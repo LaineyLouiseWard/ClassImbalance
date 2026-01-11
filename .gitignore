@@ -1,0 +1,36 @@
+# --------------------
+# Data (ALL derived + raw)
+# --------------------
+data/
+pretrain_weights/
+model_weights/
+
+# --------------------
+# Logs / outputs
+# --------------------
+lightning_logs/
+wandb/
+logs/
+
+# --------------------
+# Python
+# --------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# --------------------
+# Environments
+# --------------------
+.env
+.env.*
+*.conda
+*.egg-info/
+
+# --------------------
+# OS
+# --------------------
+.DS_Store
+Thumbs.db
