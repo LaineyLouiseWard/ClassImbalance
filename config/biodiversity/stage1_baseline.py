@@ -10,7 +10,7 @@ from geoseg.datasets.biodiversity_dataset import (
     BiodiversityTiffTestDataset,
 )
 from geoseg.models.ftunetformer import ft_unetformer
-from geoseg.utils.utils import Lookahead, process_model_params
+from geoseg.utils.optim import Lookahead, process_model_params
 
 
 # -----------------------

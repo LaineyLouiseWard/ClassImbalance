@@ -12,7 +12,7 @@ import torch
 
 from geoseg.losses import *
 from geoseg.models.unet import TeacherUNet
-from geoseg.utils.utils import Lookahead, process_model_params
+from geoseg.utils.optim import Lookahead, process_model_params
 from geoseg.datasets.openearthmap_dataset import OpenEarthMapTeacherDataset, oem_train_aug, oem_val_aug
 
 # -------------------------

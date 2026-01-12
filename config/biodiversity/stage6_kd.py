@@ -32,7 +32,7 @@ from geoseg.datasets.biodiversity_dataset import (
 from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.models.unet import TeacherUNet
 from geoseg.utils.kd_utils import KDHelper, create_mapping_matrix
-from geoseg.utils.utils import Lookahead, process_model_params
+from geoseg.utils.optim import Lookahead, process_model_params
 
 
 # ======================

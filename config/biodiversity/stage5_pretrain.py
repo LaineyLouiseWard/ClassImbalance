@@ -17,7 +17,7 @@ from geoseg.datasets.biodiversity_dataset import (
 )
 from geoseg.datasets.biodiversity_oem_dataset import BiodiversityCombinedTiffTrainDataset
 from geoseg.models.ftunetformer import ft_unetformer
-from geoseg.utils.utils import Lookahead, process_model_params
+from geoseg.utils.optim import Lookahead, process_model_params
 
 max_epoch = 50
 ignore_index = 255
