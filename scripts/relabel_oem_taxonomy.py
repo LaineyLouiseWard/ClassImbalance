@@ -6,11 +6,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Dict
-
-import numpy as np
-from PIL import Image
-import rasterio
-
+from convert_oem_masks import convert_oem_mask_tif_to_png
 
 # OEM 8 classes → your 6-class taxonomy
 # 0 bareland -> background(0)
@@ -120,9 +116,7 @@ def main() -> None:
 
         link_or_copy(img, out_img, args.mode)
 
-        oem_ids = read_oem_mask(msk)
-        tgt = remap_to_target6(oem_ids)
-        Image.fromarray(tgt, mode="L").save(out_msk)
+        convert_oem_mask_tif_to_png(msk, out_msk, id_map=OEM_ID_TO_TARGET6, default_value=0)
         written += 1
 
     print("[oem_remap_labels]")

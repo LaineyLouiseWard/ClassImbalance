@@ -29,10 +29,19 @@ def seed_everything(seed):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mask-dir", default="data/LoveDA/Train/Rural/masks_png")
-    parser.add_argument("--output-mask-dir", default="data/LoveDA/Train/Rural/masks_png_convert")
+    parser = argparse.ArgumentParser(description="Convert Biodiversity masks to label PNG + RGB visualisation.")
+    parser.add_argument(
+        "--mask-dir",
+        required=True,
+        help="Directory containing input mask PNGs."
+    )
+    parser.add_argument(
+        "--output-mask-dir",
+        required=True,
+        help="Output directory for converted label PNGs (and *_rgb visualisations)."
+    )
     return parser.parse_args()
+
 
 
 def convert_label(mask):

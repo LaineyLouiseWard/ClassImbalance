@@ -29,7 +29,7 @@ from typing import List, Tuple
 
 import numpy as np
 from PIL import Image
-
+from convert_oem_masks import quick_mask_stats
 
 IMG_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
 MASK_EXTS = (".png", ".tif", ".tiff")
@@ -66,29 +66,6 @@ def safe_symlink(src: Path, dst: Path):
     if dst.exists() or dst.is_symlink():
         return
     dst.symlink_to(src.resolve())
-
-
-def quick_mask_stats(mask_paths: List[Path], max_checks: int = 200):
-    """
-    Prints basic label sanity for a subset.
-    """
-    sample = mask_paths[:max_checks]
-    uniques = set()
-    maxv = -1
-    has_255 = 0
-
-    for p in sample:
-        arr = np.array(Image.open(p))
-        uniques.update(np.unique(arr).tolist())
-        maxv = max(maxv, int(arr.max()))
-        if (arr == 255).any():
-            has_255 += 1
-
-    uniques_sorted = sorted(int(u) for u in uniques)
-    print(f"[TeacherPrep] Checked {len(sample)} masks for stats.")
-    print(f"[TeacherPrep] Unique labels (sample): {uniques_sorted[:40]}{' ...' if len(uniques_sorted)>40 else ''}")
-    print(f"[TeacherPrep] Max label (sample): {maxv}")
-    print(f"[TeacherPrep] Masks containing 255 (sample): {has_255}")
 
 
 def main():
