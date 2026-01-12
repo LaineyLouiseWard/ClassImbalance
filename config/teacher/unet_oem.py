@@ -40,8 +40,9 @@ classes = OEM_CLASSES_9
 # -------------------------
 # logging / ckpt
 # -------------------------
-weights_name = "u-efficientnet-b4_s0_CELoss_pretrained"
-weights_path = "pretrain_weights"   # <- IMPORTANT: matches Chantelle-style path
+# --- checkpoints ---
+weights_path = "model_weights/teacher"
+weights_name = "teacher"
 test_weights_name = weights_name
 log_name = "teacher_oem/u-efficientnet-b4"
 

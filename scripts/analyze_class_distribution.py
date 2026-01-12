@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """
-Analyze class distribution in training masks to identify which images to replicate/augment.
+Analyze class distribution in training masks to identify which images to replicate.
 
-OFFLINE dataset analysis tool (constructs a JSON list used by replicate_minority_samples.py).
+Offline dataset analysis tool.
+Produces a JSON list consumed by replicate_minority_samples.py.
 
-Expected layout (your current one):
-  data_root/
-    images/*.tif
-    masks/*.png
-
-Example:
-  data_root = data/biodiversity_split/train
+Conventions:
+- Class 0 (Background) is excluded from percentage calculations.
+- Percentages are computed over non-background pixels only.
 """
 
 from __future__ import annotations
@@ -22,6 +19,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 from PIL import Image
+
 
 # Cosmetic labels only
 CLASSES: Dict[int, str] = {
@@ -35,19 +33,28 @@ CLASSES: Dict[int, str] = {
 
 # Minority classes to target
 TARGET_CLASSES = [4, 5]  # Settlement, SemiNatural
+IGNORE_INDEX = 0
 
 
 def analyze_mask(mask_path: Path) -> Tuple[Dict[int, float], Dict[int, int]]:
-    """Return class pixel percentages and counts for a single mask."""
+    """
+    Return class pixel percentages and counts for a single mask.
+    Percentages are computed over non-background pixels only.
+    """
     mask = np.array(Image.open(mask_path))
-    unique, counts = np.unique(mask, return_counts=True)
+
+    valid = mask != IGNORE_INDEX
+    valid_pixels = int(valid.sum())
+
+    unique, counts = np.unique(mask[valid], return_counts=True)
     class_counts = {int(k): int(v) for k, v in zip(unique.tolist(), counts.tolist())}
-    total_pixels = int(mask.size)
 
     class_percentages: Dict[int, float] = {}
     for cls_id in range(6):
-        count = class_counts.get(cls_id, 0)
-        class_percentages[cls_id] = (count / total_pixels) * 100.0
+        if cls_id == IGNORE_INDEX or valid_pixels == 0:
+            class_percentages[cls_id] = 0.0
+        else:
+            class_percentages[cls_id] = (class_counts.get(cls_id, 0) / valid_pixels) * 100.0
 
     return class_percentages, class_counts
 
@@ -103,10 +110,7 @@ def save_augmentation_list(
     threshold_settlement: float = 5.0,
     threshold_seminatural: float = 5.0,
 ) -> dict:
-    """
-    Save JSON with the image IDs that meet thresholds.
-    This format is what replicate_minority_samples.py expects.
-    """
+    """Save JSON list of image IDs meeting target thresholds."""
     settlement_images = [
         item["img_id"] for item in results if item["settlement_pct"] >= threshold_settlement
     ]
@@ -119,10 +123,14 @@ def save_augmentation_list(
         "seminatural_images": seminatural_images,
         "settlement_count": len(settlement_images),
         "seminatural_count": len(seminatural_images),
-        "thresholds": {"settlement": threshold_settlement, "seminatural": threshold_seminatural},
+        "thresholds": {
+            "settlement": threshold_settlement,
+            "seminatural": threshold_seminatural,
+        },
     }
 
     out_path = Path(output_file)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(augmentation_list, indent=2))
 
     print(f"\nSaved augmentation list to: {out_path.resolve()}")
@@ -133,56 +141,33 @@ def save_augmentation_list(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Analyze masks for target-class presence (offline)."
-    )
-    # ✅ Updated default for your current repo layout
+    parser = argparse.ArgumentParser(description="Analyze masks for target-class presence (offline).")
     parser.add_argument(
         "--data-root",
         type=str,
         default="data/biodiversity_split/train",
-        help="Dataset root containing images/ and masks/ (default: data/biodiversity_split/train)",
+        help="Dataset root containing images/ and masks/",
     )
     parser.add_argument(
         "--mask-dir",
         type=str,
         default="masks",
-        help="Mask subdirectory name (default: masks)",
+        help="Mask subdirectory name",
     )
-    parser.add_argument(
-        "--top-n",
-        type=int,
-        default=30,
-        help="Print top N images",
-    )
+    parser.add_argument("--top-n", type=int, default=30, help="Print top N images")
     parser.add_argument(
         "--out",
         type=str,
         default="artifacts/train_augmentation_list.json",
         help="Output JSON file",
     )
-    parser.add_argument(
-        "--threshold-settlement",
-        type=float,
-        default=5.0,
-        help="Settlement percentage threshold",
-    )
-    parser.add_argument(
-        "--threshold-seminatural",
-        type=float,
-        default=5.0,
-        help="SemiNatural percentage threshold",
-    )
+    parser.add_argument("--threshold-settlement", type=float, default=5.0)
+    parser.add_argument("--threshold-seminatural", type=float, default=5.0)
     args = parser.parse_args()
 
     print(f"Analyzing dataset: {args.data_root}/{args.mask_dir}")
     results = analyze_dataset(args.data_root, mask_dir_name=args.mask_dir)
     print(f"Total images analyzed: {len(results)}")
-
-    avg_settlement = sum(r["settlement_pct"] for r in results) / max(len(results), 1)
-    avg_seminatural = sum(r["seminatural_pct"] for r in results) / max(len(results), 1)
-    print(f"Average Settlement %: {avg_settlement:.2f}%")
-    print(f"Average SemiNatural %: {avg_seminatural:.2f}%")
 
     print_top_images(results, n=args.top_n)
 

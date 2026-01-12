@@ -1,9 +1,9 @@
 """
-Train the OEM teacher model (EfficientNet-B4 U-Net) and save a .pth checkpoint
-compatible with TeacherUNet.load_checkpoint().
+Train a teacher segmentation model on OpenEarthMap (OEM).
 
-Run:
-  python train_teacher.py -c config/teacher/unet_oem.py
+This script performs standard supervised training and saves
+Lightning checkpoints (.ckpt). Export to a plain .pth state_dict
+is handled separately by export_teacher_checkpoint.py.
 """
 
 import os
@@ -21,6 +21,9 @@ from geoseg.utils.cfg import py2cfg
 from geoseg.utils.metric import Evaluator
 
 
+# ---------------------------------------------------------------------
+# Reproducibility
+# ---------------------------------------------------------------------
 def seed_worker(worker_id: int):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
@@ -31,10 +34,8 @@ def seed_everything(seed: int = 42):
     os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
-
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -45,27 +46,32 @@ def get_args():
     return p.parse_args()
 
 
+# ---------------------------------------------------------------------
+# Lightning Module
+# ---------------------------------------------------------------------
 class TeacherTrain(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
+
         self.net = config.net
         self.loss = config.loss
         self.classes = config.classes
 
         ignore_index = getattr(config, "ignore_index", None)
-        self.train_evaluator = Evaluator(num_class=len(self.classes), ignore_index=ignore_index)
-        self.val_evaluator = Evaluator(num_class=len(self.classes), ignore_index=ignore_index)
+        self.train_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
+        self.val_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
 
-        self.training_step_outputs = []
-        self.validation_step_outputs = []
+        self._train_cache = []
+        self._val_cache = []
 
     def forward(self, x):
         return self.net(x)
 
+    # ---------------- TRAIN ----------------
     def on_train_epoch_start(self):
         self.train_evaluator.reset()
-        self.training_step_outputs = []
+        self._train_cache.clear()
 
     def training_step(self, batch, batch_idx):
         img = batch["img"]
@@ -75,32 +81,34 @@ class TeacherTrain(pl.LightningModule):
         loss = self.loss(logits, mask)
         pred = torch.argmax(logits, dim=1)
 
-        self.training_step_outputs.append(
-            {"loss": loss, "pred": pred.detach().cpu().numpy(), "target": mask.detach().cpu().numpy()}
+        self._train_cache.append(
+            {
+                "pred": pred.detach().cpu().numpy(),
+                "target": mask.detach().cpu().numpy(),
+            }
         )
 
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def on_train_epoch_end(self):
-        for output in self.training_step_outputs:
-            self.train_evaluator.add_batch(output["target"], output["pred"])
+        for o in self._train_cache:
+            self.train_evaluator.add_batch(o["target"], o["pred"])
 
-        IoU = self.train_evaluator.Intersection_over_Union()
-        mIoU = np.nanmean(IoU)
-        F1 = np.nanmean(self.train_evaluator.F1())
-        OA = self.train_evaluator.OA()
+        iou = self.train_evaluator.Intersection_over_Union()
+        f1 = self.train_evaluator.F1()
+        oa = self.train_evaluator.OA()
 
-        self.log("train_mIoU", mIoU, on_epoch=True, prog_bar=True)
-        self.log("train_F1", F1, on_epoch=True, prog_bar=True)
-        self.log("train_OA", OA, on_epoch=True, prog_bar=True)
+        self.log("train_mIoU", np.nanmean(iou), prog_bar=True)
+        self.log("train_F1", np.nanmean(f1), prog_bar=True)
+        self.log("train_OA", oa, prog_bar=True)
 
-        print(f"\ntrain: {{'mIoU': {mIoU}, 'F1': {F1}, 'OA': {OA}}}")
-        self.training_step_outputs.clear()
+        print("\ntrain:", {"mIoU": np.nanmean(iou), "F1": np.nanmean(f1), "OA": oa})
 
+    # ---------------- VAL ----------------
     def on_validation_epoch_start(self):
         self.val_evaluator.reset()
-        self.validation_step_outputs = []
+        self._val_cache.clear()
 
     def validation_step(self, batch, batch_idx):
         img = batch["img"]
@@ -110,33 +118,37 @@ class TeacherTrain(pl.LightningModule):
         loss = self.loss(logits, mask)
         pred = torch.argmax(logits, dim=1)
 
-        self.validation_step_outputs.append(
-            {"loss": loss, "pred": pred.detach().cpu().numpy(), "target": mask.detach().cpu().numpy()}
+        self._val_cache.append(
+            {
+                "pred": pred.detach().cpu().numpy(),
+                "target": mask.detach().cpu().numpy(),
+            }
         )
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
         return loss
 
     def on_validation_epoch_end(self):
-        for output in self.validation_step_outputs:
-            self.val_evaluator.add_batch(output["target"], output["pred"])
+        for o in self._val_cache:
+            self.val_evaluator.add_batch(o["target"], o["pred"])
 
-        IoU = self.val_evaluator.Intersection_over_Union()
-        mIoU = np.nanmean(IoU)
-        F1 = np.nanmean(self.val_evaluator.F1())
-        OA = self.val_evaluator.OA()
+        iou = self.val_evaluator.Intersection_over_Union()
+        f1 = self.val_evaluator.F1()
+        oa = self.val_evaluator.OA()
 
-        self.log("val_mIoU", mIoU, on_epoch=True, prog_bar=True)
-        self.log("val_F1", F1, on_epoch=True, prog_bar=True)
-        self.log("val_OA", OA, on_epoch=True, prog_bar=True)
+        self.log("val_mIoU", np.nanmean(iou), prog_bar=True)
+        self.log("val_F1", np.nanmean(f1), prog_bar=True)
+        self.log("val_OA", oa, prog_bar=True)
 
-        print(f"\nval: {{'mIoU': {mIoU}, 'F1': {F1}, 'OA': {OA}}}")
-        self.validation_step_outputs.clear()
+        print("\nval:", {"mIoU": np.nanmean(iou), "F1": np.nanmean(f1), "OA": oa})
 
     def configure_optimizers(self):
         return [self.config.optimizer], [self.config.lr_scheduler]
 
 
+# ---------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------
 def main():
     args = get_args()
     config = py2cfg(args.config_path)
@@ -144,14 +156,10 @@ def main():
     seed_everything(42)
     pl.seed_everything(42, workers=True)
 
-    seed = 42
-    g = torch.Generator()
-    g.manual_seed(seed)
-
+    g = torch.Generator().manual_seed(42)
     if hasattr(config, "train_loader") and config.train_loader is not None:
         config.train_loader.worker_init_fn = seed_worker
         config.train_loader.generator = g
-
     if hasattr(config, "val_loader") and config.val_loader is not None:
         config.val_loader.worker_init_fn = seed_worker
         config.val_loader.generator = g
@@ -160,7 +168,7 @@ def main():
 
     os.makedirs(config.weights_path, exist_ok=True)
 
-    checkpoint_callback = ModelCheckpoint(
+    checkpoint_cb = ModelCheckpoint(
         dirpath=config.weights_path,
         filename=config.weights_name,
         monitor=config.monitor,
@@ -169,35 +177,21 @@ def main():
         save_last=config.save_last,
     )
 
-    csv_logger = CSVLogger(save_dir="lightning_logs", name=config.log_name)
-    tb_logger = TensorBoardLogger(save_dir="lightning_logs", name=config.log_name)
-
     trainer = pl.Trainer(
         max_epochs=config.max_epoch,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1 if torch.cuda.is_available() else None,
-        callbacks=[checkpoint_callback],
-        logger=[csv_logger, tb_logger],
+        callbacks=[checkpoint_cb],
+        logger=[
+            CSVLogger("lightning_logs", name=config.log_name),
+            TensorBoardLogger("lightning_logs", name=config.log_name),
+        ],
         check_val_every_n_epoch=config.check_val_every_n_epoch,
         log_every_n_steps=10,
         precision=16 if torch.cuda.is_available() else 32,
     )
 
     trainer.fit(model, config.train_loader, config.val_loader)
-
-    # -------------------------
-    # Export final teacher .pth
-    # -------------------------
-    # We save a plain state_dict .pth in the EXACT place your KD expects.
-    out_pth = osp_join(config.weights_path, f"{config.weights_name}.pth")
-    torch.save(model.net.model.state_dict(), out_pth)
-    print(f"\nSaved teacher state_dict to: {out_pth}")
-    print("This should be loadable by TeacherUNet.load_checkpoint(...).")
-
-
-def osp_join(*parts):
-    import os.path as osp
-    return osp.join(*parts)
 
 
 if __name__ == "__main__":

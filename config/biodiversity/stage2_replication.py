@@ -1,10 +1,20 @@
-# config/biodiversity_tiff/stage2_replication.py
+"""
+Stage 2 (replication): supervised training on train_rep (originals + replicated minority tiles).
+Background is ignored in loss/metrics via ignore_index=0.
+"""
 
 from torch.utils.data import DataLoader
 import torch
 
-from geoseg.losses import *
-from geoseg.datasets.biodiversity_dataset import *   # ✅ renamed file
+from geoseg.losses import JointLoss, SoftCrossEntropyLoss, DiceLoss
+from geoseg.datasets.biodiversity_dataset import (
+    CLASSES,
+    train_aug_random,
+    val_aug,
+    BiodiversityTrainDataset,
+    BiodiversityValDataset,
+    BiodiversityTestDataset,
+)
 from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.utils.optim import Lookahead, process_model_params
 
@@ -14,9 +24,8 @@ from geoseg.utils.optim import Lookahead, process_model_params
 # -------------------
 max_epoch = 45
 
-# ✅ Background is a real class (0), so DO NOT ignore 0.
-# Use 255 only if you actually have void/ignore pixels labeled as 255.
-ignore_index = 255
+# We ignore background (0) in loss/metrics
+ignore_index = 0
 
 train_batch_size = 4
 val_batch_size = 4
@@ -52,7 +61,12 @@ gpus = "auto"
 # -------------------
 # Model / loss
 # -------------------
-net = ft_unetformer(num_classes=num_classes, decoder_channels=256)
+net = ft_unetformer(
+    pretrained=False,
+    weight_path=None,
+    num_classes=num_classes,
+    decoder_channels=256,
+)
 
 loss = JointLoss(
     SoftCrossEntropyLoss(smooth_factor=0.05, ignore_index=ignore_index),
@@ -69,28 +83,16 @@ use_aux_loss = False
 # -------------------
 train_dataset = BiodiversityTrainDataset(
     data_root="data/biodiversity_split/train_rep",
-    img_dir="images",
-    mask_dir="masks",
-    img_suffix=".tif",
-    mask_suffix=".png",
-    mosaic_ratio=0.25,
-    transform=train_aug_random,   # ✅ stage2 still uses random aug
+    transform=train_aug_random,
 )
 
-val_dataset = BiodiversityTrainDataset(
+val_dataset = BiodiversityValDataset(
     data_root="data/biodiversity_split/val",
-    img_dir="images",
-    mask_dir="masks",
-    img_suffix=".tif",
-    mask_suffix=".png",
-    mosaic_ratio=0.0,
     transform=val_aug,
 )
 
 test_dataset = BiodiversityTestDataset(
     data_root="data/biodiversity_split/test",
-    img_dir="images",
-    img_suffix=".tif",
 )
 
 
@@ -119,7 +121,9 @@ val_loader = DataLoader(
 # -------------------
 # Optimizer / scheduler
 # -------------------
-layerwise_params = {"backbone.*": dict(lr=backbone_lr, weight_decay=backbone_weight_decay)}
+layerwise_params = {
+    "backbone.*": dict(lr=backbone_lr, weight_decay=backbone_weight_decay)
+}
 net_params = process_model_params(net, layerwise_params=layerwise_params)
 
 base_optimizer = torch.optim.AdamW(net_params, lr=lr, weight_decay=weight_decay)

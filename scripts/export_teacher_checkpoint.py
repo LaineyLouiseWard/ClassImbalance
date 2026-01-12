@@ -1,10 +1,11 @@
 """
-Export TeacherUNet weights from a Lightning .ckpt to a plain .pth state_dict.
+Export teacher model weights from a Lightning checkpoint to a plain PyTorch state_dict.
 
-Usage:
-  python scripts/export_teacher_checkpoint.py \
-    --ckpt model_weights/teacher/teacher_oem_effb4_unet/teacher_oem_effb4_unet.ckpt \
-    --out  pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
+This is used to:
+- Load teacher weights in KD training without Lightning
+- Reuse teacher pretraining as a standard .pth file
+
+Run once after teacher training.
 """
 
 import argparse

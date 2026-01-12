@@ -9,12 +9,11 @@ Cumulative components kept ON:
 PLUS:
 - knowledge distillation (teacher -> student)
 
-IMPORTANT CONSISTENCY:
-- ignore_index = 255 everywhere (loss + metrics)
+IMPORTANT:
+- ignore_index = 0 everywhere
 """
 
 from __future__ import annotations
-
 from pathlib import Path
 
 import torch
@@ -24,8 +23,9 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 from geoseg.losses import JointLoss, SoftCrossEntropyLoss, DiceLoss
 from geoseg.datasets.biodiversity_dataset import (
     CLASSES,
-    BiodiversityTiffTrainDataset,
-    BiodiversityTiffTestDataset,
+    BiodiversityTrainDataset,
+    BiodiversityValDataset,
+    BiodiversityTestDataset,
     train_aug_minority,
     val_aug,
 )
@@ -39,9 +39,9 @@ from geoseg.utils.optim import Lookahead, process_model_params
 # Training hyperparams
 # ======================
 max_epoch = 60
-ignore_index = 255
+ignore_index = 0
 
-train_batch_size = 2  # KD is heavier; keep small
+train_batch_size = 2
 val_batch_size = 2
 
 lr = 6e-4
@@ -52,6 +52,7 @@ backbone_weight_decay = 2.5e-4
 num_classes = 6
 classes = CLASSES
 
+
 # ======================
 # KD parameters
 # ======================
@@ -59,16 +60,16 @@ kd_temperature = 2.0
 kd_alpha = 0.3
 rangeland_split_alpha = 0.7
 
-# Path to teacher weights (make sure this exists)
-teacher_checkpoint = "pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth"
+teacher_checkpoint = "pretrain_weights/teacher.pth"
+
 
 # ======================
 # Logging / checkpoints
 # ======================
 weights_name = "stage6_final_kd_ftunetformer"
-weights_path = f"model_weights/{weights_name}"
+weights_path = f"model_weights/biodiversity/{weights_name}"
 test_weights_name = weights_name
-log_name = f"{weights_name}"
+log_name = f"biodiversity/{weights_name}"
 
 monitor = "val_F1"
 monitor_mode = "max"
@@ -77,27 +78,30 @@ save_last = True
 check_val_every_n_epoch = 1
 gpus = "auto"
 
-# Ablation: train student from scratch unless you explicitly set this
 pretrained_ckpt_path = None
 resume_ckpt_path = None
+
 
 # ======================
 # Models
 # ======================
-# Student
-net = ft_unetformer(num_classes=num_classes, decoder_channels=256)
+net = ft_unetformer(
+    pretrained=False,
+    weight_path=None,
+    num_classes=num_classes,
+    decoder_channels=256,
+)
 
-# Teacher (typically 9-class EfficientNet-B4 UNet in Chantelle's setup)
-teacher = TeacherUNet(num_classes=9, pretrained=True)
+teacher = TeacherUNet(num_classes=9, pretrained=False)
 teacher.load_checkpoint(teacher_checkpoint)
 teacher.freeze()
 
-# KD helper (maps teacher classes -> your 6-class taxonomy)
 mapping_matrix = create_mapping_matrix(alpha=rangeland_split_alpha)
 kd_helper = KDHelper(mapping_matrix=mapping_matrix, temperature=kd_temperature)
 
+
 # ======================
-# Loss (hard + KD)
+# Loss
 # ======================
 hard_loss = JointLoss(
     SoftCrossEntropyLoss(smooth_factor=0.05, ignore_index=ignore_index),
@@ -108,8 +112,6 @@ hard_loss = JointLoss(
 
 
 class KDLoss(nn.Module):
-    """Hard target loss + KD loss."""
-
     def __init__(self, hard_loss: nn.Module, kd_helper: KDHelper, alpha: float):
         super().__init__()
         self.hard_loss = hard_loss
@@ -125,37 +127,27 @@ class KDLoss(nn.Module):
 loss = KDLoss(hard_loss, kd_helper, alpha=kd_alpha)
 use_aux_loss = False
 
+
 # ======================
 # Datasets
 # ======================
-train_dataset = BiodiversityTiffTrainDataset(
+train_dataset = BiodiversityTrainDataset(
     data_root="data/biodiversity_split/train_rep",
-    img_dir="images",
-    mask_dir="masks",
-    img_suffix=".tif",
-    mask_suffix=".png",
-    mosaic_ratio=0.25,
-    transform=train_aug_minority,  # minority-aware cropping ON
+    transform=train_aug_minority,
 )
 
-val_dataset = BiodiversityTiffTrainDataset(
+val_dataset = BiodiversityValDataset(
     data_root="data/biodiversity_split/val",
-    img_dir="images",
-    mask_dir="masks",
-    img_suffix=".tif",
-    mask_suffix=".png",
-    mosaic_ratio=0.0,
     transform=val_aug,
 )
 
-test_dataset = BiodiversityTiffTestDataset(
+test_dataset = BiodiversityTestDataset(
     data_root="data/biodiversity_split/test",
-    img_dir="images",
-    img_suffix=".tif",
 )
 
+
 # ======================
-# Difficulty weights (same file as Stage 3/5B)
+# Difficulty weights
 # ======================
 repo_root = Path(__file__).resolve().parents[2]
 sample_weights_path = repo_root / "artifacts" / "sample_weights.txt"
@@ -166,12 +158,9 @@ with open(sample_weights_path, "r", encoding="utf-8") as f:
         _, w = line.strip().split("\t")
         sample_weights.append(float(w))
 
-print(f"Loaded {len(sample_weights)} sample weights from {sample_weights_path}")
-
 if len(sample_weights) != len(train_dataset):
     raise ValueError(
-        f"sample_weights length ({len(sample_weights)}) != train_dataset length ({len(train_dataset)}). "
-        "Regenerate artifacts/sample_weights.txt using the SAME train_rep split."
+        f"sample_weights ({len(sample_weights)}) != train_dataset ({len(train_dataset)})"
     )
 
 sampler = WeightedRandomSampler(
@@ -180,12 +169,16 @@ sampler = WeightedRandomSampler(
     replacement=True,
 )
 
+
+# ======================
+# Loaders
+# ======================
 train_loader = DataLoader(
     dataset=train_dataset,
     batch_size=train_batch_size,
     num_workers=4,
     pin_memory=True,
-    sampler=sampler,  # difficulty-weighted sampling ON
+    sampler=sampler,
     drop_last=True,
 )
 
@@ -198,6 +191,7 @@ val_loader = DataLoader(
     drop_last=False,
 )
 
+
 # ======================
 # Optimizer
 # ======================
@@ -206,4 +200,7 @@ net_params = process_model_params(net, layerwise_params=layerwise_params)
 
 base_optimizer = torch.optim.AdamW(net_params, lr=lr, weight_decay=weight_decay)
 optimizer = Lookahead(base_optimizer)
-lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=15, T_mult=2)
+
+lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    optimizer, T_0=15, T_mult=2
+)

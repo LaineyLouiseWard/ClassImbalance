@@ -1,33 +1,38 @@
-import os
-import sys
-from pathlib import Path
-import json
+#!/usr/bin/env python3
+"""
+Evaluate FT-UNetFormer checkpoints on the Biodiversity validation split.
+
+Writes per-checkpoint outputs:
+- metrics.json (OA, per-class IoU/F1, macro means excluding Background)
+- confusion_matrix.png (row-normalized; ignores ignore_index pixels)
+- class_iou_scores.png / class_f1_scores.png (excluding Background)
+- evaluation_report.txt
+
+Conventions:
+- Biodiversity uses ignore_index=0 (Background/void) during evaluation.
+- Macro metrics are reported excluding Background (class 0).
+"""
+
+from __future__ import annotations
+
+import argparse
 import datetime
-
-# Add project root to Python path (repo root = parent of evaluation/)
-current_dir = Path(__file__).resolve().parent
-project_root = current_dir.parent
-sys.path.insert(0, str(project_root))
-
+import json
 import logging
-import torch
-import numpy as np
+from pathlib import Path
+from typing import Tuple
+
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-from sklearn.metrics import confusion_matrix
+import numpy as np
+import torch
 import torch.nn as nn
-
+from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
-from geoseg.utils.metric import Evaluator
 from geoseg.datasets.biodiversity_dataset import BiodiversityValDataset
-from geoseg.models.UNetFormer import UNetFormer
-
-# Optional: if you have DCSwin in your repo and want to evaluate it too
-try:
-    from geoseg.models.DCSwin import dcswin_base
-except Exception:
-    dcswin_base = None
+from geoseg.models.ftunetformer import ft_unetformer
+from geoseg.utils.metric import Evaluator
 
 
 CLASS_NAMES_6 = [
@@ -41,26 +46,15 @@ CLASS_NAMES_6 = [
 CLASS_NAMES_5 = CLASS_NAMES_6[1:]
 
 
-def build_model(model_name: str, num_classes: int = 6) -> torch.nn.Module:
-    """
-    model_name: "unetformer" or "dcswin"
-    NOTE: We default to pretrained=False to avoid missing weight files.
-    """
-    model_name = model_name.lower()
-
-    if model_name == "dcswin":
-        if dcswin_base is None:
-            raise RuntimeError("dcswin_base could not be imported. Is geoseg/models/DCSwin.py present?")
-        return dcswin_base(num_classes=num_classes, pretrained=False, weight_path=None)
-
-    # default
-    return UNetFormer(num_classes=num_classes)
+def build_model(num_classes: int = 6) -> torch.nn.Module:
+    """Instantiate the FT-UNetFormer architecture used in this repo."""
+    return ft_unetformer(num_classes=num_classes, decoder_channels=256)
 
 
 def load_checkpoint_into_model(model: torch.nn.Module, ckpt_path: Path, device: torch.device) -> torch.nn.Module:
+    """Load a Lightning .ckpt into the raw nn.Module (handles 'net.'/'model.' prefixes)."""
     ckpt = torch.load(ckpt_path, map_location=device)
 
-    # lightning ckpt typically has 'state_dict'
     if isinstance(ckpt, dict) and "state_dict" in ckpt:
         state_dict = ckpt["state_dict"]
     elif isinstance(ckpt, dict):
@@ -68,28 +62,44 @@ def load_checkpoint_into_model(model: torch.nn.Module, ckpt_path: Path, device: 
     else:
         raise ValueError(f"Unexpected checkpoint type: {type(ckpt)}")
 
-    # remove common lightning prefix if present
     cleaned = {}
     for k, v in state_dict.items():
-        if k.startswith("model."):
+        if k.startswith("net."):
+            cleaned[k.replace("net.", "", 1)] = v
+        elif k.startswith("model."):
             cleaned[k.replace("model.", "", 1)] = v
         else:
             cleaned[k] = v
 
-    model.load_state_dict(cleaned, strict=False)
+    missing, unexpected = model.load_state_dict(cleaned, strict=False)
+    if missing:
+        logging.warning(f"Missing keys (non-fatal): {missing[:10]}{'...' if len(missing) > 10 else ''}")
+    if unexpected:
+        logging.warning(f"Unexpected keys (non-fatal): {unexpected[:10]}{'...' if len(unexpected) > 10 else ''}")
+
     return model
+
+
+def _apply_ignore_mask(true: np.ndarray, pred: np.ndarray, ignore_index: int | None) -> Tuple[np.ndarray, np.ndarray]:
+    """Flatten arrays and drop ignored pixels (for confusion matrix consistency)."""
+    t = true.reshape(-1)
+    p = pred.reshape(-1)
+    if ignore_index is None:
+        return t, p
+    keep = t != ignore_index
+    return t[keep], p[keep]
 
 
 @torch.no_grad()
 def evaluate_checkpoint(
     ckpt_path: Path,
-    model_name: str,
     val_root: Path,
     device: torch.device,
+    ignore_index: int | None,
     batch_size: int = 1,
     num_workers: int = 0,
-):
-    model = build_model(model_name=model_name, num_classes=6).to(device)
+) -> Tuple[dict, np.ndarray]:
+    model = build_model(num_classes=6).to(device)
     model = load_checkpoint_into_model(model, ckpt_path, device)
     model.eval()
 
@@ -99,10 +109,10 @@ def evaluate_checkpoint(
         batch_size=batch_size,
         num_workers=num_workers,
         shuffle=False,
-        pin_memory=True,
+        pin_memory=(device.type == "cuda"),
     )
 
-    evaluator = Evaluator(num_class=6)
+    evaluator = Evaluator(num_class=6, ignore_index=ignore_index)
     cm = np.zeros((6, 6), dtype=np.int64)
 
     softmax = nn.Softmax(dim=1)
@@ -112,27 +122,28 @@ def evaluate_checkpoint(
         masks = batch["gt_semantic_seg"].cpu().numpy()  # (B,H,W)
 
         outputs = model(images)
-        preds = softmax(outputs).argmax(dim=1).cpu().numpy()
+        preds = softmax(outputs).argmax(dim=1).cpu().numpy()  # (B,H,W)
 
         for true, pred in zip(masks, preds):
-            cm += confusion_matrix(true.flatten(), pred.flatten(), labels=list(range(6)))
+            t_flat, p_flat = _apply_ignore_mask(true, pred, ignore_index)
+            cm += confusion_matrix(t_flat, p_flat, labels=list(range(6)))
             evaluator.add_batch(true, pred)
 
-    # Metrics excluding background
     iou_all = evaluator.Intersection_over_Union()
     f1_all = evaluator.F1()
     oa = float(evaluator.OA())
 
+    # Macro metrics excluding Background (class 0)
     iou_no_bg = iou_all[1:]
     f1_no_bg = f1_all[1:]
-    miou = float(np.mean(iou_no_bg))
-    mf1 = float(np.mean(f1_no_bg))
+    miou = float(np.nanmean(iou_no_bg))
+    mf1 = float(np.nanmean(f1_no_bg))
 
     metrics = {
         "checkpoint": str(ckpt_path),
-        "model_name": model_name,
         "val_root": str(val_root),
         "date": datetime.datetime.now().isoformat(timespec="seconds"),
+        "ignore_index": ignore_index,
         "OA": oa,
         "mIoU_excluding_bg": miou,
         "mF1_excluding_bg": mf1,
@@ -181,22 +192,13 @@ def plot_class_bars(values: list[float], labels: list[str], title: str, ylabel: 
     plt.close()
 
 
-def infer_model_name_from_path(p: Path) -> str:
-    s = str(p).lower()
-    if "dcswin" in s:
-        return "dcswin"
-    return "unetformer"
-
-
-def main():
-    import argparse
-
-    ap = argparse.ArgumentParser(description="Evaluate checkpoints and write metrics.json + plots")
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Evaluate .ckpt checkpoints and write metrics + plots")
     ap.add_argument(
         "--base-dir",
         type=str,
-        default=".",
-        help="Directory to search for .ckpt files (recursively). Example: model_weights/",
+        default="model_weights",
+        help="Directory to search for .ckpt files (recursively).",
     )
     ap.add_argument(
         "--val-root",
@@ -207,22 +209,18 @@ def main():
     ap.add_argument(
         "--out-dir",
         type=str,
-        default="evaluation_results",
+        default="evaluation/evaluation_results",
         help="Where to write evaluation outputs.",
     )
+    ap.add_argument("--pattern", type=str, default="*.ckpt", help="Checkpoint filename pattern.")
+    ap.add_argument("--num-workers", type=int, default=0, help="Dataloader workers.")
+    ap.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
     ap.add_argument(
-        "--pattern",
-        type=str,
-        default="*.ckpt",
-        help="Checkpoint filename pattern (default: *.ckpt).",
-    )
-    ap.add_argument(
-        "--num-workers",
+        "--ignore-index",
         type=int,
         default=0,
-        help="Dataloader workers (start with 0 to avoid multiprocessing issues).",
+        help="Label value to ignore in evaluation (biodiversity: 0).",
     )
-    ap.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
     args = ap.parse_args()
 
     base_dir = Path(args.base_dir).resolve()
@@ -238,32 +236,29 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
     logging.info(f"Found {len(ckpts)} checkpoints under {base_dir}")
+    logging.info(f"Using ignore_index={args.ignore_index}")
 
     for ckpt in ckpts:
-        model_name = infer_model_name_from_path(ckpt)
-
-        # results per-checkpoint folder
         safe_name = ckpt.parent.name + "__" + ckpt.stem
         run_dir = out_root / safe_name
         run_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"Evaluating: {ckpt} (model={model_name})")
+        logging.info(f"Evaluating: {ckpt}")
 
         metrics, cm = evaluate_checkpoint(
             ckpt_path=ckpt,
-            model_name=model_name,
             val_root=val_root,
             device=device,
+            ignore_index=args.ignore_index,
             batch_size=1,
             num_workers=args.num_workers,
         )
 
-        # write metrics.json
         with open(run_dir / "metrics.json", "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)
 
-        # plots
         plot_confusion_matrix(cm, run_dir)
+
         iou_no_bg = [metrics["per_class_iou"][c] for c in CLASS_NAMES_5]
         f1_no_bg = [metrics["per_class_f1"][c] for c in CLASS_NAMES_5]
 
@@ -282,12 +277,11 @@ def main():
             out_path=run_dir / "class_f1_scores.png",
         )
 
-        # text report
         with open(run_dir / "evaluation_report.txt", "w", encoding="utf-8") as f:
             f.write("=== Evaluation Report ===\n\n")
             f.write(f"Checkpoint: {metrics['checkpoint']}\n")
-            f.write(f"Model: {metrics['model_name']}\n")
-            f.write(f"Val root: {metrics['val_root']}\n\n")
+            f.write(f"Val root: {metrics['val_root']}\n")
+            f.write(f"Ignore index: {metrics['ignore_index']}\n\n")
             f.write(f"Overall Accuracy (OA): {metrics['OA']:.4f}\n")
             f.write(f"Mean IoU (excl. bg): {metrics['mIoU_excluding_bg']:.4f}\n")
             f.write(f"Mean F1 (excl. bg): {metrics['mF1_excluding_bg']:.4f}\n\n")

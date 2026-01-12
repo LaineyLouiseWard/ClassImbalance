@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+"""
+Relabel OpenEarthMap (OEM) masks into the target 6-class taxonomy.
+
+Input:
+  in_root/
+    images/*.tif
+    masks/*.tif   (OEM integer labels)
+
+Output:
+  out_root/
+    images/*.tif  (copied or symlinked)
+    masks/*.png   (uint8 label masks, remapped)
+
+Notes:
+- Background (0) is a semantic class, not ignore.
+- No ignore_index is introduced here.
+- Any unmapped IDs default to background (0).
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -6,26 +25,20 @@ import os
 import shutil
 from pathlib import Path
 from typing import Dict
-from convert_oem_masks import convert_oem_mask_tif_to_png
 
-# OEM 8 classes → your 6-class taxonomy
-# 0 bareland -> background(0)
-# 1 rangeland -> grassland(2)
-# 2 developed space -> settlement(4)
-# 3 road -> settlement(4)
-# 4 tree -> forest(1)
-# 5 water -> background(0)
-# 6 agriculture -> cropland(3)
-# 7 building -> settlement(4)
+from scripts.convert_oem_masks import convert_oem_mask_tif_to_png
+
+
+# OEM 8-class taxonomy → target 6-class taxonomy
 OEM_ID_TO_TARGET6: Dict[int, int] = {
-    0: 0,
-    1: 2,
-    2: 4,
-    3: 4,
-    4: 1,
-    5: 0,
-    6: 3,
-    7: 4,
+    0: 0,  # bareland -> background
+    1: 2,  # rangeland -> grassland
+    2: 4,  # developed space -> settlement
+    3: 4,  # road -> settlement
+    4: 1,  # tree -> forest
+    5: 0,  # water -> background
+    6: 3,  # agriculture -> cropland
+    7: 4,  # building -> settlement
 }
 
 
@@ -34,9 +47,11 @@ def ensure_dir(p: Path) -> None:
 
 
 def link_or_copy(src: Path, dst: Path, mode: str) -> None:
+    """Populate dst with src using symlink or copy."""
     dst.parent.mkdir(parents=True, exist_ok=True)
     if dst.exists():
         return
+
     if mode == "symlink":
         rel = os.path.relpath(src, start=dst.parent)
         dst.symlink_to(rel)
@@ -46,33 +61,17 @@ def link_or_copy(src: Path, dst: Path, mode: str) -> None:
         raise ValueError(f"Unknown mode: {mode}")
 
 
-def read_oem_mask(mask_tif: Path) -> np.ndarray:
-    with rasterio.open(mask_tif) as src:
-        if src.count != 1:
-            raise ValueError(f"Expected 1-band mask, got {src.count}: {mask_tif}")
-        arr = src.read(1)
-    return arr.astype(np.int32)
-
-
-def remap_to_target6(oem_ids: np.ndarray) -> np.ndarray:
-    out = np.zeros_like(oem_ids, dtype=np.uint8)
-    for k, v in OEM_ID_TO_TARGET6.items():
-        out[oem_ids == k] = v
-    out[(oem_ids < 0) | (oem_ids > 7)] = 0
-    return out
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--in-root",
         default="data/openearthmap_filtered",
-        help="Filtered OEM dataset (images/ + masks/)",
+        help="Filtered OEM dataset (expects images/ and masks/)",
     )
     ap.add_argument(
         "--out-root",
         default="data/openearthmap_relabelled",
-        help="Output directory for remapped OEM",
+        help="Output directory for relabelled OEM dataset",
     )
     ap.add_argument(
         "--mode",
@@ -116,13 +115,18 @@ def main() -> None:
 
         link_or_copy(img, out_img, args.mode)
 
-        convert_oem_mask_tif_to_png(msk, out_msk, id_map=OEM_ID_TO_TARGET6, default_value=0)
+        convert_oem_mask_tif_to_png(
+            msk,
+            out_msk,
+            id_map=OEM_ID_TO_TARGET6,
+            default_value=0,
+        )
         written += 1
 
-    print("[oem_remap_labels]")
-    print(f"  input root: {in_root}")
+    print("[relabel_oem_taxonomy]")
+    print(f"  input root:  {in_root}")
     print(f"  output root: {out_root.resolve()}")
-    print(f"  wrote masks: {written}")
+    print(f"  masks written: {written}")
     print(f"  skipped: {skipped}")
 
 

@@ -1,48 +1,66 @@
 #!/usr/bin/env python3
 """
-Stage 1 OEM filtering:
-Remove tiles where BUILT ENVIRONMENT (building + road + developed)
-occupies more than a threshold of pixels.
+Filter raw OpenEarthMap tiles to keep predominantly rural scenes.
 
-Runs on RAW OpenEarthMap labels (.tif).
+A tile is dropped if the proportion of built environment
+(developed + road + building) exceeds a threshold.
+
+Input (RAW OEM):
+  raw_root/
+    <region>/
+      images/*.tif
+      labels/*.tif
+
+Output:
+  out_root/
+    images/*.tif
+    masks/*.tif
+
+Images are namespaced as: oem_<region>_<tile_id>.tif
 """
 
 from pathlib import Path
-import numpy as np
-import rasterio
 import argparse
 import shutil
+
+import numpy as np
+import rasterio
 from tqdm import tqdm
 
+
+# OEM raw class IDs
 BUILT_CLASSES = {2, 3, 7}  # developed, road, building
-IGNORE_INDEX = 255
 
 
-def built_env_percentage(label_path):
+def built_env_percentage(label_path: Path) -> float:
+    """Return % of pixels belonging to built-environment classes."""
     with rasterio.open(label_path) as src:
         m = src.read(1)
 
-    valid = m != IGNORE_INDEX
-    denom = valid.sum()
-    if denom == 0:
+    total = m.size
+    if total == 0:
         return 0.0
 
     built = np.isin(m, list(BUILT_CLASSES)).sum()
-    return 100.0 * built / denom
+    return 100.0 * built / total
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--raw-root", required=True,
-                    help="Path to OpenEarthMap_wo_xBD")
-    ap.add_argument("--out-root", required=True,
-                    help="Output folder for stage-1 filtered OEM")
-    ap.add_argument("--threshold", type=float, default=50.0)
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Filter OEM tiles by built-environment dominance")
+    ap.add_argument("--raw-root", required=True, help="Path to raw OpenEarthMap root")
+    ap.add_argument("--out-root", required=True, help="Output folder for filtered OEM")
+    ap.add_argument("--threshold", type=float, default=50.0, help="Max % built environment allowed")
     ap.add_argument("--mode", choices=["symlink", "copy"], default="symlink")
+    ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()
 
     raw_root = Path(args.raw_root)
     out_root = Path(args.out_root)
+
+    img_out = out_root / "images"
+    msk_out = out_root / "masks"
+    img_out.mkdir(parents=True, exist_ok=True)
+    msk_out.mkdir(parents=True, exist_ok=True)
 
     kept = dropped = 0
 
@@ -50,7 +68,7 @@ def main():
         label_dir = region / "labels"
         image_dir = region / "images"
 
-        if not label_dir.exists():
+        if not label_dir.is_dir() or not image_dir.is_dir():
             continue
 
         for label_path in label_dir.glob("*.tif"):
@@ -63,27 +81,29 @@ def main():
             if not img_path.exists():
                 continue
 
-            (out_root / "images").mkdir(parents=True, exist_ok=True)
-            (out_root / "masks").mkdir(parents=True, exist_ok=True)
-
             stem = f"oem_{region.name}_{label_path.stem}"
+            dst_label = msk_out / f"{stem}.tif"
+            dst_img = img_out / f"{stem}.tif"
 
-            dst_label = out_root / "masks" / f"{stem}.tif"
-            dst_img   = out_root / "images" / f"{stem}.tif"
+            if dst_label.exists() and not args.overwrite:
+                continue
 
             if args.mode == "symlink":
-                dst_label.symlink_to(label_path)
-                dst_img.symlink_to(img_path)
+                if not dst_label.exists():
+                    dst_label.symlink_to(label_path.resolve())
+                if not dst_img.exists():
+                    dst_img.symlink_to(img_path.resolve())
             else:
                 shutil.copy2(label_path, dst_label)
                 shutil.copy2(img_path, dst_img)
 
             kept += 1
 
-    print("\n[OEM Stage 1]")
-    print(f"Threshold: {args.threshold}% built environment")
-    print(f"Kept: {kept}")
-    print(f"Dropped: {dropped}")
+    print("\n[filter_oem_rural]")
+    print(f"  threshold: {args.threshold}% built environment")
+    print(f"  kept:      {kept}")
+    print(f"  dropped:   {dropped}")
+    print(f"  output:   {out_root.resolve()}")
 
 
 if __name__ == "__main__":

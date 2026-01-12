@@ -1,4 +1,22 @@
 #!/usr/bin/env python3
+
+"""
+Split biodiversity images and masks into train/val/test sets.
+
+Expects:
+  in-root/
+    images/
+    masks/
+
+Creates:
+  out-root/
+    train/images, train/masks
+    val/images,   val/masks
+    test/images,  test/masks
+
+Pairs images and masks by filename stem and performs a reproducible
+random split. Files can be copied or symlinked.
+"""
 from __future__ import annotations
 
 import argparse

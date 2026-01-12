@@ -1,10 +1,11 @@
 """
-Knowledge Distillation Training Script (KD).
-Used for Stage 6 (final consolidation).
+Knowledge Distillation (KD) training script.
 
-- Student: FT-UNetFormer
-- Teacher: frozen external model
-- Dataset + sampling fully defined in config
+Trains a student segmentation model using:
+- Ground-truth labels
+- A frozen teacher model (logits supervision)
+
+Everything (models, loaders, losses, optimizer, scheduler) is defined in the config.
 """
 
 import os
@@ -25,7 +26,7 @@ from geoseg.utils.metric import Evaluator
 
 
 # ---------------------------------------------------------------------
-# Reproducibility (fair ablation)
+# Reproducibility
 # ---------------------------------------------------------------------
 def seed_worker(worker_id: int):
     worker_seed = torch.initial_seed() % 2**32
@@ -45,19 +46,10 @@ def seed_everything(seed: int = 42):
     torch.backends.cudnn.benchmark = False
 
 
-# ---------------------------------------------------------------------
-# Args
-# ---------------------------------------------------------------------
 def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c",
-        "--config_path",
-        type=Path,
-        required=True,
-        help="Path to KD config file",
-    )
-    return parser.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("-c", "--config_path", type=Path, required=True, help="Path to KD config file")
+    return p.parse_args()
 
 
 # ---------------------------------------------------------------------
@@ -68,7 +60,6 @@ class KDTrain(pl.LightningModule):
         super().__init__()
         self.config = config
 
-        # Required objects from config
         self.net = config.net
         self.teacher = config.teacher
         self.loss = config.loss
@@ -79,79 +70,54 @@ class KDTrain(pl.LightningModule):
         for p in self.teacher.parameters():
             p.requires_grad = False
 
-        ignore_index = getattr(config, "ignore_index", 255)
-
-        self.train_evaluator = Evaluator(
-            num_class=len(self.classes), ignore_index=ignore_index
-        )
-        self.val_evaluator = Evaluator(
-            num_class=len(self.classes), ignore_index=ignore_index
-        )
-
-        self.training_step_outputs = []
-        self.validation_step_outputs = []
+        ignore_index = getattr(config, "ignore_index", None)
+        self.train_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
+        self.val_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
 
     def forward(self, x):
         return self.net(x)
 
+    def on_fit_start(self):
+        # Ensure teacher is on same device as student
+        self.teacher.to(self.device)
+        self.teacher.eval()
+
     # ---------------- TRAIN ----------------
     def on_train_epoch_start(self):
         self.train_evaluator.reset()
-        self.training_step_outputs = []
 
     def training_step(self, batch, batch_idx):
         img = batch["img"]
         mask = batch["gt_semantic_seg"]
 
         student_logits = self(img)
-
         with torch.no_grad():
             teacher_logits = self.teacher(img)
 
         loss = self.loss(student_logits, mask, teacher_logits)
-
         pred = torch.argmax(student_logits, dim=1)
 
-        self.training_step_outputs.append(
-            {
-                "loss": loss,
-                "pred": pred.detach().cpu().numpy(),
-                "target": mask.detach().cpu().numpy(),
-            }
-        )
+        # Update metrics per-batch (no caching)
+        self.train_evaluator.add_batch(mask.detach().cpu().numpy(), pred.detach().cpu().numpy())
 
-        self.log(
-            "train_loss",
-            loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            batch_size=img.size(0),
-        )
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=img.size(0))
         return loss
 
     def on_train_epoch_end(self):
-        for o in self.training_step_outputs:
-            self.train_evaluator.add_batch(o["target"], o["pred"])
+        iou = self.train_evaluator.Intersection_over_Union()
+        f1 = self.train_evaluator.F1()
+        oa = self.train_evaluator.OA()
 
-        IoU = self.train_evaluator.Intersection_over_Union()
-        F1 = self.train_evaluator.F1()
-        OA = self.train_evaluator.OA()
+        self.log("train_mIoU", np.nanmean(iou), prog_bar=True)
+        self.log("train_F1", np.nanmean(f1), prog_bar=True)
+        self.log("train_OA", oa, prog_bar=True)
 
-        self.log("train_mIoU", np.nanmean(IoU), prog_bar=True)
-        self.log("train_F1", np.nanmean(F1), prog_bar=True)
-        self.log("train_OA", OA, prog_bar=True)
-
-        print("\ntrain:",
-              {"mIoU": np.nanmean(IoU), "F1": np.nanmean(F1), "OA": OA})
-        print({self.classes[i]: IoU[i] for i in range(len(self.classes))})
-
-        self.training_step_outputs.clear()
+        print("\ntrain:", {"mIoU": np.nanmean(iou), "F1": np.nanmean(f1), "OA": oa})
+        print({self.classes[i]: iou[i] for i in range(len(self.classes))})
 
     # ---------------- VAL ----------------
     def on_validation_epoch_start(self):
         self.val_evaluator.reset()
-        self.validation_step_outputs = []
 
     def validation_step(self, batch, batch_idx):
         img = batch["img"]
@@ -164,40 +130,22 @@ class KDTrain(pl.LightningModule):
         loss = self.loss(student_logits, mask, teacher_logits)
         pred = torch.argmax(student_logits, dim=1)
 
-        self.validation_step_outputs.append(
-            {
-                "loss": loss,
-                "pred": pred.detach().cpu().numpy(),
-                "target": mask.detach().cpu().numpy(),
-            }
-        )
+        self.val_evaluator.add_batch(mask.detach().cpu().numpy(), pred.detach().cpu().numpy())
 
-        self.log(
-            "val_loss",
-            loss,
-            on_epoch=True,
-            prog_bar=True,
-            batch_size=img.size(0),
-        )
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True, batch_size=img.size(0))
         return loss
 
     def on_validation_epoch_end(self):
-        for o in self.validation_step_outputs:
-            self.val_evaluator.add_batch(o["target"], o["pred"])
+        iou = self.val_evaluator.Intersection_over_Union()
+        f1 = self.val_evaluator.F1()
+        oa = self.val_evaluator.OA()
 
-        IoU = self.val_evaluator.Intersection_over_Union()
-        F1 = self.val_evaluator.F1()
-        OA = self.val_evaluator.OA()
+        self.log("val_mIoU", np.nanmean(iou), prog_bar=True)
+        self.log("val_F1", np.nanmean(f1), prog_bar=True)
+        self.log("val_OA", oa, prog_bar=True)
 
-        self.log("val_mIoU", np.nanmean(IoU), prog_bar=True)
-        self.log("val_F1", np.nanmean(F1), prog_bar=True)
-        self.log("val_OA", OA, prog_bar=True)
-
-        print("\nval:",
-              {"mIoU": np.nanmean(IoU), "F1": np.nanmean(F1), "OA": OA})
-        print({self.classes[i]: IoU[i] for i in range(len(self.classes))})
-
-        self.validation_step_outputs.clear()
+        print("\nval:", {"mIoU": np.nanmean(iou), "F1": np.nanmean(f1), "OA": oa})
+        print({self.classes[i]: iou[i] for i in range(len(self.classes))})
 
     def configure_optimizers(self):
         return [self.config.optimizer], [self.config.lr_scheduler]
@@ -208,16 +156,17 @@ class KDTrain(pl.LightningModule):
 # ---------------------------------------------------------------------
 def _load_student_weights_from_pl_ckpt(model: nn.Module, ckpt_path: str):
     ckpt = torch.load(ckpt_path, map_location="cpu")
-    if "state_dict" not in ckpt:
-        raise ValueError("Checkpoint missing state_dict")
+    if not isinstance(ckpt, dict) or "state_dict" not in ckpt:
+        raise ValueError(f"Checkpoint does not look like a Lightning .ckpt: {ckpt_path}")
 
-    sd = {
-        k.replace("net.", ""): v
-        for k, v in ckpt["state_dict"].items()
-        if k.startswith("net.")
-    }
+    state_dict = ckpt["state_dict"]
 
-    missing, unexpected = model.load_state_dict(sd, strict=False)
+    # Prefer "net.*" (LightningModule style), else fall back to direct keys.
+    net_sd = {k.replace("net.", "", 1): v for k, v in state_dict.items() if k.startswith("net.")}
+    if not net_sd:
+        net_sd = state_dict
+
+    missing, unexpected = model.load_state_dict(net_sd, strict=False)
     print("Loaded student weights.")
     if missing:
         print("Missing (non-fatal):", missing[:10])
@@ -236,22 +185,20 @@ def main():
     pl.seed_everything(42, workers=True)
 
     g = torch.Generator().manual_seed(42)
-    if hasattr(config, "train_loader"):
+    if hasattr(config, "train_loader") and config.train_loader is not None:
         config.train_loader.worker_init_fn = seed_worker
         config.train_loader.generator = g
-    if hasattr(config, "val_loader"):
+    if hasattr(config, "val_loader") and config.val_loader is not None:
         config.val_loader.worker_init_fn = seed_worker
         config.val_loader.generator = g
 
     model = KDTrain(config)
 
     if getattr(config, "pretrained_ckpt_path", None):
-        print(f"Loading student weights from {config.pretrained_ckpt_path}")
-        _load_student_weights_from_pl_ckpt(
-            model.net, config.pretrained_ckpt_path
-        )
+        print(f"Loading student weights from: {config.pretrained_ckpt_path}")
+        _load_student_weights_from_pl_ckpt(model.net, config.pretrained_ckpt_path)
 
-    checkpoint_callback = ModelCheckpoint(
+    checkpoint_cb = ModelCheckpoint(
         dirpath=config.weights_path,
         filename=config.weights_name,
         monitor=config.monitor,
@@ -264,7 +211,7 @@ def main():
         max_epochs=config.max_epoch,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1 if torch.cuda.is_available() else None,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_cb],
         logger=[
             CSVLogger("lightning_logs", name=config.log_name),
             TensorBoardLogger("lightning_logs", name=config.log_name),

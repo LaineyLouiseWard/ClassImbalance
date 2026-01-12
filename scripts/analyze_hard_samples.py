@@ -7,26 +7,18 @@ Uses:
 - The Train_rep split (images/*.tif, masks/*.png)
 
 Writes:
-- artifacts/sample_weights.txt  (tab-separated: img_id <TAB> weight)
-  IMPORTANT: the line order matches the dataset ordering, so the weights list
-  aligns with train_dataset indexing.
+- artifacts/sample_weights.txt (tab-separated: img_id <TAB> weight)
 
-No KD / teacher models.
+Note:
+- Weight file order matches the dataset iteration order used here.
+- For biodiversity we treat label 0 as ignore_index (background/void) when scoring difficulty.
+  (This should match the training convention.)
 """
 
 from __future__ import annotations
 
-# --- make sure repo root is importable so `import geoseg` works ---
-import os
-import sys
-from pathlib import Path
-
-_THIS_FILE = Path(__file__).resolve()
-REPO_ROOT = _THIS_FILE.parents[1]  # .../ClassImbalance
-sys.path.insert(0, str(REPO_ROOT))
-# ---------------------------------------------------------------
-
 import argparse
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -38,6 +30,7 @@ from geoseg.datasets.biodiversity_dataset import BiodiversityTrainDataset, val_a
 
 
 def load_net_from_lightning_ckpt(net: torch.nn.Module, ckpt_path: Path) -> torch.nn.Module:
+    """Load the underlying segmentation network weights from a Lightning .ckpt."""
     ckpt = torch.load(str(ckpt_path), map_location="cpu")
     if not isinstance(ckpt, dict) or "state_dict" not in ckpt:
         raise ValueError(f"Checkpoint does not look like a Lightning .ckpt (missing state_dict): {ckpt_path}")
@@ -45,23 +38,13 @@ def load_net_from_lightning_ckpt(net: torch.nn.Module, ckpt_path: Path) -> torch
     sd = ckpt["state_dict"]
 
     # train_supervision.py saves the LightningModule where the actual network is under "net."
-    # So keys look like "net.backbone...."
-    net_sd = {}
-    for k, v in sd.items():
-        if k.startswith("net."):
-            net_sd[k.replace("net.", "", 1)] = v
+    net_sd = {k.replace("net.", "", 1): v for k, v in sd.items() if k.startswith("net.")}
+    if not net_sd:
+        # fallback for checkpoints saved with "model."
+        net_sd = {k.replace("model.", "", 1): v for k, v in sd.items() if k.startswith("model.")}
 
     if not net_sd:
-        # fallback: sometimes people save directly, or with "model."
-        for k, v in sd.items():
-            if k.startswith("model."):
-                net_sd[k.replace("model.", "", 1)] = v
-
-    if not net_sd:
-        raise ValueError(
-            "Could not find model weights under 'net.' or 'model.' in state_dict. "
-            "Open the ckpt and inspect keys."
-        )
+        raise ValueError("Could not find model weights under 'net.' or 'model.' in state_dict.")
 
     missing, unexpected = net.load_state_dict(net_sd, strict=False)
     if missing:
@@ -77,7 +60,7 @@ def main() -> None:
     ap.add_argument(
         "--ckpt",
         type=str,
-        default="model_weights/stage2_replication_ftunetformer/stage2_replication_ftunetformer.ckpt",
+        default="model_weights/stage2_replication_ftunetformer.ckpt",
         help="Stage 2 Lightning checkpoint (.ckpt) used to define difficulty",
     )
     ap.add_argument(
@@ -99,6 +82,12 @@ def main() -> None:
         default=4.0,
         help="Weight scaling. Final weights are in [1, 1+alpha] after normalization.",
     )
+    ap.add_argument(
+        "--ignore-index",
+        type=int,
+        default=0,
+        help="Label value to ignore when scoring difficulty (biodiversity: 0).",
+    )
     args = ap.parse_args()
 
     ckpt_path = Path(args.ckpt)
@@ -112,7 +101,7 @@ def main() -> None:
 
     device = torch.device(args.device if (args.device == "cpu" or torch.cuda.is_available()) else "cpu")
 
-    # Build dataset in a deterministic order, no mosaic, no random crop
+    # Deterministic order, no mosaic, no random crop.
     ds = BiodiversityTrainDataset(
         data_root=str(data_root),
         img_dir="images",
@@ -120,10 +109,9 @@ def main() -> None:
         img_suffix=".tif",
         mask_suffix=".png",
         mosaic_ratio=0.0,
-        transform=val_aug,  # just normalize; no random cropping
+        transform=val_aug,  # normalize only; no random cropping
     )
 
-    # Build Stage 2 architecture
     net = ft_unetformer(num_classes=6, decoder_channels=256)
     net = load_net_from_lightning_ckpt(net, ckpt_path)
     net.to(device).eval()
@@ -132,11 +120,12 @@ def main() -> None:
     img_ids: list[str] = []
 
     print("[analyze_hard_samples]")
-    print(f"  ckpt:     {ckpt_path.resolve()}")
-    print(f"  data:     {data_root.resolve()}")
-    print(f"  samples:  {len(ds)}")
-    print(f"  device:   {device}")
-    print(f"  out:      {out_path.resolve()}")
+    print(f"  ckpt:        {ckpt_path.resolve()}")
+    print(f"  data:        {data_root.resolve()}")
+    print(f"  samples:     {len(ds)}")
+    print(f"  device:      {device}")
+    print(f"  ignore_index:{args.ignore_index}")
+    print(f"  out:         {out_path.resolve()}")
 
     with torch.no_grad():
         for i in tqdm(range(len(ds)), desc="Scoring difficulty"):
@@ -148,19 +137,17 @@ def main() -> None:
 
             logits = net(img)  # (1,num_classes,H,W)
 
-            # Cross-entropy difficulty (stable + monotonic)
-            # ignore_index=255 is safe even if masks are 0..5 (it will just never apply)
-            loss = F.cross_entropy(logits, mask.long(), ignore_index=255, reduction="mean")
+            loss = F.cross_entropy(
+                logits,
+                mask.long(),
+                ignore_index=args.ignore_index,
+                reduction="mean",
+            )
             losses[i] = float(loss.item())
 
-    # Normalize losses -> weights in [1, 1+alpha]
     lo = float(losses.min())
     hi = float(losses.max())
-    if hi > lo:
-        norm = (losses - lo) / (hi - lo)
-    else:
-        norm = np.zeros_like(losses)
-
+    norm = (losses - lo) / (hi - lo) if hi > lo else np.zeros_like(losses)
     weights = 1.0 + float(args.alpha) * norm
 
     out_path.parent.mkdir(parents=True, exist_ok=True)

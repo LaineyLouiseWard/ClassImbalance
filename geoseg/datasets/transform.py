@@ -16,10 +16,6 @@ import random
 from PIL import Image, ImageOps, ImageEnhance
 import numpy as np
 
-from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
-from scipy.ndimage import maximum_filter
-
-
 class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms

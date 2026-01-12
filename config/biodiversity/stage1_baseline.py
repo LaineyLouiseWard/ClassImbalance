@@ -1,3 +1,8 @@
+"""
+Stage 1 (baseline): supervised training on biodiversity_split with random crops/augs.
+Saves Lightning checkpoints under weights_path, monitored by val_F1.
+"""
+
 from torch.utils.data import DataLoader
 import torch
 
@@ -7,6 +12,7 @@ from geoseg.datasets.biodiversity_dataset import (
     train_aug_random,
     val_aug,
     BiodiversityTiffTrainDataset,
+    BiodiversityTiffValDataset,
     BiodiversityTiffTestDataset,
 )
 from geoseg.models.ftunetformer import ft_unetformer
@@ -17,7 +23,9 @@ from geoseg.utils.optim import Lookahead, process_model_params
 # Training hyperparams
 # -----------------------
 max_epoch = 45
-ignore_index = 255
+
+# Loss/metric ignore label (you confirmed: background=0 should be ignored)
+ignore_index = 0
 
 train_batch_size = 4
 val_batch_size = 4
@@ -29,6 +37,7 @@ backbone_weight_decay = 2.5e-4
 
 num_classes = 6
 classes = CLASSES
+
 
 # -----------------------
 # Logging / checkpoints
@@ -50,10 +59,10 @@ resume_ckpt_path = None
 
 
 # -----------------------
-# Model (NO PRETRAIN)
+# Model (no pretrain)
 # -----------------------
 net = ft_unetformer(
-    pretrained=False,           # IMPORTANT: avoids looking for pretrain_weights/stseg_base.pth
+    pretrained=False,
     weight_path=None,
     num_classes=num_classes,
     decoder_channels=256,
@@ -70,33 +79,20 @@ use_aux_loss = False
 
 
 # -----------------------
-# Datasets (your split)
+# Datasets
 # -----------------------
 train_dataset = BiodiversityTiffTrainDataset(
     data_root="data/biodiversity_split/train",
-    img_dir="images",
-    mask_dir="masks",
-    img_suffix=".tif",
-    mask_suffix=".png",
-    mosaic_ratio=0.25,
     transform=train_aug_random,
 )
 
-val_dataset = BiodiversityTiffTrainDataset(
+val_dataset = BiodiversityTiffValDataset(
     data_root="data/biodiversity_split/val",
-    img_dir="images",
-    mask_dir="masks",
-    img_suffix=".tif",
-    mask_suffix=".png",
-    mosaic_ratio=0.0,
     transform=val_aug,
 )
 
-# If your test split has no masks (recommended), this is correct:
 test_dataset = BiodiversityTiffTestDataset(
     data_root="data/biodiversity_split/test",
-    img_dir="images",
-    img_suffix=".tif",
 )
 
 
