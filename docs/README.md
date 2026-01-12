@@ -149,7 +149,7 @@ data/
 ### Core Training Files
 - **`train_supervision.py`**: Main training script using PyTorch Lightning
 - **`config/biodiversity/*.py`**: Configuration files for different models (unetformer.py, ftunetformer.py, dcswin.py)
-- **`config/biodiversity_tiff/*.py`**: Configuration files for GeoTIFF datasets
+- **`config/biodiversity/*.py`**: Configuration files for GeoTIFF datasets
 
 ### Model Architectures
 - **`geoseg/models/UNetFormer.py`**: UNetFormer architecture with ResNet18 backbone
@@ -158,7 +158,7 @@ data/
 
 ### Dataset Handlers
 - **`geoseg/datasets/biodiversity_dataset.py`**: Dataset loader for PNG images
-- **`geoseg/datasets/biodiversity_tiff_dataset.py`**: Dataset loader for GeoTIFF files with proper geospatial handling
+- **`geoseg/datasets/biodiversity_dataset.py`**: Dataset loader for GeoTIFF files with proper geospatial handling
 - **`geoseg/datasets/transform.py`**: Custom augmentation transforms
 
 ### Loss Functions
@@ -181,8 +181,8 @@ data/
 - **`tools/metric.py`**: Evaluation metrics (IoU, F1, OA, Precision, Recall)
 - **`tools/convert_biodiversity_masks.py`**: Convert masks to proper class indices
 - **`data_diagnostics.py`**: Dataset validation and diagnostics
-- **`evaluation/model_metrics.py`**: Generate comprehensive evaluation reports with visualizations
-- **`evaluation/process_metrics.py`**: Process and rank model performance across experiments
+- **`evaluation/compute_metrics.py`**: Generate comprehensive evaluation reports with visualizations
+- **`evaluation/aggregate_metrics.py`**: Process and rank model performance across experiments
 
 ## Usage
 
@@ -194,7 +194,7 @@ data/
 python train_supervision.py -c config/biodiversity/unetformer.py
 
 # Train FTUNetFormer on GeoTIFF dataset
-python train_supervision.py -c config/biodiversity_tiff/ftunetformer.py
+python train_supervision.py -c config/biodiversity/ftunetformer.py
 
 # Train DCSwin
 python train_supervision.py -c config/biodiversity/dcswin.py
@@ -228,7 +228,7 @@ python outputs/biodiversity_test_direct.py \
 #### GeoTIFF Inference
 ```bash
 python outputs/biodiversity_tiff_test_direct.py \
-    -c config/biodiversity_tiff/unetformer.py \
+    -c config/biodiversity/unetformer.py \
     -w model_weights/biodiversity_tiff/best_model.ckpt \
     -i data/Biodiversity_tiff/Test/images \
     -o predictions/output \
@@ -273,7 +273,7 @@ model_weights/biodiversity/
 #### Generate Evaluation Reports
 ```bash
 # Evaluate all models in a directory
-python evaluation/model_metrics.py
+python evaluation/compute_metrics.py
 
 # This generates for each model:
 # - confusion_matrix.png
@@ -285,7 +285,7 @@ python evaluation/model_metrics.py
 #### Process and Rank Results
 ```bash
 # Extract and rank metrics from all experiments
-python evaluation/process_metrics.py
+python evaluation/aggregate_metrics.py
 
 # Generates:
 # - miou_scores.json

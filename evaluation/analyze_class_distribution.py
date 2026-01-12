@@ -6,8 +6,8 @@ This estimates the distribution under stochastic sampling/augmentation by drawin
 from config.train_dataset and config.val_dataset (default N=200).
 
 Usage:
-  python analyze_data_distribution.py --config config/biodiversity_tiff/stage1_baseline.py
-  python analyze_data_distribution.py --config config/biodiversity_tiff/stage4_minority.py --n-samples 200 --seed 0
+  python analyze_class_distribution.py --config config/biodiversity/stage1_baseline.py
+  python analyze_class_distribution.py --config config/biodiversity/stage4_minority.py --n-samples 200 --seed 0
 """
 
 import argparse

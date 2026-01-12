@@ -10,7 +10,7 @@ import torch
 
 from geoseg.losses import *
 from geoseg.datasets.biodiversity_dataset import *  # CLASSES, val_aug, train_aug_minority
-from geoseg.models.FTUNetFormer import ft_unetformer
+from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.utils.utils import Lookahead, process_model_params
 
 max_epoch = 45

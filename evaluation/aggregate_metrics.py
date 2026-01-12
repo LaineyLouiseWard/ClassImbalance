@@ -7,14 +7,14 @@ def main():
     import argparse
 
     ap = argparse.ArgumentParser(description="Aggregate metrics.json files from evaluation_results/")
-    ap.add_argument("--eval-root", type=str, default="evaluation_results", help="Folder created by model_metrics.py")
+    ap.add_argument("--eval-root", type=str, default="evaluation_results", help="Folder created by compute_metrics.py")
     ap.add_argument("--out-file", type=str, default="evaluation_results/metrics_summary.txt", help="Output summary text")
     args = ap.parse_args()
 
     eval_root = Path(args.eval_root)
     metrics_files = sorted(eval_root.rglob("metrics.json"))
     if not metrics_files:
-        raise FileNotFoundError(f"No metrics.json files found under {eval_root}. Run model_metrics.py first.")
+        raise FileNotFoundError(f"No metrics.json files found under {eval_root}. Run compute_metrics.py first.")
 
     rows = []
     for mf in metrics_files:

@@ -33,7 +33,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from geoseg.models.FTUNetFormer import ft_unetformer
+from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.datasets.biodiversity_dataset import BiodiversityTrainDataset, val_aug
 
 

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 import torch
 
 from geoseg.losses import *
-from geoseg.models.teacher_unet import TeacherUNet
+from geoseg.models.unet import TeacherUNet
 from geoseg.utils.utils import Lookahead
 
 from geoseg.datasets.openearthmap_teacher_dataset import (

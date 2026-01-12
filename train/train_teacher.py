@@ -3,7 +3,7 @@ Train the OEM teacher model (EfficientNet-B4 U-Net) and save a .pth checkpoint
 compatible with TeacherUNet.load_checkpoint().
 
 Run:
-  python train_teacher.py -c config/openearthmap_teacher/teacher_unet_oem.py
+  python train_teacher.py -c config/teacher/unet_oem.py
 """
 
 import os
