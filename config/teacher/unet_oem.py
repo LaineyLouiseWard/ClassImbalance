@@ -13,7 +13,7 @@ from geoseg.losses import *
 from geoseg.models.unet import TeacherUNet
 from geoseg.utils.utils import Lookahead
 
-from geoseg.datasets.openearthmap_teacher_dataset import (
+from geoseg.datasets.openearthmap_dataset import (
     OEM_CLASSES_9,
     OpenEarthMapTeacherTrainDataset,
     OpenEarthMapTeacherValDataset,

@@ -15,7 +15,7 @@ from geoseg.datasets.biodiversity_dataset import (
     val_aug,
     BiodiversityTiffTrainDataset,
 )
-from geoseg.datasets.biodiversity_oem_combined_dataset import BiodiversityCombinedTiffTrainDataset
+from geoseg.datasets.biodiversity_oem_dataset import BiodiversityCombinedTiffTrainDataset
 from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.utils.utils import Lookahead, process_model_params
 

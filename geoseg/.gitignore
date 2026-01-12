@@ -1,9 +1,9 @@
+########################
 # Python
+########################
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyc
-*.pyo
 *.so
 .Python
 build/
@@ -23,7 +23,9 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environment
+########################
+# Virtual Environments
+########################
 venv/
 env/
 ENV/
@@ -31,25 +33,31 @@ env.bak/
 venv.bak/
 .conda/
 
-# IDEs
+########################
+# IDEs / OS
+########################
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+Thumbs.db
+desktop.ini
 
-# Jupyter Notebook
-.ipynb_checkpoints
-# Allow specific notebooks if needed (uncomment to allow .ipynb files)
-# !important_notebook.ipynb
+########################
+# Jupyter
+########################
+.ipynb_checkpoints/
 
-# DATA - All data directories and files
+########################
+# DATA (raw + processed)
+########################
 data/
 Data/
 DATA/
 dataset/
-datasets/
+datasets/              # generic datasets folder (not code)
 Biodiversity_tiff/
 biodiversity/
 biodiversity_combined/
@@ -68,7 +76,9 @@ biodiversity_combined/
 *.hdf5
 *.zip
 
-# MODEL WEIGHTS - All checkpoint and model files
+########################
+# MODEL WEIGHTS
+########################
 model_weights/
 pretrain_weights/
 checkpoints/
@@ -79,7 +89,9 @@ checkpoints/
 *.weights
 *.safetensors
 
-# Training outputs
+########################
+# TRAINING OUTPUTS
+########################
 lightning_logs/
 logs/
 outputs/
@@ -91,18 +103,20 @@ per_class_metrics_comparison/
 more_data/
 nohup.out
 
-# Backups
+########################
+# TEMP / BACKUPS
+########################
 *_backup/
 *_original_backup/
 backup*/
 *.bak
-
-# Temporary files
 tmp/
 temp/
 *.tmp
 
-# Large analysis files
+########################
+# LARGE / GENERATED ANALYSIS
+########################
 *.parquet
 *.feather
 hard_samples_analysis.json
@@ -110,15 +124,22 @@ sample_weights.txt
 diagnostics*.csv
 *.log
 
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
+########################
+# ALLOW CODE UNDER geoseg/
+########################
+!geoseg/
+!geoseg/**/
+geoseg/**/__pycache__/
+geoseg/**/*.pyc
 
-# Keep only structure (allow empty directories with .gitkeep)
+########################
+# Keep only structure helpers
+########################
 !.gitkeep
 
-# Allow important text files back in
+########################
+# Explicitly tracked text files
+########################
 !requirements.txt
 !README.md
 !LICENSE
