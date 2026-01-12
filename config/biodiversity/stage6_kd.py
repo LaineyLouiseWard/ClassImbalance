@@ -4,7 +4,7 @@ Stage 6: Final KD consolidation stage (cumulative).
 Target: Biodiversity TIFF only (your split)
 Cumulative components kept ON:
 - replication (train_rep split)
-- difficulty-weighted sampling (scripts/sample_weights.txt)
+- difficulty-weighted sampling (artifacts/sample_weights.txt)
 - minority-aware cropping (train_aug_minority)
 PLUS:
 - knowledge distillation (teacher -> student)
@@ -158,7 +158,7 @@ test_dataset = BiodiversityTiffTestDataset(
 # Difficulty weights (same file as Stage 3/5B)
 # ======================
 repo_root = Path(__file__).resolve().parents[2]
-sample_weights_path = repo_root / "scripts" / "sample_weights.txt"
+sample_weights_path = repo_root / "artifacts" / "sample_weights.txt"
 
 sample_weights = []
 with open(sample_weights_path, "r", encoding="utf-8") as f:
@@ -171,7 +171,7 @@ print(f"Loaded {len(sample_weights)} sample weights from {sample_weights_path}")
 if len(sample_weights) != len(train_dataset):
     raise ValueError(
         f"sample_weights length ({len(sample_weights)}) != train_dataset length ({len(train_dataset)}). "
-        "Regenerate sample_weights.txt using the SAME train_rep split."
+        "Regenerate artifacts/sample_weights.txt using the SAME train_rep split."
     )
 
 sampler = WeightedRandomSampler(

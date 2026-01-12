@@ -72,7 +72,7 @@ test_dataset = BiodiversityTiffTestDataset(
 
 # expects repo-root sample_weights.txt
 repo_root = Path(__file__).resolve().parents[2]  # geoseg/
-sample_weights_path = repo_root / "scripts" / "sample_weights.txt"
+sample_weights_path = repo_root / "artifacts" / "sample_weights.txt"
 
 sample_weights = []
 with open(sample_weights_path, "r") as f:

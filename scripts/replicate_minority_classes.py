@@ -119,7 +119,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", default="data/biodiversity_split/train")
     ap.add_argument("--out-root", default="data/biodiversity_split/train_rep")
-    ap.add_argument("--augmentation-list", default="train_augmentation_list.json")
+    ap.add_argument("--augmentation-list", default="artifacts/train_augmentation_list.json")
     ap.add_argument("--replications", type=int, default=1)
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()

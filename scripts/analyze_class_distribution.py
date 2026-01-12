@@ -158,7 +158,7 @@ def main() -> None:
     parser.add_argument(
         "--out",
         type=str,
-        default="train_augmentation_list.json",
+        default="artifacts/train_augmentation_list.json",
         help="Output JSON file",
     )
     parser.add_argument(

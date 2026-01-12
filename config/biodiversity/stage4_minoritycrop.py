@@ -71,7 +71,7 @@ test_dataset = BiodiversityTiffTestDataset(
 
 # difficulty weights from Stage 2
 repo_root = Path(__file__).resolve().parents[2]
-sample_weights_path = repo_root / "scripts" / "sample_weights.txt"
+sample_weights_path = repo_root / "artifacts" / "sample_weights.txt"
 
 sample_weights = []
 with open(sample_weights_path, "r") as f:

@@ -135,7 +135,7 @@ def get_args():
     p = argparse.ArgumentParser()
     p.add_argument("--config", required=True, help="Config used to build the dataset (stage2 recommended).")
     p.add_argument("--ckpt", required=True, help="Baseline student checkpoint (.ckpt) used to score difficulty.")
-    p.add_argument("--out_dir", default=".", help="Where to write sample_weights.txt")
+    p.add_argument("--out_dir", default="artifacts", help="Where to write sample_weights.txt")
     return p.parse_args()
 
 

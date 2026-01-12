@@ -7,7 +7,7 @@ Uses:
 - The Train_rep split (images/*.tif, masks/*.png)
 
 Writes:
-- scripts/sample_weights.txt  (tab-separated: img_id <TAB> weight)
+- artifacts/sample_weights.txt  (tab-separated: img_id <TAB> weight)
   IMPORTANT: the line order matches the dataset ordering, so the weights list
   aligns with train_dataset indexing.
 
@@ -89,7 +89,7 @@ def main() -> None:
     ap.add_argument(
         "--out",
         type=str,
-        default="scripts/sample_weights.txt",
+        default="artifacts/sample_weights.txt",
         help="Output weights file (tab-separated: img_id\\tweight)",
     )
     ap.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
