@@ -2,7 +2,7 @@
 Export TeacherUNet weights from a Lightning .ckpt to a plain .pth state_dict.
 
 Usage:
-  python scripts/export_teacher_pth.py \
+  python scripts/export_teacher_checkpoint.py \
     --ckpt model_weights/teacher/teacher_oem_effb4_unet/teacher_oem_effb4_unet.ckpt \
     --out  pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
 """

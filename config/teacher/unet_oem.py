@@ -1,7 +1,7 @@
 """
 Teacher training: EfficientNet-B4 U-Net on OpenEarthMap (native taxonomy 0..8).
 
-- Uses your openearthmap_teacher split created by prepare_openearthmap_teacher.py
+- Uses your openearthmap_teacher split created by prepare_oem_teacher_data.py
 - Uses SAME TIFF->RGB conversion as Biodiversity (_read_tif_as_rgb_uint8)
 - Output checkpoint: pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
 """

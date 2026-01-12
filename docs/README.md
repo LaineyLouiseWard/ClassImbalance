@@ -44,20 +44,20 @@ This removes any pre-existing train/validation split.
 Randomly split the pooled Biodiversity dataset:
 
 ```bash
-python scripts/split_biodiversity_pool.py
+python scripts/split_biodiversity_dataset.py
 data/biodiversity_split/
 ├── train/
 ├── val/
 └── test/
 
 
-python scripts/filter_oem_stage1.py \
+python scripts/filter_oem_rural.py \
   --raw-root data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD \
   --out-root data/openearthmap_filtered \
   --threshold 50 \
   --mode symlink
 
-python scripts/oem_relabel_stage2.py \
+python scripts/relabel_oem_taxonomy.py \
   --in-root data/openearthmap_filtered \
   --out-root data/openearthmap_relabelled \
   --mode symlink \
@@ -179,7 +179,7 @@ data/
 
 ### Utilities
 - **`tools/metric.py`**: Evaluation metrics (IoU, F1, OA, Precision, Recall)
-- **`tools/biodiversity_mask_convert.py`**: Convert masks to proper class indices
+- **`tools/convert_biodiversity_masks.py`**: Convert masks to proper class indices
 - **`data_diagnostics.py`**: Dataset validation and diagnostics
 - **`evaluation/model_metrics.py`**: Generate comprehensive evaluation reports with visualizations
 - **`evaluation/process_metrics.py`**: Process and rank model performance across experiments
@@ -411,7 +411,7 @@ Pixels: 152384
 ## Tips and Best Practices
 
 1. **Data Preparation**: Use `data_diagnostics.py` to validate dataset integrity before training
-2. **Mask Conversion**: Run `tools/biodiversity_mask_convert.py` to ensure masks have correct class indices
+2. **Mask Conversion**: Run `tools/convert_biodiversity_masks.py` to ensure masks have correct class indices
 3. **Hyperparameter Tuning**: Start with smaller batch sizes (4-8) for memory-constrained GPUs
 4. **GeoTIFF Handling**: The tiff dataset classes handle normalization and band conversion automatically
 5. **Model Selection**: UNetFormer for speed, FTUNetFormer for accuracy, DCSwin for large-scale features

@@ -2,7 +2,7 @@
 """
 Analyze class distribution in training masks to identify which images to replicate/augment.
 
-OFFLINE dataset analysis tool (constructs a JSON list used by replicate_minority_classes.py).
+OFFLINE dataset analysis tool (constructs a JSON list used by replicate_minority_samples.py).
 
 Expected layout (your current one):
   data_root/
@@ -105,7 +105,7 @@ def save_augmentation_list(
 ) -> dict:
     """
     Save JSON with the image IDs that meet thresholds.
-    This format is what replicate_minority_classes.py expects.
+    This format is what replicate_minority_samples.py expects.
     """
     settlement_images = [
         item["img_id"] for item in results if item["settlement_pct"] >= threshold_settlement
