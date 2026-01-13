@@ -2,7 +2,7 @@
 
 This repository implements a **fully reproducible, stage-wise training pipeline** for 6-class land-cover semantic segmentation on a Biodiversity TIFF dataset, with explicit handling of class imbalance and optional knowledge distillation from an OpenEarthMap (OEM) teacher model.
 
-The methodology is structured as **incremental ablations**, where each stage adds exactly one component, enabling clean attribution of performance gains.
+The methodology is structured as **successive ablations**, where each stage adds exactly one component, enabling clean attribution of performance gains.
 
 ---
 
