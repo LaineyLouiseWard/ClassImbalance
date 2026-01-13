@@ -14,7 +14,12 @@ import torch
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", type=str, required=True)
+    ap.add_argument(
+    "--ckpt",
+    type=str,
+    default="model_weights/teacher/teacher.ckpt",
+    help="Teacher Lightning checkpoint (.ckpt)",
+    )
     ap.add_argument("--out", type=str, required=True)
     args = ap.parse_args()
 

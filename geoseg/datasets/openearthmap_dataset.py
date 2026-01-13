@@ -32,6 +32,23 @@ except Exception:  # pragma: no cover
     rasterio = None
 
 
+# -----------------------------------------------------------------------------
+# OEM taxonomy (native labels 0..8)
+# (names are used for logging only; labels are verified to be 0..8 in your data)
+# -----------------------------------------------------------------------------
+OEM_CLASSES_9 = (
+    "Class0",
+    "Class1",
+    "Class2",
+    "Class3",
+    "Class4",
+    "Class5",
+    "Class6",
+    "Class7",
+    "Class8",
+)
+
+
 def _train_tf():
     return albu.Compose(
         [

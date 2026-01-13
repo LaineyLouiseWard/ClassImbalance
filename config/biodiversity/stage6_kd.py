@@ -60,7 +60,7 @@ kd_temperature = 2.0
 kd_alpha = 0.3
 rangeland_split_alpha = 0.7
 
-teacher_checkpoint = "pretrain_weights/teacher.pth"
+teacher_checkpoint = "pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth"
 
 
 # ======================

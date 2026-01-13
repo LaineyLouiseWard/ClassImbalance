@@ -107,8 +107,9 @@ def print_top_images(results: List[dict], n: int = 20) -> None:
 def save_augmentation_list(
     results: List[dict],
     output_file: str,
-    threshold_settlement: float = 5.0,
-    threshold_seminatural: float = 5.0,
+    threshold_settlement: float,
+    threshold_seminatural: float,
+    overwrite: bool,
 ) -> dict:
     """Save JSON list of image IDs meeting target thresholds."""
     settlement_images = [
@@ -131,6 +132,12 @@ def save_augmentation_list(
 
     out_path = Path(output_file)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if out_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"{out_path} already exists. Use --overwrite to regenerate."
+        )
+
     out_path.write_text(json.dumps(augmentation_list, indent=2))
 
     print(f"\nSaved augmentation list to: {out_path.resolve()}")
@@ -141,7 +148,9 @@ def save_augmentation_list(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Analyze masks for target-class presence (offline).")
+    parser = argparse.ArgumentParser(
+        description="Analyze masks for target-class presence (offline)."
+    )
     parser.add_argument(
         "--data-root",
         type=str,
@@ -163,6 +172,11 @@ def main() -> None:
     )
     parser.add_argument("--threshold-settlement", type=float, default=5.0)
     parser.add_argument("--threshold-seminatural", type=float, default=5.0)
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite output JSON if it already exists.",
+    )
     args = parser.parse_args()
 
     print(f"Analyzing dataset: {args.data_root}/{args.mask_dir}")
@@ -176,6 +190,7 @@ def main() -> None:
         args.out,
         threshold_settlement=args.threshold_settlement,
         threshold_seminatural=args.threshold_seminatural,
+        overwrite=args.overwrite,
     )
 
 

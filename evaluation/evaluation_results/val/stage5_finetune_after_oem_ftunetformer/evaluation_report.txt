@@ -1,0 +1,18 @@
+=== Evaluation Report ===
+
+Checkpoint: /home/lainey/Documents/Github/ClassImbalance/model_weights/biodiversity/stage5_finetune_after_oem_ftunetformer/stage5_finetune_after_oem_ftunetformer.ckpt
+Split: val
+Data root: /home/lainey/Documents/Github/ClassImbalance/data/biodiversity_split/val
+Ignore index: 0
+
+Overall Accuracy (OA): 0.8132
+Mean IoU (excl. bg): 0.5381
+Mean F1 (excl. bg): 0.6843
+
+Per-class IoU:
+  Background: 0.0000
+  Forest land: 0.6216
+  Grassland: 0.7979
+  Cropland: 0.3941
+  Settlement: 0.5513
+  Seminatural Grassland: 0.3256

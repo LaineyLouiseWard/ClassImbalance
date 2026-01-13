@@ -28,17 +28,17 @@ from typing import Dict
 
 from scripts.convert_oem_masks import convert_oem_mask_tif_to_png
 
-
-# OEM 8-class taxonomy → target 6-class taxonomy
+# OEM 8-class IDs (1..8) -> Biodiversity 6-class IDs (0..5)
 OEM_ID_TO_TARGET6: Dict[int, int] = {
-    0: 0,  # bareland -> background
-    1: 2,  # rangeland -> grassland
-    2: 4,  # developed space -> settlement
-    3: 4,  # road -> settlement
-    4: 1,  # tree -> forest
-    5: 0,  # water -> background
-    6: 3,  # agriculture -> cropland
-    7: 4,  # building -> settlement
+    0: 0,  # (if any background/no-data appears)
+    1: 0,  # Bareland -> background
+    2: 2,  # Rangeland -> grassland
+    3: 4,  # Developed space -> settlement
+    4: 4,  # Road -> settlement
+    5: 1,  # Tree -> forest
+    6: 0,  # Water -> background
+    7: 3,  # Agriculture land -> cropland
+    8: 4,  # Building -> settlement
 }
 
 

@@ -1,0 +1,26 @@
+{
+  "checkpoint": "/home/lainey/Documents/Github/ClassImbalance/model_weights/biodiversity/stage2_replication_ftunetformer/stage2_replication_ftunetformer.ckpt",
+  "split": "val",
+  "data_root": "/home/lainey/Documents/Github/ClassImbalance/data/biodiversity_split/val",
+  "date": "2026-01-13T01:25:59",
+  "ignore_index": 0,
+  "OA": 0.8169060765978116,
+  "mIoU_excluding_bg": 0.5022044243738067,
+  "mF1_excluding_bg": 0.6449884359689366,
+  "per_class_iou": {
+    "Background": 0.0,
+    "Forest land": 0.6059596155149006,
+    "Grassland": 0.817075552126999,
+    "Cropland": 0.265761718687007,
+    "Settlement": 0.5111142666768594,
+    "Seminatural Grassland": 0.31111096886326756
+  },
+  "per_class_f1": {
+    "Background": 0.0,
+    "Forest land": 0.7546386666841991,
+    "Grassland": 0.8993302965619753,
+    "Cropland": 0.4199237688227134,
+    "Settlement": 0.6764733470810196,
+    "Seminatural Grassland": 0.4745761006947759
+  }
+}

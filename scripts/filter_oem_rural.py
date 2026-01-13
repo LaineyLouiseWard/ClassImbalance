@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 
 # OEM raw class IDs
-BUILT_CLASSES = {2, 3, 7}  # developed, road, building
+BUILT_CLASSES = {3, 4, 8}  # developed, road, building
 
 
 def built_env_percentage(label_path: Path) -> float:
@@ -49,7 +49,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Filter OEM tiles by built-environment dominance")
     ap.add_argument("--raw-root", required=True, help="Path to raw OpenEarthMap root")
     ap.add_argument("--out-root", required=True, help="Output folder for filtered OEM")
-    ap.add_argument("--threshold", type=float, default=50.0, help="Max % built environment allowed")
+    ap.add_argument("--threshold", type=float, default=50.0, help="Max %% built environment allowed")
     ap.add_argument("--mode", choices=["symlink", "copy"], default="symlink")
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()
@@ -85,8 +85,12 @@ def main() -> None:
             dst_label = msk_out / f"{stem}.tif"
             dst_img = img_out / f"{stem}.tif"
 
-            if dst_label.exists() and not args.overwrite:
-                continue
+            # --- overwrite handling (remove stale outputs) ---
+            if args.overwrite:
+                if dst_label.exists():
+                    dst_label.unlink()
+                if dst_img.exists():
+                    dst_img.unlink()
 
             if args.mode == "symlink":
                 if not dst_label.exists():

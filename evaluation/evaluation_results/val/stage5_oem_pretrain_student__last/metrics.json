@@ -1,0 +1,26 @@
+{
+  "checkpoint": "/home/lainey/Documents/Github/ClassImbalance/model_weights/biodiversity/stage5_oem_pretrain_student/last.ckpt",
+  "split": "val",
+  "data_root": "/home/lainey/Documents/Github/ClassImbalance/data/biodiversity_split/val",
+  "date": "2026-01-13T01:27:22",
+  "ignore_index": 0,
+  "OA": 0.7792617292629769,
+  "mIoU_excluding_bg": 0.37741241282155064,
+  "mF1_excluding_bg": 0.4927277119387273,
+  "per_class_iou": {
+    "Background": 0.0,
+    "Forest land": 0.5136975148817874,
+    "Grassland": 0.7784452633711099,
+    "Cropland": 0.2108905935999474,
+    "Settlement": 0.37739769558840264,
+    "Seminatural Grassland": 0.006630996666505613
+  },
+  "per_class_f1": {
+    "Background": 0.0,
+    "Forest land": 0.6787320533271946,
+    "Grassland": 0.8754222297015477,
+    "Cropland": 0.34832311397258936,
+    "Settlement": 0.5479865304760904,
+    "Seminatural Grassland": 0.013174632216214297
+  }
+}

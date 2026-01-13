@@ -11,9 +11,9 @@ from geoseg.datasets.biodiversity_dataset import (
     CLASSES,
     train_aug_random,
     val_aug,
-    BiodiversityTiffTrainDataset,
-    BiodiversityTiffValDataset,
-    BiodiversityTiffTestDataset,
+    BiodiversityTrainDataset,
+    BiodiversityValDataset,
+    BiodiversityTestDataset,
 )
 from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.utils.optim import Lookahead, process_model_params
@@ -81,17 +81,17 @@ use_aux_loss = False
 # -----------------------
 # Datasets
 # -----------------------
-train_dataset = BiodiversityTiffTrainDataset(
+train_dataset = BiodiversityTrainDataset(
     data_root="data/biodiversity_split/train",
     transform=train_aug_random,
 )
 
-val_dataset = BiodiversityTiffValDataset(
+val_dataset = BiodiversityValDataset(
     data_root="data/biodiversity_split/val",
     transform=val_aug,
 )
 
-test_dataset = BiodiversityTiffTestDataset(
+test_dataset = BiodiversityTestDataset(
     data_root="data/biodiversity_split/test",
 )
 

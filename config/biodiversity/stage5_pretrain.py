@@ -16,7 +16,7 @@ from geoseg.datasets.biodiversity_dataset import (
     BiodiversityValDataset,
 )
 from geoseg.datasets.biodiversity_oem_dataset import (
-    BiodiversityCombinedTiffTrainDataset,
+    BiodiversityOEMTrainDataset,   # <-- CHANGED
 )
 from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.utils.optim import Lookahead, process_model_params
@@ -83,7 +83,7 @@ use_aux_loss = False
 # Datasets
 # -------------------
 # Combined pretraining dataset (biodiversity + OEM)
-train_dataset = BiodiversityCombinedTiffTrainDataset(
+train_dataset = BiodiversityOEMTrainDataset(     # <-- CHANGED
     data_root="data/biodiversity_oem_combined/train",
     transform=train_aug_random,
 )

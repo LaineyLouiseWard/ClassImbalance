@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Evaluate FT-UNetFormer checkpoints on the Biodiversity validation split.
+Evaluate FT-UNetFormer checkpoints on the Biodiversity validation or test split.
 
 Writes per-checkpoint outputs:
 - metrics.json (OA, per-class IoU/F1, macro means excluding Background)
@@ -9,8 +9,9 @@ Writes per-checkpoint outputs:
 - evaluation_report.txt
 
 Conventions:
-- Biodiversity uses ignore_index=0 (Background/void) during evaluation.
+- Biodiversity uses ignore_index=0 (Background) during evaluation.
 - Macro metrics are reported excluding Background (class 0).
+- Test evaluation reads masks ONLY to compute metrics (no training).
 """
 
 from __future__ import annotations
@@ -30,7 +31,10 @@ from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from geoseg.datasets.biodiversity_dataset import BiodiversityValDataset
+from geoseg.datasets.biodiversity_dataset import (
+    BiodiversityValDataset,
+    BiodiversityTestWithMasksDataset,
+)
 from geoseg.models.ftunetformer import ft_unetformer
 from geoseg.utils.metric import Evaluator
 
@@ -51,7 +55,9 @@ def build_model(num_classes: int = 6) -> torch.nn.Module:
     return ft_unetformer(num_classes=num_classes, decoder_channels=256)
 
 
-def load_checkpoint_into_model(model: torch.nn.Module, ckpt_path: Path, device: torch.device) -> torch.nn.Module:
+def load_checkpoint_into_model(
+    model: torch.nn.Module, ckpt_path: Path, device: torch.device
+) -> torch.nn.Module:
     """Load a Lightning .ckpt into the raw nn.Module (handles 'net.'/'model.' prefixes)."""
     ckpt = torch.load(ckpt_path, map_location=device)
 
@@ -73,14 +79,20 @@ def load_checkpoint_into_model(model: torch.nn.Module, ckpt_path: Path, device: 
 
     missing, unexpected = model.load_state_dict(cleaned, strict=False)
     if missing:
-        logging.warning(f"Missing keys (non-fatal): {missing[:10]}{'...' if len(missing) > 10 else ''}")
+        logging.warning(
+            f"Missing keys (non-fatal): {missing[:10]}{'...' if len(missing) > 10 else ''}"
+        )
     if unexpected:
-        logging.warning(f"Unexpected keys (non-fatal): {unexpected[:10]}{'...' if len(unexpected) > 10 else ''}")
+        logging.warning(
+            f"Unexpected keys (non-fatal): {unexpected[:10]}{'...' if len(unexpected) > 10 else ''}"
+        )
 
     return model
 
 
-def _apply_ignore_mask(true: np.ndarray, pred: np.ndarray, ignore_index: int | None) -> Tuple[np.ndarray, np.ndarray]:
+def _apply_ignore_mask(
+    true: np.ndarray, pred: np.ndarray, ignore_index: int | None
+) -> Tuple[np.ndarray, np.ndarray]:
     """Flatten arrays and drop ignored pixels (for confusion matrix consistency)."""
     t = true.reshape(-1)
     p = pred.reshape(-1)
@@ -93,7 +105,8 @@ def _apply_ignore_mask(true: np.ndarray, pred: np.ndarray, ignore_index: int | N
 @torch.no_grad()
 def evaluate_checkpoint(
     ckpt_path: Path,
-    val_root: Path,
+    data_root: Path,
+    split: str,
     device: torch.device,
     ignore_index: int | None,
     batch_size: int = 1,
@@ -103,9 +116,15 @@ def evaluate_checkpoint(
     model = load_checkpoint_into_model(model, ckpt_path, device)
     model.eval()
 
-    val_dataset = BiodiversityValDataset(data_root=str(val_root))
-    val_loader = DataLoader(
-        dataset=val_dataset,
+    if split == "val":
+        ds = BiodiversityValDataset(data_root=str(data_root))
+    elif split == "test":
+        ds = BiodiversityTestWithMasksDataset(data_root=str(data_root))
+    else:
+        raise ValueError(f"Unknown split: {split}")
+
+    loader = DataLoader(
+        dataset=ds,
         batch_size=batch_size,
         num_workers=num_workers,
         shuffle=False,
@@ -117,7 +136,7 @@ def evaluate_checkpoint(
 
     softmax = nn.Softmax(dim=1)
 
-    for batch in tqdm(val_loader, desc=f"Evaluating {ckpt_path.name}", leave=False):
+    for batch in tqdm(loader, desc=f"Evaluating {ckpt_path.name}", leave=False):
         images = batch["img"].to(device)
         masks = batch["gt_semantic_seg"].cpu().numpy()  # (B,H,W)
 
@@ -141,7 +160,8 @@ def evaluate_checkpoint(
 
     metrics = {
         "checkpoint": str(ckpt_path),
-        "val_root": str(val_root),
+        "split": split,
+        "data_root": str(data_root),
         "date": datetime.datetime.now().isoformat(timespec="seconds"),
         "ignore_index": ignore_index,
         "OA": oa,
@@ -194,6 +214,7 @@ def plot_class_bars(values: list[float], labels: list[str], title: str, ylabel: 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Evaluate .ckpt checkpoints and write metrics + plots")
+    ap.add_argument("--split", type=str, default="val", choices=["val", "test"], help="Which split to evaluate.")
     ap.add_argument(
         "--base-dir",
         type=str,
@@ -201,10 +222,10 @@ def main() -> None:
         help="Directory to search for .ckpt files (recursively).",
     )
     ap.add_argument(
-        "--val-root",
+        "--data-root",
         type=str,
         default="data/biodiversity_split/val",
-        help="Validation dataset root (contains images/ and masks/).",
+        help="Split root (contains images/ and masks/). Use val or test root depending on --split.",
     )
     ap.add_argument(
         "--out-dir",
@@ -224,7 +245,7 @@ def main() -> None:
     args = ap.parse_args()
 
     base_dir = Path(args.base_dir).resolve()
-    val_root = Path(args.val_root).resolve()
+    data_root = Path(args.data_root).resolve()
     out_root = Path(args.out_dir).resolve()
     out_root.mkdir(parents=True, exist_ok=True)
 
@@ -236,10 +257,13 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO)
     logging.info(f"Found {len(ckpts)} checkpoints under {base_dir}")
+    logging.info(f"Split={args.split}  data_root={data_root}")
     logging.info(f"Using ignore_index={args.ignore_index}")
 
     for ckpt in ckpts:
-        safe_name = ckpt.parent.name + "__" + ckpt.stem
+        parent = ckpt.parent.name
+        stem = ckpt.stem
+        safe_name = parent if parent == stem else f"{parent}__{stem}"
         run_dir = out_root / safe_name
         run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -247,7 +271,8 @@ def main() -> None:
 
         metrics, cm = evaluate_checkpoint(
             ckpt_path=ckpt,
-            val_root=val_root,
+            data_root=data_root,
+            split=args.split,
             device=device,
             ignore_index=args.ignore_index,
             batch_size=1,
@@ -280,7 +305,8 @@ def main() -> None:
         with open(run_dir / "evaluation_report.txt", "w", encoding="utf-8") as f:
             f.write("=== Evaluation Report ===\n\n")
             f.write(f"Checkpoint: {metrics['checkpoint']}\n")
-            f.write(f"Val root: {metrics['val_root']}\n")
+            f.write(f"Split: {metrics['split']}\n")
+            f.write(f"Data root: {metrics['data_root']}\n")
             f.write(f"Ignore index: {metrics['ignore_index']}\n\n")
             f.write(f"Overall Accuracy (OA): {metrics['OA']:.4f}\n")
             f.write(f"Mean IoU (excl. bg): {metrics['mIoU_excluding_bg']:.4f}\n")

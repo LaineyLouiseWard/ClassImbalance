@@ -60,10 +60,7 @@ save_last = False
 check_val_every_n_epoch = 1
 
 # Stage 5A checkpoint (OEM-pretrained student)
-pretrained_ckpt_path = (
-    "model_weights/stage5_oem_pretrain_student/"
-    "stage5_oem_pretrain_student.ckpt"
-)
+pretrained_ckpt_path = "model_weights/biodiversity/stage5_oem_pretrain_student/stage5_oem_pretrain_student.ckpt"
 
 resume_ckpt_path = None
 gpus = "auto"

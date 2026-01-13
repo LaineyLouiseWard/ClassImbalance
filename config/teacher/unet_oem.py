@@ -78,9 +78,9 @@ train_dataset = OpenEarthMapTeacherTrainDataset(
     mask_dir="masks",
     img_suffix=".tif",
     mask_suffix=".tif",
-    transform=oem_train_aug,
-    ignore_index=ignore_index,
 )
+
+
 
 val_dataset = OpenEarthMapTeacherValDataset(
     data_root="data/openearthmap_teacher/val",
@@ -88,9 +88,9 @@ val_dataset = OpenEarthMapTeacherValDataset(
     mask_dir="masks",
     img_suffix=".tif",
     mask_suffix=".tif",
-    transform=oem_val_aug,
-    ignore_index=ignore_index,
 )
+
+
 
 train_loader = DataLoader(
     dataset=train_dataset,

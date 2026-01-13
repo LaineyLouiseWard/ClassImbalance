@@ -1,0 +1,26 @@
+{
+  "checkpoint": "/home/lainey/Documents/Github/ClassImbalance/model_weights/teacher/last.ckpt",
+  "split": "val",
+  "data_root": "/home/lainey/Documents/Github/ClassImbalance/data/biodiversity_split/val",
+  "date": "2026-01-13T01:28:44",
+  "ignore_index": 0,
+  "OA": 0.38682078314387996,
+  "mIoU_excluding_bg": 0.09679214408217154,
+  "mF1_excluding_bg": 0.1386490695159586,
+  "per_class_iou": {
+    "Background": 0.0,
+    "Forest land": 0.0,
+    "Grassland": 0.4423814809328334,
+    "Cropland": 1.4351603522601043e-05,
+    "Settlement": 0.04156488787450173,
+    "Seminatural Grassland": 0.0
+  },
+  "per_class_f1": {
+    "Background": 0.0,
+    "Forest land": 0.0,
+    "Grassland": 0.6134042667954549,
+    "Cropland": 2.8702783603706666e-05,
+    "Settlement": 0.07981237800073433,
+    "Seminatural Grassland": 0.0
+  }
+}

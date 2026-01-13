@@ -1,60 +1,76 @@
 # ============================================================
-# Data reproduction (run in order)
-# ============================================================
+# Data reproduction
 # Assumptions:
 # - You are in the repo root
-# - The Python environment is activated
-# - Raw datasets already exist on disk
-# - Paths below match your local setup
+# - conda env is activated
+# - raw datasets already exist in data/
 # ============================================================
 
+# ------------------------------------------------------------
+# Step 0 — Optional: inspect biodiversity class distribution
+# ------------------------------------------------------------
+python -m scripts.analyze_class_distribution \
+  --out artifacts/train_augmentation_list.json \
+  --overwrite
+
 
 # ------------------------------------------------------------
-# Step 0 — Inspect raw class distributions (optional sanity)
+# Step 1 — Split Biodiversity into train / val / test
 # ------------------------------------------------------------
-python scripts/analyze_class_distribution.py
-
-
-# ------------------------------------------------------------
-# Step 1 — Split Biodiversity dataset into train / val / test
-# ------------------------------------------------------------
-python scripts/split_biodiversity_dataset.py \
+python -m scripts.split_biodiversity_dataset \
   --in-root data/biodiversity_raw \
-  --out-root data/biodiversity_split
+  --out-root data/biodiversity_split \
+  --mode symlink \
+  --seed 42 \
+  --overwrite
 
 
 # ------------------------------------------------------------
-# Step 2 — Replicate minority samples (train_rep split)
+# Step 2 — Replicate minority-rich samples (creates train_rep)
 # ------------------------------------------------------------
-python scripts/replicate_minority_samples.py \
-  --in-root data/biodiversity_split/train \
-  --out-root data/biodiversity_split/train_rep
+python -m scripts.replicate_minority_samples \
+  --data-root data/biodiversity_split/train \
+  --out-root  data/biodiversity_split/train_rep \
+  --augmentation-list artifacts/train_augmentation_list.json \
+  --replications 1 \
+  --overwrite
 
 
 # ------------------------------------------------------------
-# Step 3 — Prepare OpenEarthMap (OEM) teacher dataset
-#   - filter rural tiles
-#   - keep raw OEM labels (with ignore_index=255)
+# Step 3 — Filter OEM to rural subset  (RAW → filtered)
 # ------------------------------------------------------------
-python scripts/filter_oem_rural.py \
-  --raw-root data/openearthmap_raw \
-  --out-root data/openearthmap_filtered
+python -m scripts.filter_oem_rural \
+  --raw-root data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD \
+  --out-root data/openearthmap_filtered \
+  --threshold 50 \
+  --mode symlink \
+  --overwrite
 
-python scripts/prepare_oem_teacher_data.py \
+
+# ------------------------------------------------------------
+# Step 4 — Prepare OEM teacher split (filtered → teacher)
+# ------------------------------------------------------------
+python -m scripts.prepare_oem_teacher_data \
   --raw-root data/openearthmap_filtered \
-  --out-root data/openearthmap_teacher
+  --out-root data/openearthmap_teacher \
+  --val-frac 0.1 \
+  --seed 42 \
+  --mode symlink \
+  --overwrite
+
+# ------------------------------------------------------------
+# Step 5 — Relabel OEM into 6-class taxonomy (filtered → relabelled)
+# ------------------------------------------------------------
+python -m scripts.relabel_oem_taxonomy \
+  --in-root  data/openearthmap_filtered \
+  --out-root data/openearthmap_relabelled \
+  --mode symlink \
+  --overwrite
 
 
 # ------------------------------------------------------------
-# Step 4 — Relabel OEM masks into 6-class taxonomy
+# Step 6 — Create combined Biodiversity + OEM training set
 # ------------------------------------------------------------
-python scripts/relabel_oem_taxonomy.py \
-  --in-root data/openearthmap_filtered \
-  --out-root data/openearthmap_relabelled
-
-
-# ------------------------------------------------------------
-# Step 5 — Create combined Biodiversity + OEM training set
-#   (used only for OEM pretraining)
-# ------------------------------------------------------------
-python scripts/create_biodiversity_oem_combined.py
+python -m scripts.create_biodiversity_oem_combined \
+  --mode symlink \
+  --overwrite
