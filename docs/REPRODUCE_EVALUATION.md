@@ -1,7 +1,11 @@
-# ------------------------------------------------------------
-# Validation — all stages (Biodiversity val split only)
-# ------------------------------------------------------------
+# Ablation Evaluation
+## Assumptions:
+- You are in the repo root
+- conda env is activated
+- raw datasets already exist in data/
 
+
+## Validation — all stages (Biodiversity val split only)
 python -m evaluation.compute_metrics \
   --split val \
   --base-dir model_weights \
@@ -13,10 +17,7 @@ python -m evaluation.compute_metrics \
   --num-workers 0
 
 
-# ------------------------------------------------------------
-# Test — final model only (Stage 6)
-# ------------------------------------------------------------
-
+## Test — final model only (Stage 6)
 python -m evaluation.compute_metrics \
   --split test \
   --base-dir model_weights/biodiversity/stage6_final_kd_ftunetformer \
@@ -28,19 +29,13 @@ python -m evaluation.compute_metrics \
   --num-workers 0
 
 
-# ------------------------------------------------------------
-# Aggregate validation results (ablation comparison)
-# ------------------------------------------------------------
-
+## Aggregate validation results (ablation comparison)
 python -m evaluation.aggregate_metrics \
   --eval-root evaluation/evaluation_results/val \
   --out-file evaluation/evaluation_results/val/metrics_summary.txt
 
 
-# ------------------------------------------------------------
-# Aggregate test results (final model only; optional)
-# ------------------------------------------------------------
-
+## Aggregate test results (final model only; optional)
 python -m evaluation.aggregate_metrics \
   --eval-root evaluation/evaluation_results/test \
   --out-file evaluation/evaluation_results/test/metrics_summary.txt

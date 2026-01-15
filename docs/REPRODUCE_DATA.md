@@ -1,8 +1,8 @@
 # Data reproduction
 ## Assumptions:
-### - You are in the repo root
-### - conda env is activated
-### - raw datasets already exist in data/
+- You are in the repo root
+- conda env is activated
+- raw datasets already exist in data/
 
 
 ## Step 0 — Optional: inspect biodiversity class distribution
