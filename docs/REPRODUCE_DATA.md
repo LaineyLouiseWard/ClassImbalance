@@ -56,6 +56,15 @@ python -m scripts.relabel_oem_taxonomy \
   --overwrite
 
 
+## Step 5.5 — Second filtering pass (relabelled → relabelled_filtered)
+python -m scripts.filter_oem_settlement_postmap \
+  --in-root  data/openearthmap_relabelled \
+  --out-root data/openearthmap_relabelled_filtered \
+  --threshold 50.0 \
+  --mode symlink \
+  --overwrite
+
+
 ## Step 6 — Create combined Biodiversity + OEM training set
 python -m scripts.create_biodiversity_oem_combined \
   --mode symlink \

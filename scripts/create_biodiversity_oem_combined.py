@@ -97,7 +97,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Create biodiversity+OEM combined dataset.")
     ap.add_argument("--out-root", type=Path, default=Path("data/biodiversity_oem_combined"))
     ap.add_argument("--bio-root", type=Path, default=Path("data/biodiversity_split"))
-    ap.add_argument("--oem-root", type=Path, default=Path("data/openearthmap_relabelled"))
+    ap.add_argument("--oem-root", type=Path, default=Path("data/openearthmap_relabelled_filtered"))
     ap.add_argument("--oem-prefix", type=str, default="oem")
     ap.add_argument("--img-ext", type=str, default=".tif")
     ap.add_argument("--mask-ext", type=str, default=".png")

@@ -13,20 +13,20 @@
     },
     "openearthmap_raw": {
       "name": "OpenEarthMap raw",
-      "root": "/home/lainey/Documents/Github/ClassImbalance/data/openearthmap_raw/OpenEarthMap",
-      "images": 0,
-      "masks": 0,
-      "paired": 0,
-      "unique_ids": 0,
+      "root": "/home/lainey/Documents/Github/ClassImbalance/data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD",
+      "images": 3838,
+      "masks": 3500,
+      "paired": 2687,
+      "unique_ids": 2687,
       "replicas": 0
     },
     "openearthmap_filtered": {
       "name": "OEM rural-filtered",
       "root": "/home/lainey/Documents/Github/ClassImbalance/data/openearthmap_filtered",
       "images": 1477,
-      "masks": 0,
-      "paired": 0,
-      "unique_ids": 0,
+      "masks": 1477,
+      "paired": 1477,
+      "unique_ids": 1477,
       "replicas": 0
     },
     "openearthmap_relabelled": {
@@ -38,22 +38,31 @@
       "unique_ids": 1477,
       "replicas": 0
     },
+    "openearthmap_relabelled_filtered": {
+      "name": "OEM relabelled + settlement-filtered",
+      "root": "/home/lainey/Documents/Github/ClassImbalance/data/openearthmap_relabelled_filtered",
+      "images": 1477,
+      "masks": 1477,
+      "paired": 1477,
+      "unique_ids": 1477,
+      "replicas": 0
+    },
     "openearthmap_teacher_train": {
       "name": "OEM teacher train",
       "root": "/home/lainey/Documents/Github/ClassImbalance/data/openearthmap_teacher/train",
       "images": 1329,
-      "masks": 0,
-      "paired": 0,
-      "unique_ids": 0,
+      "masks": 1329,
+      "paired": 1329,
+      "unique_ids": 1329,
       "replicas": 0
     },
     "openearthmap_teacher_val": {
       "name": "OEM teacher val",
       "root": "/home/lainey/Documents/Github/ClassImbalance/data/openearthmap_teacher/val",
       "images": 148,
-      "masks": 0,
-      "paired": 0,
-      "unique_ids": 0,
+      "masks": 148,
+      "paired": 148,
+      "unique_ids": 148,
       "replicas": 0
     },
     "biodiversity_train": {
@@ -119,16 +128,5 @@
       "unique_ids": 0,
       "replicas": 0
     }
-  },
-  "stage_pools": {
-    "stage_1_train": 1846,
-    "stage_2_train_rep": 2646,
-    "stage_3_train_rep": 2646,
-    "stage_4_train_rep": 2646,
-    "stage_5_pretrain_combined_train": 3323,
-    "stage_5_finetune_train_rep": 2646,
-    "stage_6_distill_train_rep": 2646,
-    "eval_val": 231,
-    "eval_test": 230
   }
 }

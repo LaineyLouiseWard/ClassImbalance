@@ -2,24 +2,10 @@
 """
 evaluation/tile_number_metrics.py
 
-Counts dataset tile totals for the *current ClassImbalance data tree*:
+Counts dataset tile totals for the *current ClassImbalance data tree*.
 
-data/
-  biodiversity_raw/{images,masks}
-  biodiversity_split/{train,train_rep,val,test}/{images,masks}
-  biodiversity_oem_combined/{train,val,test}/{images,masks}
-  openearthmap_raw/OpenEarthMap/...            (raw download; recursive count)
-  openearthmap_filtered/{images,masks}         (rural-filtered OEM)
-  openearthmap_relabelled/{images,masks}       (OEM mapped to Biodiversity taxonomy)
-  openearthmap_teacher/{train,val}/{images,masks} (teacher dataset split)
-
-Outputs:
-- A human-readable report to stdout.
-- Optional JSON report (for copy/paste into paper later).
-
-Notes:
-- “paired tiles” = image+mask share same stem.
-- “unique IDs” strips replication suffix *_repN.
+Raw OpenEarthMap layout (your download):
+data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD/<region>/{images,labels}/*.tif
 """
 
 from __future__ import annotations
@@ -29,7 +15,7 @@ import json
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Iterable, List, Sequence, Set
 
 
 REP_SUFFIX_RE = re.compile(r"_rep\d+$", re.IGNORECASE)
@@ -89,14 +75,12 @@ def count_paired_dir(
     mask_dir: str = "masks",
     img_exts: Sequence[str] = (".tif", ".tiff", ".png", ".jpg", ".jpeg"),
     mask_exts: Sequence[str] = (".png",),
-    recursive_images: bool = False,
-    recursive_masks: bool = False,
 ) -> DirCounts:
     img_p = root / img_dir
     msk_p = root / mask_dir
 
-    imgs = list_files(img_p, img_exts, recursive=recursive_images)
-    msks = list_files(msk_p, mask_exts, recursive=recursive_masks)
+    imgs = list_files(img_p, img_exts, recursive=False)
+    msks = list_files(msk_p, mask_exts, recursive=False)
 
     img_ids = stems(imgs)
     msk_ids = stems(msks)
@@ -116,6 +100,49 @@ def count_paired_dir(
     )
 
 
+def merge_counts(name: str, root: Path, counts: List[DirCounts]) -> DirCounts:
+    images = sum(c.images for c in counts)
+    masks = sum(c.masks for c in counts)
+    paired = sum(c.paired for c in counts)
+    # unique_ids/replicas are not meaningful across heterogeneous region stems (they’re already unique)
+    # but we can compute them as: unique_ids = paired - replicas, and replicas=0
+    return DirCounts(
+        name=name,
+        root=str(root),
+        images=images,
+        masks=masks,
+        paired=paired,
+        unique_ids=paired,
+        replicas=0,
+    )
+
+
+def count_oem_raw_by_regions(oem_root: Path) -> DirCounts:
+    """
+    Counts raw OEM where regions are immediate subfolders:
+      oem_root/<region>/{images,labels}/*.tif
+    """
+    region_counts: List[DirCounts] = []
+    if not oem_root.exists():
+        return DirCounts("OpenEarthMap raw", str(oem_root), 0, 0, 0, 0, 0)
+
+    for region in sorted([p for p in oem_root.iterdir() if p.is_dir()]):
+        # only treat as region if it has images/ and labels/
+        if not (region / "images").is_dir() or not (region / "labels").is_dir():
+            continue
+        c = count_paired_dir(
+            name=f"raw:{region.name}",
+            root=region,
+            img_dir="images",
+            mask_dir="labels",
+            img_exts=(".tif", ".tiff"),
+            mask_exts=(".tif", ".tiff"),
+        )
+        region_counts.append(c)
+
+    return merge_counts("OpenEarthMap raw", oem_root, region_counts)
+
+
 def print_block(title: str) -> None:
     print("\n" + title)
     print("-" * len(title))
@@ -123,7 +150,7 @@ def print_block(title: str) -> None:
 
 def print_counts_row(c: DirCounts) -> None:
     print(
-        f"{c.name:<32} paired={fmt(c.paired):>6}  "
+        f"{c.name:<36} paired={fmt(c.paired):>6}  "
         f"(images={fmt(c.images):>6}, masks={fmt(c.masks):>6}, "
         f"unique={fmt(c.unique_ids):>6}, reps={fmt(c.replicas):>5})"
     )
@@ -151,37 +178,53 @@ def main() -> None:
         mask_exts=(".png",),
     )
 
-    # OEM raw is nested; count recursively under openearthmap_raw/OpenEarthMap
-    oem_raw_root = data_root / "openearthmap_raw" / "OpenEarthMap"
-    oem_raw = count_paired_dir(
-        name="OpenEarthMap raw",
-        root=oem_raw_root,
-        img_dir="images",
-        mask_dir="masks",
-        img_exts=(".tif", ".tiff", ".png", ".jpg", ".jpeg"),
-        mask_exts=(".png",),
-        recursive_images=True,
-        recursive_masks=True,
-    )
+    oem_raw_root = data_root / "openearthmap_raw" / "OpenEarthMap" / "OpenEarthMap_wo_xBD"
+    oem_raw = count_oem_raw_by_regions(oem_raw_root)
 
-    # ---- B) OEM processing ----
+    # ---- B) OEM processing (student-side) ----
     oem_filtered = count_paired_dir(
         name="OEM rural-filtered",
         root=data_root / "openearthmap_filtered",
+        img_dir="images",
+        mask_dir="masks",
+        img_exts=(".tif", ".tiff"),
+        mask_exts=(".tif", ".tiff"),
     )
+
     oem_relabelled = count_paired_dir(
         name="OEM relabelled (→Biodiv taxonomy)",
         root=data_root / "openearthmap_relabelled",
+        img_dir="images",
+        mask_dir="masks",
+        img_exts=(".tif", ".tiff"),
+        mask_exts=(".png",),
+    )
+
+    oem_relabelled_filtered = count_paired_dir(
+        name="OEM relabelled + settlement-filtered",
+        root=data_root / "openearthmap_relabelled_filtered",
+        img_dir="images",
+        mask_dir="masks",
+        img_exts=(".tif", ".tiff"),
+        mask_exts=(".png",),
     )
 
     # ---- C) OEM teacher dataset ----
     oem_teacher_train = count_paired_dir(
         name="OEM teacher train",
         root=data_root / "openearthmap_teacher" / "train",
+        img_dir="images",
+        mask_dir="masks",
+        img_exts=(".tif", ".tiff"),
+        mask_exts=(".tif", ".tiff"),
     )
     oem_teacher_val = count_paired_dir(
         name="OEM teacher val",
         root=data_root / "openearthmap_teacher" / "val",
+        img_dir="images",
+        mask_dir="masks",
+        img_exts=(".tif", ".tiff"),
+        mask_exts=(".tif", ".tiff"),
     )
 
     # ---- D) Biodiversity split + replication ----
@@ -191,7 +234,7 @@ def main() -> None:
     biodiv_val = count_paired_dir(name="Biodiversity val", root=biodiv_split_root / "val")
     biodiv_test = count_paired_dir(name="Biodiversity test", root=biodiv_split_root / "test")
 
-    # ---- E) Combined pretraining pool (Biodiversity + OEM-filtered) ----
+    # ---- E) Combined pretraining pool (Biodiversity + OEM) ----
     combined_root = data_root / "biodiversity_oem_combined"
     combined_train = count_paired_dir(name="Combined pretrain train", root=combined_root / "train")
     combined_val = count_paired_dir(name="Combined pretrain val", root=combined_root / "val")
@@ -208,6 +251,7 @@ def main() -> None:
     print_block("B) OpenEarthMap processing (student-side)")
     print_counts_row(oem_filtered)
     print_counts_row(oem_relabelled)
+    print_counts_row(oem_relabelled_filtered)
 
     print_block("C) OpenEarthMap teacher dataset")
     print_counts_row(oem_teacher_train)
@@ -224,9 +268,7 @@ def main() -> None:
     print_counts_row(combined_val)
     print_counts_row(combined_test)
 
-    # ---- Stage mapping (paper-facing) ----
     print_block("F) Stage-wise pools (paper-facing)")
-    # Stages 1–4: Biodiversity (train or train_rep), Stage 5: combined pretrain then finetune, Stage 6: distill finetune
     print(f"{'Stage 1–2':<12} Biodiversity train/train_rep pool: {fmt(biodiv_train.paired)} / {fmt(biodiv_train_rep.paired)} paired tiles")
     print(f"{'Stage 3–4':<12} Biodiversity train_rep pool:       {fmt(biodiv_train_rep.paired)} paired tiles (same pool; different sampling/cropping)")
     print(f"{'Stage 5 pre':<12} Combined pretrain train pool:     {fmt(combined_train.paired)} paired tiles")
@@ -234,7 +276,6 @@ def main() -> None:
     print(f"{'Stage 6':<12} Biodiversity train_rep pool:       {fmt(biodiv_train_rep.paired)} paired tiles (teacher supervision)")
     print(f"{'Eval':<12} Biodiversity val/test pools:       {fmt(biodiv_val.paired)} / {fmt(biodiv_test.paired)} paired tiles")
 
-    # ---- Optional JSON ----
     if args.out_json:
         out_path = (repo_root / args.out_json).resolve()
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,6 +288,7 @@ def main() -> None:
                 "openearthmap_raw": asdict(oem_raw),
                 "openearthmap_filtered": asdict(oem_filtered),
                 "openearthmap_relabelled": asdict(oem_relabelled),
+                "openearthmap_relabelled_filtered": asdict(oem_relabelled_filtered),
                 "openearthmap_teacher_train": asdict(oem_teacher_train),
                 "openearthmap_teacher_val": asdict(oem_teacher_val),
                 "biodiversity_train": asdict(biodiv_train),
@@ -256,17 +298,6 @@ def main() -> None:
                 "combined_train": asdict(combined_train),
                 "combined_val": asdict(combined_val),
                 "combined_test": asdict(combined_test),
-            },
-            "stage_pools": {
-                "stage_1_train": biodiv_train.paired,
-                "stage_2_train_rep": biodiv_train_rep.paired,
-                "stage_3_train_rep": biodiv_train_rep.paired,
-                "stage_4_train_rep": biodiv_train_rep.paired,
-                "stage_5_pretrain_combined_train": combined_train.paired,
-                "stage_5_finetune_train_rep": biodiv_train_rep.paired,
-                "stage_6_distill_train_rep": biodiv_train_rep.paired,
-                "eval_val": biodiv_val.paired,
-                "eval_test": biodiv_test.paired,
             },
         }
 
