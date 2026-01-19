@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Supervised (non-KD) training script for Stages 1–5.
 """
@@ -59,16 +60,12 @@ class SupervisionTrain(pl.LightningModule):
         self.train_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
         self.val_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
 
-        self._train_cache = []
-        self._val_cache = []
-
     def forward(self, x):
         return self.net(x)
 
     # ---------------- TRAIN ----------------
     def on_train_epoch_start(self):
         self.train_evaluator.reset()
-        self._train_cache.clear()
 
     def training_step(self, batch, batch_idx):
         img = batch["img"]
@@ -76,22 +73,23 @@ class SupervisionTrain(pl.LightningModule):
 
         logits = self(img)
         loss = self.loss(logits, mask)
+
+        # Fail fast on NaNs / Infs
+        if not torch.isfinite(loss):
+            raise RuntimeError(f"Non-finite loss detected: {loss}")
+
         pred = torch.argmax(logits, dim=1)
 
-        self._train_cache.append(
-            {
-                "pred": pred.detach().cpu().numpy(),
-                "target": mask.detach().cpu().numpy(),
-            }
+        # Update metrics per batch (no caching)
+        self.train_evaluator.add_batch(
+            mask.detach().cpu().numpy(),
+            pred.detach().cpu().numpy(),
         )
 
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def on_train_epoch_end(self):
-        for o in self._train_cache:
-            self.train_evaluator.add_batch(o["target"], o["pred"])
-
         iou = self.train_evaluator.Intersection_over_Union()
         f1 = self.train_evaluator.F1()
         oa = self.train_evaluator.OA()
@@ -106,8 +104,8 @@ class SupervisionTrain(pl.LightningModule):
     # ---------------- VAL ----------------
     def on_validation_epoch_start(self):
         self.val_evaluator.reset()
-        self._val_cache.clear()
 
+    @torch.no_grad()
     def validation_step(self, batch, batch_idx):
         img = batch["img"]
         mask = batch["gt_semantic_seg"]
@@ -116,20 +114,16 @@ class SupervisionTrain(pl.LightningModule):
         loss = self.loss(logits, mask)
         pred = torch.argmax(logits, dim=1)
 
-        self._val_cache.append(
-            {
-                "pred": pred.detach().cpu().numpy(),
-                "target": mask.detach().cpu().numpy(),
-            }
+        # Update metrics per batch (no caching)
+        self.val_evaluator.add_batch(
+            mask.detach().cpu().numpy(),
+            pred.detach().cpu().numpy(),
         )
 
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
         return loss
 
     def on_validation_epoch_end(self):
-        for o in self._val_cache:
-            self.val_evaluator.add_batch(o["target"], o["pred"])
-
         iou = self.val_evaluator.Intersection_over_Union()
         f1 = self.val_evaluator.F1()
         oa = self.val_evaluator.OA()
@@ -141,7 +135,10 @@ class SupervisionTrain(pl.LightningModule):
         print("\nval:", {"mIoU": np.nanmean(iou), "F1": np.nanmean(f1), "OA": oa})
         print({self.classes[i]: iou[i] for i in range(len(self.classes))})
 
+    # ---------------- OPTIM ----------------
     def configure_optimizers(self):
+        # Lightning expects this method on the LightningModule.
+        # Your config already constructs optimizer + lr_scheduler objects.
         return [self.config.optimizer], [self.config.lr_scheduler]
 
 
@@ -210,7 +207,9 @@ def main():
         ],
         check_val_every_n_epoch=config.check_val_every_n_epoch,
         log_every_n_steps=10,
-        precision=16 if torch.cuda.is_available() else 32,
+        gradient_clip_val=1.0,
+        gradient_clip_algorithm="norm",
+        precision=32,
     )
 
     trainer.fit(model, config.train_loader, config.val_loader)

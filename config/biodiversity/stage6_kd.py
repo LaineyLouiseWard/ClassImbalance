@@ -41,8 +41,8 @@ from geoseg.utils.optim import Lookahead, process_model_params
 max_epoch = 60
 ignore_index = 0
 
-train_batch_size = 2
-val_batch_size = 2
+train_batch_size = 4
+val_batch_size = 4
 
 lr = 6e-4
 weight_decay = 2.5e-4
@@ -71,9 +71,9 @@ weights_path = f"model_weights/biodiversity/{weights_name}"
 test_weights_name = weights_name
 log_name = f"biodiversity/{weights_name}"
 
-monitor = "val_F1"
+monitor = "val_mIoU"
 monitor_mode = "max"
-save_top_k = 3
+save_top_k = 1
 save_last = True
 check_val_every_n_epoch = 1
 gpus = "auto"

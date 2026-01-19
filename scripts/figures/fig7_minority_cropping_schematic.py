@@ -66,7 +66,7 @@ COLOR_MAP = {
 
 CLASS_NAMES = [
     "Background", "Forest land", "Grassland", "Cropland",
-    "Settlement", "Semi-natural grassland"
+    "Settlement", "Semi-nat."
 ]
 
 # -----------------------------------------------------------------------------
@@ -240,7 +240,7 @@ print("Minority crop contains settlement:", (msk_m == 4).any(), "semi-natural:",
 # -----------------------------------------------------------------------------
 # Plot (same layout as before)
 # -----------------------------------------------------------------------------
-def add_panel_label_above_center(ax, label, fontsize=12):
+def add_panel_label_above_center(ax, label, fontsize=32):
     ax.text(
         0.5, 1.02, label,
         transform=ax.transAxes,
@@ -268,7 +268,7 @@ def plot_fig7(full_mask, bbox_r, bbox_m, out_pdf: Path):
         )
         ax.set_axis_off()
 
-    fig = plt.figure(figsize=(8, 4.2))
+    fig = plt.figure(figsize=(8*3, 4.2*3), dpi=300)
     gs = fig.add_gridspec(2, 2, height_ratios=[1, 0.18], hspace=0.15, wspace=-0.15)
 
     ax1 = fig.add_subplot(gs[0, 0])
@@ -282,11 +282,10 @@ def plot_fig7(full_mask, bbox_r, bbox_m, out_pdf: Path):
     legend_ax = fig.add_subplot(gs[1, :])
     legend_ax.axis("off")
     handles = [Patch(facecolor=colors[i], label=CLASS_NAMES[i]) for i in range(6)]
-    legend_ax.legend(handles=handles, loc="center", ncol=3, frameon=False, fontsize=10)
+    legend_ax.legend(handles=handles, loc="center", ncol=3, frameon=False, fontsize=32)
 
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_pdf, bbox_inches="tight")
-    plt.show()
+    fig.savefig(out_pdf, dpi=300, pad_inches=0.02)
     plt.close(fig)
     print("Saved:", out_pdf)
 

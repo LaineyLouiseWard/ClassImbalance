@@ -63,7 +63,7 @@ COLOR_MAP = {
 
 CLASS_NAMES = [
     "Background", "Forest land", "Grassland", "Cropland",
-    "Settlement", "Semi-natural grassland"
+    "Settlement", "Semi-nat."
 ]
 
 colors = np.array([np.array(COLOR_MAP[i]) / 255.0 for i in range(6)])
@@ -124,7 +124,7 @@ print("Easy mask:", easy_mask_path.name, easy_mask.shape, easy_mask.dtype)
 print("Hard mask:", hard_mask_path.name, hard_mask.shape, hard_mask.dtype)
 
 # %%
-def add_panel_label_above_center(ax, label, fontsize=12):
+def add_panel_label_above_center(ax, label, fontsize=32):
     ax.text(
         0.5, 1.02, label,
         transform=ax.transAxes,
@@ -134,7 +134,7 @@ def add_panel_label_above_center(ax, label, fontsize=12):
 
 # %%
 def plot_fig8_hard_sampling(easy_mask, hard_mask, easy_w, hard_w, out_pdf: Path):
-    fig = plt.figure(figsize=(8, 4.2))
+    fig = plt.figure(figsize=(8*3, 4.2*3), dpi=300)
     gs = fig.add_gridspec(2, 2, height_ratios=[1, 0.18], hspace=0.15, wspace=-0.15)
 
     # (a) easy
@@ -153,14 +153,13 @@ def plot_fig8_hard_sampling(easy_mask, hard_mask, easy_w, hard_w, out_pdf: Path)
     legend_ax = fig.add_subplot(gs[1, :])
     legend_ax.axis("off")
     handles = [Patch(facecolor=colors[i], label=CLASS_NAMES[i]) for i in range(6)]
-    legend_ax.legend(handles=handles, loc="center", ncol=3, frameon=False, fontsize=10)
+    legend_ax.legend(handles=handles, loc="center", ncol=3, frameon=False, fontsize=32)
 
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_pdf, bbox_inches="tight")
-    plt.show()
+    fig.savefig(out_pdf, dpi=300, pad_inches=0.02)
     plt.close(fig)
-
     print("Saved:", out_pdf)
+
 
 plot_fig8_hard_sampling(easy_mask, hard_mask, easy_w, hard_w, OUT_PDF)
 

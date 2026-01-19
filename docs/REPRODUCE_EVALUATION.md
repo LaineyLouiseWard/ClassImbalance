@@ -40,6 +40,7 @@ python -m evaluation.aggregate_metrics \
   --eval-root evaluation/evaluation_results/test \
   --out-file evaluation/evaluation_results/test/metrics_summary.txt
 
+
 ### Dataset size and provenance checks
 python -m evaluation.tile_number_metrics \
   --out-json artifacts/tile_number_metrics.json

@@ -261,9 +261,7 @@ def main() -> None:
     logging.info(f"Using ignore_index={args.ignore_index}")
 
     for ckpt in ckpts:
-        parent = ckpt.parent.name
-        stem = ckpt.stem
-        safe_name = parent if parent == stem else f"{parent}__{stem}"
+        safe_name = ckpt.parent.name # Should only be keeping one checkpoint per ablation stage.
         run_dir = out_root / safe_name
         run_dir.mkdir(parents=True, exist_ok=True)
 

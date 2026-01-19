@@ -33,13 +33,15 @@ ignore_index = 0  # background ignored in loss/metrics (pipeline decision)
 train_batch_size = 4
 val_batch_size = 4
 
-lr = 6e-4
-weight_decay = 2.5e-4
-backbone_lr = 6e-5
-backbone_weight_decay = 2.5e-4
+lr = 6e-4 # try lr 3e-4
+weight_decay = 2.5e-4 # stay same
+backbone_lr = 6e-5 # try 3e-5 
+backbone_weight_decay = 2.5e-4 # stay same
 
 num_classes = 6
 classes = CLASSES
+
+max_epoch = 45
 
 
 # -------------------
@@ -50,9 +52,9 @@ weights_path = f"model_weights/biodiversity/{weights_name}"
 test_weights_name = weights_name
 log_name = f"biodiversity/{weights_name}"
 
-monitor = "val_F1"
+monitor = "val_mIoU"
 monitor_mode = "max"
-save_top_k = 3
+save_top_k = 1
 save_last = False
 check_val_every_n_epoch = 1
 

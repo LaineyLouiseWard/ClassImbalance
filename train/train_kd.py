@@ -218,8 +218,11 @@ def main():
         ],
         check_val_every_n_epoch=config.check_val_every_n_epoch,
         log_every_n_steps=10,
-        precision=16 if torch.cuda.is_available() else 32,
+        gradient_clip_val=1.0,
+        gradient_clip_algorithm="norm",
+        precision=32,
     )
+
 
     trainer.fit(model, config.train_loader, config.val_loader)
 
