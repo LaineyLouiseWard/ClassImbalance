@@ -190,8 +190,10 @@ def main():
         log_every_n_steps=10,
         gradient_clip_val=1.0,
         gradient_clip_algorithm="norm",
-        precision=32, # Test to see if wont explode in stage 3.
+        accumulate_grad_batches=2,  # <-- add this
+        precision="bf16-mixed" if torch.cuda.is_available() else 32,
     )
+
 
     trainer.fit(model, config.train_loader, config.val_loader)
 

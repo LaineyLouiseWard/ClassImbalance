@@ -1,7 +1,22 @@
 """
-Stage 2 (replication): supervised training on train_rep (originals + replicated minority tiles).
-Background is ignored in loss/metrics via ignore_index=0.
+Stage 3b: Finetune on Biodiversity (train_rep) after Stage 3 OEM pretraining.
+
+Fair ablation rule:
+- Keep EVERYTHING identical to Stage 2 replication training (data aug/loss/optim/sched),
+  except the initialisation checkpoint (comes from Stage 3 OEM pretrain).
+- NO minority-aware cropping here.
+- NO weighted sampling here. (That is Stage 4.)
+
+Target: Biodiversity only
+Cumulative ON:
+- replication (train_rep)
+- OEM pretraining initialisation (from Stage 3)
+
+Run with:
+  PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage3b_finetune.py
 """
+
+from __future__ import annotations
 
 from torch.utils.data import DataLoader
 import torch
@@ -20,19 +35,17 @@ from geoseg.utils.optim import Lookahead, process_model_params
 
 
 # -------------------
-# Training hyperparams
+# Training hyperparams (MATCH STAGE 1 BASE)
 # -------------------
 max_epoch = 45
-
-# We ignore background (0) in loss/metrics
 ignore_index = 0
 
 train_batch_size = 2
 val_batch_size = 2
 
-lr = 6e-4
+lr = 3e-4
 weight_decay = 2.5e-4
-backbone_lr = 6e-5
+backbone_lr = 3e-5
 backbone_weight_decay = 2.5e-4
 
 num_classes = 6
@@ -42,7 +55,7 @@ classes = CLASSES
 # -------------------
 # Logging / checkpoints
 # -------------------
-weights_name = "stage2_replication"
+weights_name = "stage3b_finetune"
 weights_path = f"model_weights/biodiversity/{weights_name}"
 test_weights_name = weights_name
 log_name = f"biodiversity/{weights_name}"
@@ -53,7 +66,13 @@ save_top_k = 1
 save_last = False
 check_val_every_n_epoch = 1
 
-pretrained_ckpt_path = None
+# IMPORTANT: initialise from Stage 3 OEM pretrain
+pretrained_ckpt_path = (
+    "model_weights/biodiversity/"
+    "stage3a_pretrain/"
+    "stage3a_pretrain.ckpt"
+)
+
 resume_ckpt_path = None
 gpus = "auto"
 
@@ -79,7 +98,7 @@ use_aux_loss = False
 
 
 # -------------------
-# Datasets
+# Datasets (NO minority cropping)
 # -------------------
 train_dataset = BiodiversityTrainDataset(
     data_root="data/biodiversity_split/train_rep",
@@ -97,7 +116,7 @@ test_dataset = BiodiversityTestDataset(
 
 
 # -------------------
-# Loaders
+# Loaders (vanilla shuffle; sampling comes in Stage 4)
 # -------------------
 train_loader = DataLoader(
     dataset=train_dataset,

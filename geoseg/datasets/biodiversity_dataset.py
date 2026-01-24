@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 """
-Biodiversity TIFF segmentation dataset.
+Biodiversity TIFF segmentation dataset (6-class).
 
-- 6-class taxonomy
-- Background = class 0 (REAL class)
+- Background = class 0 (REAL class, but ignored by loss/metrics via ignore_index=0 in training configs)
 - No void class in masks
-- ignore_index=0 is used ONLY by loss
-- SmartCrop uses 255 internally for padding/balance logic (must be remapped before loss/metrics)
+- SmartCropV1 may use 255 internally for padding (we always map 255 -> 0 before returning)
+
+Stage usage:
+- Stage 1/2/3 (hierarchical experiment): train_aug_random
 """
 
 import os
@@ -22,8 +23,9 @@ from PIL import Image
 
 import albumentations as albu
 
-# geometry-aware transforms
-from geoseg.datasets.transform import Compose, RandomScale, SmartCropV1, SmartCropV2
+# geometry-aware transforms (mask-aligned)
+from geoseg.datasets.transform import Compose, RandomScale, SmartCropV1
+
 
 # -----------------------------------------------------------------------------
 # Constants / taxonomy
@@ -48,6 +50,7 @@ PALETTE = [
     [59, 141, 247],
     [255, 214, 33],
 ]
+
 
 # -----------------------------------------------------------------------------
 # TIFF image reader (shared everywhere)
@@ -117,54 +120,18 @@ def _val_tf():
 # -----------------------------------------------------------------------------
 
 def train_aug_random(img: Image.Image, mask: Image.Image):
+    """Stage 1/2/3 default: RandomScale + SmartCropV1 -> 512x512."""
     crop_aug = Compose(
         [
             RandomScale([0.75, 1.0, 1.25, 1.5], mode="value"),
-            # Background (0) remains a real class
             SmartCropV1(crop_size=512, max_ratio=0.75, ignore_index=0, nopad=False),
         ]
     )
 
-    # crop first
     img, mask = crop_aug(img, mask)
-
     img_np, mask_np = np.array(img), np.array(mask)
 
-    # if any 255 appears (shouldn't with V1, but keep safe), map to 0
-    mask_np[mask_np == 255] = 0
-
-    out = _train_tf()(image=img_np, mask=mask_np)
-    return out["image"], out["mask"]
-
-
-def train_aug_minority(img: Image.Image, mask: Image.Image):
-    """
-    Minority-aware cropping using SmartCropV2.
-
-    SmartCropV2 uses 255 internally for padding/balance logic.
-    We MUST map 255 -> 0 after cropping so the mask only contains [0..5].
-    """
-    crop_aug = Compose(
-        [
-            RandomScale([0.75, 1.0, 1.25, 1.5], mode="value"),
-            SmartCropV2(
-                crop_size=512,
-                num_classes=6,
-                class_interest=[1, 2, 3, 4, 5],
-                class_ratio=[0.05, 0.05, 0.05, 0.03, 0.03],
-                max_ratio=0.75,
-                ignore_index=255,  # crop logic/padding only
-                nopad=False,
-            ),
-        ]
-    )
-
-    # crop first
-    img, mask = crop_aug(img, mask)
-
-    img_np, mask_np = np.array(img), np.array(mask)
-
-    # CRITICAL: remove crop padding label before loss/metrics
+    # Safety: remove SmartCrop padding label if present
     mask_np[mask_np == 255] = 0
 
     out = _train_tf()(image=img_np, mask=mask_np)
@@ -176,12 +143,41 @@ def val_aug(img: Image.Image, mask: Image.Image):
     mask = mask.resize((512, 512), Image.NEAREST)
     img_np, mask_np = np.array(img), np.array(mask)
 
-    # safety (should not happen in val, but keep invariant)
+    # safety
     mask_np[mask_np == 255] = 0
 
     out = _val_tf()(image=img_np, mask=mask_np)
     return out["image"], out["mask"]
 
+def train_aug_minority(img: Image.Image, mask: Image.Image):
+    """
+    Minority-aware crop policy:
+    - biases crops to include rare classes Settlement(4) and Seminatural(5)
+    - still uses same pixel-level aug + normalize as train_aug_random
+    """
+    crop_aug = Compose(
+        [
+            RandomScale([0.75, 1.0, 1.25, 1.5], mode="value"),
+            SmartCropV2(
+                crop_size=512,
+                num_classes=6,
+                class_interest=[4, 5],
+                class_ratio=[0.01, 0.01],
+                max_ratio=0.75,
+                ignore_index=0,
+                nopad=False,
+            ),
+        ]
+    )
+
+    img, mask = crop_aug(img, mask)
+    img_np, mask_np = np.array(img), np.array(mask)
+
+    # Safety: remove SmartCrop padding label if present
+    mask_np[mask_np == 255] = 0
+
+    out = _train_tf()(image=img_np, mask=mask_np)
+    return out["image"], out["mask"]
 
 # -----------------------------------------------------------------------------
 # Dataset base
@@ -228,20 +224,23 @@ class _BiodiversitySegDataset(Dataset):
         else:
             img_np, mask_np = np.array(img), np.array(mask)
 
-        # enforce label invariant early (prevents CUDA asserts)
+        # Enforce label invariant (prevents CUDA asserts)
         if np.any((mask_np < 0) | (mask_np > 5)):
             bad = np.unique(mask_np[(mask_np < 0) | (mask_np > 5)]).tolist()
             raise ValueError(f"Invalid mask labels {bad} for img_id={img_id}")
 
         img_t = torch.from_numpy(np.ascontiguousarray(img_np)).permute(2, 0, 1).float()
         mask_t = torch.from_numpy(np.ascontiguousarray(mask_np)).long()
-
         return {"img": img_t, "gt_semantic_seg": mask_t, "img_id": img_id}
 
     def _get_img_ids(self) -> List[str]:
         imgs = sorted(f for f in os.listdir(self.img_dir) if f.endswith(self.img_suffix))
         masks = set(f for f in os.listdir(self.mask_dir) if f.endswith(self.mask_suffix))
-        return [osp.splitext(f)[0] for f in imgs if f.replace(self.img_suffix, self.mask_suffix) in masks]
+        return [
+            osp.splitext(f)[0]
+            for f in imgs
+            if f.replace(self.img_suffix, self.mask_suffix) in masks
+        ]
 
 
 # -----------------------------------------------------------------------------
@@ -250,10 +249,7 @@ class _BiodiversitySegDataset(Dataset):
 
 class BiodiversityTrainDataset(_BiodiversitySegDataset):
     def __init__(self, data_root, transform=None):
-        super().__init__(
-            data_root=data_root,
-            transform=(transform or train_aug_random),
-        )
+        super().__init__(data_root=data_root, transform=(transform or train_aug_random))
 
 
 class BiodiversityValDataset(_BiodiversitySegDataset):
@@ -276,10 +272,8 @@ class BiodiversityTestDataset(Dataset):
         img_t = torch.from_numpy(img_np).permute(2, 0, 1).float()
         return {"img": img_t, "img_id": img_id}
 
+
 class BiodiversityTestWithMasksDataset(_BiodiversitySegDataset):
-    """
-    Test split WITH masks, for evaluation only.
-    Expects data_root/images/*.tif and data_root/masks/*.png
-    """
+    """Test split WITH masks, for evaluation only."""
     def __init__(self, data_root="data/biodiversity_split/test", transform=None, **kw):
         super().__init__(data_root=data_root, transform=(transform or val_aug), **kw)

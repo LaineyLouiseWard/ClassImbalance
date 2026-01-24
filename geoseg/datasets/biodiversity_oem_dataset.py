@@ -2,20 +2,30 @@
 from __future__ import annotations
 
 """
-Combined dataset for OEM-pretraining:
-- Biodiversity split + OEM relabelled into the same 6-class taxonomy (0..5)
+Combined Biodiversity + OpenEarthMap (OEM) dataset for Stage 3 OEM pretraining.
 
-Expected layout:
-  data/biodiversity_oem_combined/
-    train/images/*.tif
-    train/masks/*.png
-    val/images/*.tif
-    val/masks/*.png
+IMPORTANT:
+- This file defines DATASETS ONLY.
+- NO sampling logic
+- NO weights
+- NO KD
+- NO stage-specific behaviour
+
+Used ONLY in:
+- Stage 3a: OEM pretraining (supervised)
+
+All masks are assumed to be harmonised to the 6-class Biodiversity taxonomy:
+  0 Background
+  1 Forest
+  2 Grassland
+  3 Cropland
+  4 Settlement
+  5 Seminatural
 """
 
 import os
 import os.path as osp
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import torch
@@ -23,104 +33,98 @@ from torch.utils.data import Dataset
 from PIL import Image
 
 from geoseg.datasets.biodiversity_dataset import (
-    ORIGIN_IMG_SIZE,
+    _read_tif_as_rgb_uint8,
     train_aug_random,
     val_aug,
-    _read_tif_as_rgb_uint8,
 )
 
-class _CombinedSegDataset(Dataset):
-    def __init__(
-        self,
-        data_root: str,
-        img_dir: str = "images",
-        mask_dir: str = "masks",
-        img_suffix: str = ".tif",
-        mask_suffix: str = ".png",
-        transform=None,
-        img_size: Tuple[int, int] = ORIGIN_IMG_SIZE,
-        **kwargs,
-    ):
+
+# -----------------------------------------------------------------------------
+# Base dataset
+# -----------------------------------------------------------------------------
+
+class _OEMSegDataset(Dataset):
+    """
+    Expects:
+      data_root/
+        images/*.tif
+        masks/*.png
+    """
+
+    def __init__(self, data_root: str, transform=None):
         self.data_root = data_root
-        self.img_dir = img_dir
-        self.mask_dir = mask_dir
-        self.img_suffix = img_suffix
-        self.mask_suffix = mask_suffix
         self.transform = transform
-        self.img_size = img_size
+
+        self.img_dir = osp.join(data_root, "images")
+        self.mask_dir = osp.join(data_root, "masks")
 
         self.img_ids = self._get_img_ids()
 
-    def __len__(self) -> int:
+    def __len__(self):
         return len(self.img_ids)
 
-    def __getitem__(self, index: int):
-        img, mask = self._load_img_and_mask(index)
+    def __getitem__(self, idx):
+        img_id = self.img_ids[idx]
 
-        if self.transform:
-            img_np, mask_np = self.transform(img, mask)
-        else:
-            img_np, mask_np = np.array(img), np.array(mask)
-
-        img_np = np.ascontiguousarray(img_np)
-        mask_np = np.ascontiguousarray(mask_np)
-
-        img_t = torch.from_numpy(img_np).permute(2, 0, 1).float()
-        mask_t = torch.from_numpy(mask_np).long()
-
-        img_id = self.img_ids[index]
-        return {"img": img_t, "gt_semantic_seg": mask_t, "img_id": img_id}
-
-    def _get_img_ids(self) -> List[str]:
-        img_path = osp.join(self.data_root, self.img_dir)
-        mask_path = osp.join(self.data_root, self.mask_dir)
-
-        if not osp.isdir(img_path):
-            raise FileNotFoundError(f"Missing images dir: {img_path}")
-        if not osp.isdir(mask_path):
-            raise FileNotFoundError(f"Missing masks dir: {mask_path}")
-
-        img_files = sorted(f for f in os.listdir(img_path) if f.lower().endswith(self.img_suffix))
-        mask_files = set(f for f in os.listdir(mask_path) if f.lower().endswith(self.mask_suffix))
-
-        ids: List[str] = []
-        for f in img_files:
-            stem = osp.splitext(f)[0]
-            if f"{stem}{self.mask_suffix}" in mask_files:
-                ids.append(stem)
-
-        print(f"[BiodiversityOEM] Found {len(ids)} pairs in {self.data_root}")
-        return ids
-
-    def _load_img_and_mask(self, index: int) -> Tuple[Image.Image, Image.Image]:
-        img_id = self.img_ids[index]
-        img_path = osp.join(self.data_root, self.img_dir, img_id + self.img_suffix)
-        mask_path = osp.join(self.data_root, self.mask_dir, img_id + self.mask_suffix)
-
-        img = _read_tif_as_rgb_uint8(img_path)
-        mask = Image.open(mask_path).convert("L")
+        img = _read_tif_as_rgb_uint8(osp.join(self.img_dir, img_id + ".tif"))
+        mask = Image.open(osp.join(self.mask_dir, img_id + ".png")).convert("L")
 
         if img.size != mask.size:
             mask = mask.resize(img.size, Image.NEAREST)
 
-        return img, mask
+        if self.transform is not None:
+            img_np, mask_np = self.transform(img, mask)
+        else:
+            img_np = np.array(img)
+            mask_np = np.array(mask)
+
+        # Safety: enforce valid class range
+        if np.any((mask_np < 0) | (mask_np > 5)):
+            bad = np.unique(mask_np[(mask_np < 0) | (mask_np > 5)]).tolist()
+            raise ValueError(f"Invalid labels {bad} in {img_id}")
+
+        img_t = torch.from_numpy(np.ascontiguousarray(img_np)).permute(2, 0, 1).float()
+        mask_t = torch.from_numpy(np.ascontiguousarray(mask_np)).long()
+
+        return {
+            "img": img_t,
+            "gt_semantic_seg": mask_t,
+            "img_id": img_id,
+        }
+
+    def _get_img_ids(self) -> List[str]:
+        imgs = sorted(f for f in os.listdir(self.img_dir) if f.endswith(".tif"))
+        masks = set(f for f in os.listdir(self.mask_dir) if f.endswith(".png"))
+
+        return [
+            osp.splitext(f)[0]
+            for f in imgs
+            if f.replace(".tif", ".png") in masks
+        ]
 
 
-class BiodiversityOEMTrainDataset(_CombinedSegDataset):
-    def __init__(
-        self,
-        data_root: str = "data/biodiversity_oem_combined/train",
-        transform=train_aug_random,
-        **kwargs,
-    ):
-        super().__init__(data_root=data_root, transform=transform, **kwargs)
+# -----------------------------------------------------------------------------
+# Public datasets
+# -----------------------------------------------------------------------------
+
+class BiodiversityOEMTrainDataset(_OEMSegDataset):
+    """
+    Training split for Stage 3 OEM pretraining.
+    Uses standard random crop + flip augmentation.
+    """
+    def __init__(self, data_root: str, transform=None):
+        super().__init__(
+            data_root=data_root,
+            transform=transform or train_aug_random,
+        )
 
 
-class BiodiversityOEMValDataset(_CombinedSegDataset):
-    def __init__(
-        self,
-        data_root: str = "data/biodiversity_oem_combined/val",
-        transform=val_aug,
-        **kwargs,
-    ):
-        super().__init__(data_root=data_root, transform=transform, **kwargs)
+class BiodiversityOEMValDataset(_OEMSegDataset):
+    """
+    Optional validation split (rarely used).
+    """
+    def __init__(self, data_root: str, transform=None):
+        super().__init__(
+            data_root=data_root,
+            transform=transform or val_aug,
+        )

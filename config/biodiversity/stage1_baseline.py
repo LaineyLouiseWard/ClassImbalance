@@ -27,13 +27,13 @@ max_epoch = 45
 # Loss/metric ignore label (you confirmed: background=0 should be ignored)
 ignore_index = 0
 
-train_batch_size = 4
-val_batch_size = 4
+train_batch_size = 2
+val_batch_size = 2
 
-lr = 6e-4
-weight_decay = 2.5e-4
-backbone_lr = 6e-5
-backbone_weight_decay = 2.5e-4
+lr = 3e-4 # chnaged from 6e-4.
+weight_decay = 2.5e-4 # stay same
+backbone_lr = 3e-5 # changed from 6e.5
+backbone_weight_decay = 2.5e-4 # stay same
 
 num_classes = 6
 classes = CLASSES
@@ -42,7 +42,7 @@ classes = CLASSES
 # -----------------------
 # Logging / checkpoints
 # -----------------------
-weights_name = "stage1_baseline_ftunetformer"
+weights_name = "stage1_baseline"
 weights_path = f"model_weights/biodiversity/{weights_name}"
 test_weights_name = weights_name
 log_name = f"biodiversity/{weights_name}"

@@ -31,7 +31,7 @@ ignore_index = 255
 train_batch_size = 4
 val_batch_size = 4
 
-lr = 6e-4
+lr = 3e-4 #changed from 6e-4 to match. 
 weight_decay = 2.5e-4
 
 num_classes = 9
@@ -49,7 +49,7 @@ log_name = "teacher_oem/u-efficientnet-b4"
 monitor = "val_mIoU"
 monitor_mode = "max"
 save_top_k = 1
-save_last = True
+save_last = False
 check_val_every_n_epoch = 1
 
 pretrained_ckpt_path = None

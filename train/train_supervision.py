@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
 Supervised (non-KD) training script for Stages 1–5.
+
+Updated: supports models that return either:
+  - fine_logits (Tensor) OR
+  - (fine_logits, coarse_logits) (Tuple[Tensor, Tensor])
+
+Metrics are always computed from fine_logits.
+Loss can be defined to consume either Tensor or Tuple.
 """
 
 import os
@@ -44,6 +51,13 @@ def get_args():
     return p.parse_args()
 
 
+def _unwrap_fine_logits(model_out):
+    """Return fine logits tensor from model output (tensor or tuple/list)."""
+    if isinstance(model_out, (tuple, list)):
+        return model_out[0]
+    return model_out
+
+
 # ---------------------------------------------------------------------
 # Lightning Module
 # ---------------------------------------------------------------------
@@ -71,16 +85,16 @@ class SupervisionTrain(pl.LightningModule):
         img = batch["img"]
         mask = batch["gt_semantic_seg"]
 
-        logits = self(img)
-        loss = self.loss(logits, mask)
+        model_out = self(img)  # tensor OR (fine, coarse)
+        fine_logits = _unwrap_fine_logits(model_out)
 
-        # Fail fast on NaNs / Infs
+        loss = self.loss(model_out, mask)
+
         if not torch.isfinite(loss):
             raise RuntimeError(f"Non-finite loss detected: {loss}")
 
-        pred = torch.argmax(logits, dim=1)
+        pred = torch.argmax(fine_logits, dim=1)
 
-        # Update metrics per batch (no caching)
         self.train_evaluator.add_batch(
             mask.detach().cpu().numpy(),
             pred.detach().cpu().numpy(),
@@ -110,11 +124,12 @@ class SupervisionTrain(pl.LightningModule):
         img = batch["img"]
         mask = batch["gt_semantic_seg"]
 
-        logits = self(img)
-        loss = self.loss(logits, mask)
-        pred = torch.argmax(logits, dim=1)
+        model_out = self(img)
+        fine_logits = _unwrap_fine_logits(model_out)
 
-        # Update metrics per batch (no caching)
+        loss = self.loss(model_out, mask)
+        pred = torch.argmax(fine_logits, dim=1)
+
         self.val_evaluator.add_batch(
             mask.detach().cpu().numpy(),
             pred.detach().cpu().numpy(),
@@ -137,8 +152,6 @@ class SupervisionTrain(pl.LightningModule):
 
     # ---------------- OPTIM ----------------
     def configure_optimizers(self):
-        # Lightning expects this method on the LightningModule.
-        # Your config already constructs optimizer + lr_scheduler objects.
         return [self.config.optimizer], [self.config.lr_scheduler]
 
 
@@ -196,11 +209,12 @@ def main():
         save_last=config.save_last,
     )
 
+    extra_callbacks = getattr(config, "callbacks", []) or []
     trainer = pl.Trainer(
         max_epochs=config.max_epoch,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1 if torch.cuda.is_available() else None,
-        callbacks=[checkpoint_cb],
+        callbacks=[checkpoint_cb] + list(extra_callbacks),
         logger=[
             CSVLogger("lightning_logs", name=config.log_name),
             TensorBoardLogger("lightning_logs", name=config.log_name),
@@ -209,8 +223,9 @@ def main():
         log_every_n_steps=10,
         gradient_clip_val=1.0,
         gradient_clip_algorithm="norm",
-        precision=32,
+        precision="bf16-mixed" if torch.cuda.is_available() else 32,
     )
+
 
     trainer.fit(model, config.train_loader, config.val_loader)
 

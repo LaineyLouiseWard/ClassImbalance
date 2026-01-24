@@ -1,0 +1,26 @@
+{
+  "checkpoint": "/home/lainey/Documents/Github/ClassImbalance/model_weights/biodiversity/stage3b_finetune/stage3b_finetune.ckpt",
+  "split": "val",
+  "data_root": "/home/lainey/Documents/Github/ClassImbalance/data/biodiversity_split/val",
+  "date": "2026-01-24T10:51:12",
+  "ignore_index": 0,
+  "OA": 0.9300954603864314,
+  "mIoU_excluding_bg": 0.7955619767853246,
+  "mF1_excluding_bg": 0.8832804023926573,
+  "per_class_iou": {
+    "Background": 0.0,
+    "Forest land": 0.7467449540546556,
+    "Grassland": 0.9196100927191052,
+    "Cropland": 0.8912324328961583,
+    "Settlement": 0.7256129382059061,
+    "Seminatural Grassland": 0.694609466050798
+  },
+  "per_class_f1": {
+    "Background": 0.0,
+    "Forest land": 0.8550131465442724,
+    "Grassland": 0.9581217471281566,
+    "Cropland": 0.9424885198322788,
+    "Settlement": 0.8409915315612805,
+    "Seminatural Grassland": 0.8197870668972974
+  }
+}

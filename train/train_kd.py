@@ -6,6 +6,11 @@ Trains a student segmentation model using:
 - A frozen teacher model (logits supervision)
 
 Everything (models, loaders, losses, optimizer, scheduler) is defined in the config.
+
+Supports:
+- Loading student weights from a Lightning checkpoint (config.pretrained_ckpt_path)
+- Optional KD disablement if config.kd_enabled == False or config.teacher is None
+  (then config.loss must accept (student_logits, targets))
 """
 
 import os
@@ -61,14 +66,20 @@ class KDTrain(pl.LightningModule):
         self.config = config
 
         self.net = config.net
-        self.teacher = config.teacher
         self.loss = config.loss
         self.classes = config.classes
 
-        # Freeze teacher
-        self.teacher.eval()
-        for p in self.teacher.parameters():
-            p.requires_grad = False
+        # KD toggles:
+        # - if config.kd_enabled is provided, obey it
+        # - else KD is enabled iff teacher exists
+        self.teacher = getattr(config, "teacher", None)
+        self.kd_enabled = bool(getattr(config, "kd_enabled", self.teacher is not None))
+
+        # Freeze teacher if present
+        if self.teacher is not None:
+            self.teacher.eval()
+            for p in self.teacher.parameters():
+                p.requires_grad = False
 
         ignore_index = getattr(config, "ignore_index", None)
         self.train_evaluator = Evaluator(len(self.classes), ignore_index=ignore_index)
@@ -78,9 +89,10 @@ class KDTrain(pl.LightningModule):
         return self.net(x)
 
     def on_fit_start(self):
-        # Ensure teacher is on same device as student
-        self.teacher.to(self.device)
-        self.teacher.eval()
+        # Ensure teacher is on same device as student (if used)
+        if self.teacher is not None:
+            self.teacher.to(self.device)
+            self.teacher.eval()
 
     # ---------------- TRAIN ----------------
     def on_train_epoch_start(self):
@@ -91,16 +103,30 @@ class KDTrain(pl.LightningModule):
         mask = batch["gt_semantic_seg"]
 
         student_logits = self(img)
-        with torch.no_grad():
-            teacher_logits = self.teacher(img)
 
-        loss = self.loss(student_logits, mask, teacher_logits)
+        if self.kd_enabled and self.teacher is not None:
+            with torch.no_grad():
+                teacher_logits = self.teacher(img)
+            loss = self.loss(student_logits, mask, teacher_logits)
+        else:
+            # loss must accept (student_logits, targets)
+            loss = self.loss(student_logits, mask)
+
         pred = torch.argmax(student_logits, dim=1)
 
-        # Update metrics per-batch (no caching)
-        self.train_evaluator.add_batch(mask.detach().cpu().numpy(), pred.detach().cpu().numpy())
+        self.train_evaluator.add_batch(
+            mask.detach().cpu().numpy(),
+            pred.detach().cpu().numpy()
+        )
 
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=img.size(0))
+        self.log(
+            "train_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=img.size(0),
+        )
         return loss
 
     def on_train_epoch_end(self):
@@ -124,13 +150,20 @@ class KDTrain(pl.LightningModule):
         mask = batch["gt_semantic_seg"]
 
         student_logits = self(img)
-        with torch.no_grad():
-            teacher_logits = self.teacher(img)
 
-        loss = self.loss(student_logits, mask, teacher_logits)
+        if self.kd_enabled and self.teacher is not None:
+            with torch.no_grad():
+                teacher_logits = self.teacher(img)
+            loss = self.loss(student_logits, mask, teacher_logits)
+        else:
+            loss = self.loss(student_logits, mask)
+
         pred = torch.argmax(student_logits, dim=1)
 
-        self.val_evaluator.add_batch(mask.detach().cpu().numpy(), pred.detach().cpu().numpy())
+        self.val_evaluator.add_batch(
+            mask.detach().cpu().numpy(),
+            pred.detach().cpu().numpy()
+        )
 
         self.log("val_loss", loss, on_epoch=True, prog_bar=True, batch_size=img.size(0))
         return loss
@@ -195,8 +228,10 @@ def main():
     model = KDTrain(config)
 
     if getattr(config, "pretrained_ckpt_path", None):
-        print(f"Loading student weights from: {config.pretrained_ckpt_path}")
-        _load_student_weights_from_pl_ckpt(model.net, config.pretrained_ckpt_path)
+        ckpt_path = Path(config.pretrained_ckpt_path)
+        assert ckpt_path.exists(), f"Missing ckpt: {ckpt_path}"
+        print(f"Loading student weights from: {ckpt_path}")
+        _load_student_weights_from_pl_ckpt(model.net, str(ckpt_path))
 
     checkpoint_cb = ModelCheckpoint(
         dirpath=config.weights_path,
@@ -220,9 +255,8 @@ def main():
         log_every_n_steps=10,
         gradient_clip_val=1.0,
         gradient_clip_algorithm="norm",
-        precision=32,
+        precision="bf16-mixed" if torch.cuda.is_available() else 32,
     )
-
 
     trainer.fit(model, config.train_loader, config.val_loader)
 

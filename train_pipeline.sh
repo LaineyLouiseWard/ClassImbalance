@@ -3,51 +3,97 @@ set -euo pipefail
 unset CUDA_VISIBLE_DEVICES
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
 
-# Training Reproduction
-## Assumptions:
-# - You are in the repo root
-# - conda env is activated
-# - raw datasets already exist in data/
-# - artifacts/ (train_augmentation_list.json, sample_weights.txt) are writable
+# --------------------------------------------------------------------
+# Updated training pipeline (new stage numbering)
+#
+# Assumptions:
+# - run from repo root
+# - conda env activated
+# - data folders already exist
+# - artifacts/ is writable
+#
+# Stages (as per your new setup):
+#   Stage 1  : stage1_baseline.py
+#   Stage 2  : stage2_replication.py
+#   Stage 3a : stage3a_pretrain.py          (OEM+Biodiversity combined pretrain)
+#   Stage 3b : stage3b_finetune.py          (Biodiversity train_rep finetune, init from 3a)
+#   Build 4  : scripts/build_stage4_weights.py  (mining weights from stage3b ckpt)
+#   Stage 4  : stage4_sampling.py           (Biodiversity train_rep, init from 3b, sampler only change)
+#
+# Optional later:
+#   Stage 5  : stage5_kd.py + train_kd      (KD consolidation)
+# --------------------------------------------------------------------
 
-# Stage 1 — Baseline (Biodiversity only)
-#echo "Running Stage 1: Baseline"
-#python -m train.train_supervision -c config/biodiversity/stage1_baseline.py
+# Helpful: clean stale pyc so greps/tests behave
+#echo "Cleaning __pycache__ / .pyc ..."
+#find . -type d -name "__pycache__" -prune -exec rm -rf {} + || true
+#find . -type f -name "*.pyc" -delete || true
 
-# Stage 2 — Replication only (uses train_rep)
-#echo "Running Stage 2: Replication"
-#python -m train.train_supervision -c config/biodiversity/stage2_replication.py
+# -----------------------
+# Stage 1 — Baseline
+# -----------------------
+#echo "Running Stage 1: Baseline (Biodiversity only)"
+#PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage1_baseline.py
 
-# Step — Generate difficulty weights (required for Stage 3/4/5B)
-echo "Running Step: Generate difficulty weights"
-python -m scripts.analyze_hard_samples
+# -----------------------
+# Stage 2 — Replication
+# -----------------------
+#echo "Running Stage 2: Replication (train_rep)"
+#PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage2_replication.py
 
-# Stage 3 — Replication + difficulty-weighted sampling
-echo "Running Stage 3: Replication + Difficulty-Weighted Sampling"
-python -m train.train_supervision -c config/biodiversity/stage3_hardsampling.py
+# -----------------------
+# Stage 3a — OEM pretrain
+# -----------------------
+#echo "Running Stage 3a: OEM Pretraining (combined OEM+Biodiversity)"
+#PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage3a_pretrain.py
 
-# Stage 4 — Replication + difficulty-weighted sampling + minority-aware cropping
-echo "Running Stage 4: Replication + Difficulty-Weighted Sampling + Minority-Aware Cropping"
-python -m train.train_supervision -c config/biodiversity/stage4_minoritycrop.py
+# -----------------------
+# Stage 3b — Finetune (init from 3a)
+# -----------------------
+#echo "Running Stage 3b: Finetune on Biodiversity (train_rep) init from Stage 3a"
+PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage3b_finetune.py
 
-# Step — Train OEM teacher (EfficientNet-B4 U-Net on OEM native taxonomy)
-echo "Running Step: Train OEM Teacher"
-python -m train.train_teacher -c config/teacher/unet_oem.py
+# -----------------------
+# Build Stage 4 sampling weights (mined from Stage 3b ckpt)
+# -----------------------
+STAGE3B_CKPT="model_weights/biodiversity/stage3b_finetune/stage3b_finetune.ckpt"
+OUT_WEIGHTS="artifacts/stage4_sampling_weights.tsv"
 
-# Step — Export teacher checkpoint for student pretraining
-echo "Running Step: Export Teacher Checkpoint"
-python -m scripts.export_teacher_checkpoint \
-  --ckpt model_weights/teacher/teacher.ckpt \
-  --out pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
+echo "Building Stage 4 sampling weights from: ${STAGE3B_CKPT}"
+PYTHONPATH=. python scripts/build_stage4_weights.py \
+  --ckpt "${STAGE3B_CKPT}" \
+  --out "${OUT_WEIGHTS}" \
+  --data_root "data/biodiversity_split/train_rep" \
+  --batch_size 2 \
+  --num_workers 4
 
-# Stage 5A — OEM pretraining (student, Biodiversity + OEM combined)
-echo "Running Stage 5A: OEM Pretraining"
-python -m train.train_supervision -c config/biodiversity/stage5_pretrain.py
+# -----------------------
+# Stage 4 — Sampling (init from 3b, sampler only change)
+# -----------------------
+echo "Running Stage 4: Hard×Minority sampling on top of Stage 3b"
+PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage4_sampling.py
 
-# Stage 5B — Finetune after OEM pretraining (Biodiversity only)
-echo "Running Stage 5B: Finetune After OEM Pretraining"
-python -m train.train_supervision -c config/biodiversity/stage5_finetune.py
+# ====================================================================
+# OPTIONAL: Stage 5 — KD consolidation (only if/when you want KD)
+# ====================================================================
+# Notes:
+# - train_kd will call config.loss(student_logits, mask, teacher_logits)
+# - teacher weights must exist at:
+#     pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
+#
+# If you need to (re)train/export teacher, uncomment the block below.
+# ====================================================================
 
-# Stage 6 — Final KD consolidation (student + teacher)
-echo "Running Stage 6: Final KD Consolidation"
-python -m train.train_kd -c config/biodiversity/stage6_kd.py
+# echo "Running OPTIONAL Step: Train OEM Teacher"
+# PYTHONPATH=. python -m train.train_teacher -c config/teacher/unet_oem.py
+#
+# echo "Running OPTIONAL Step: Export teacher checkpoint"
+# PYTHONPATH=. python -m scripts.export_teacher_checkpoint \
+#   --ckpt model_weights/teacher/teacher.ckpt \
+#   --out pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
+#
+# echo "Running OPTIONAL Stage 5: KD consolidation"
+# PYTHONPATH=. python -m train.train_kd -c config/biodiversity/stage5_kd.py
+
+
+echo "DONE: pipeline finished."

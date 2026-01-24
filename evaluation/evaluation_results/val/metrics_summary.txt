@@ -1,58 +1,34 @@
-Found 11 evaluated checkpoints under: evaluation/evaluation_results/val
+Found 5 evaluated checkpoints under: evaluation/evaluation_results/val
 
 mIoU_excluding_bg (sorted desc)
 ======================================================================
-0.7425  | stage1_baseline_ftunetformer.ckpt
-0.5381  | stage5_finetune_after_oem_ftunetformer.ckpt
-0.5022  | stage2_replication_ftunetformer.ckpt
-0.4683  | stage4_replication_difficulty_minoritycrop_ftunetformer.ckpt
-0.4652  | stage3_replication_difficulty_ftunetformer.ckpt
-0.4254  | stage6_final_kd_ftunetformer.ckpt
-0.4254  | last.ckpt
-0.3774  | stage5_oem_pretrain_student.ckpt
-0.3774  | last.ckpt
-0.0968  | last.ckpt
-0.0577  | teacher.ckpt
+0.8093  | stage4_sampling.ckpt
+0.7956  | stage3b_finetune.ckpt
+0.7652  | stage2_replication.ckpt
+0.7361  | stage1_baseline.ckpt
+0.6916  | stage3a_pretrain.ckpt
 
 mF1_excluding_bg (sorted desc)
 ======================================================================
-0.8492  | stage1_baseline_ftunetformer.ckpt
-0.6843  | stage5_finetune_after_oem_ftunetformer.ckpt
-0.6450  | stage2_replication_ftunetformer.ckpt
-0.6135  | stage4_replication_difficulty_minoritycrop_ftunetformer.ckpt
-0.6044  | stage3_replication_difficulty_ftunetformer.ckpt
-0.5395  | stage6_final_kd_ftunetformer.ckpt
-0.5395  | last.ckpt
-0.4927  | stage5_oem_pretrain_student.ckpt
-0.4927  | last.ckpt
-0.1386  | last.ckpt
-0.1047  | teacher.ckpt
+0.8926  | stage4_sampling.ckpt
+0.8833  | stage3b_finetune.ckpt
+0.8641  | stage2_replication.ckpt
+0.8437  | stage1_baseline.ckpt
+0.8093  | stage3a_pretrain.ckpt
 
 OA (sorted desc)
 ======================================================================
-0.9116  | stage1_baseline_ftunetformer.ckpt
-0.8169  | stage2_replication_ftunetformer.ckpt
-0.8132  | stage5_finetune_after_oem_ftunetformer.ckpt
-0.8053  | stage6_final_kd_ftunetformer.ckpt
-0.8053  | last.ckpt
-0.7918  | stage3_replication_difficulty_ftunetformer.ckpt
-0.7793  | stage5_oem_pretrain_student.ckpt
-0.7793  | last.ckpt
-0.7785  | stage4_replication_difficulty_minoritycrop_ftunetformer.ckpt
-0.3868  | last.ckpt
-0.1276  | teacher.ckpt
+0.9343  | stage4_sampling.ckpt
+0.9301  | stage3b_finetune.ckpt
+0.9210  | stage2_replication.ckpt
+0.9100  | stage1_baseline.ckpt
+0.8950  | stage3a_pretrain.ckpt
 
 
 Full listing:
 ======================================================================
-0.7425 mIoU | 0.8492 mF1 | 0.9116 OA | stage1_baseline_ftunetformer.ckpt
-0.5022 mIoU | 0.6450 mF1 | 0.8169 OA | stage2_replication_ftunetformer.ckpt
-0.4652 mIoU | 0.6044 mF1 | 0.7918 OA | stage3_replication_difficulty_ftunetformer.ckpt
-0.4683 mIoU | 0.6135 mF1 | 0.7785 OA | stage4_replication_difficulty_minoritycrop_ftunetformer.ckpt
-0.5381 mIoU | 0.6843 mF1 | 0.8132 OA | stage5_finetune_after_oem_ftunetformer.ckpt
-0.3774 mIoU | 0.4927 mF1 | 0.7793 OA | stage5_oem_pretrain_student.ckpt
-0.3774 mIoU | 0.4927 mF1 | 0.7793 OA | last.ckpt
-0.4254 mIoU | 0.5395 mF1 | 0.8053 OA | stage6_final_kd_ftunetformer.ckpt
-0.4254 mIoU | 0.5395 mF1 | 0.8053 OA | last.ckpt
-0.0577 mIoU | 0.1047 mF1 | 0.1276 OA | teacher.ckpt
-0.0968 mIoU | 0.1386 mF1 | 0.3868 OA | last.ckpt
+0.7361 mIoU | 0.8437 mF1 | 0.9100 OA | stage1_baseline.ckpt
+0.7652 mIoU | 0.8641 mF1 | 0.9210 OA | stage2_replication.ckpt
+0.6916 mIoU | 0.8093 mF1 | 0.8950 OA | stage3a_pretrain.ckpt
+0.7956 mIoU | 0.8833 mF1 | 0.9301 OA | stage3b_finetune.ckpt
+0.8093 mIoU | 0.8926 mF1 | 0.9343 OA | stage4_sampling.ckpt

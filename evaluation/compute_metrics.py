@@ -86,6 +86,8 @@ def load_checkpoint_into_model(
         logging.warning(
             f"Unexpected keys (non-fatal): {unexpected[:10]}{'...' if len(unexpected) > 10 else ''}"
         )
+    if len(missing) > 50 or len(unexpected) > 50:
+        raise RuntimeError(f"Checkpoint doesn't match FT-UNetFormer-6: {ckpt_path}")
 
     return model
 
