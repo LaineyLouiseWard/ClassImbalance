@@ -51,8 +51,12 @@ check(list(map(list, tax.STUDENT_PALETTE)) ==
 check(tuple(tax.OEM_NATIVE_CLASSES) ==
       ("Unknown", "Bareland", "Rangeland", "Developed", "Road", "Tree", "Water", "Agriculture", "Building"),
       "OEM_NATIVE_CLASSES changed from the verified native-A order")
-check(dict(tax.OEM_TO_STUDENT_PRETRAIN) == {0: 0, 1: 5, 2: 2, 3: 4, 4: 4, 5: 1, 6: 2, 7: 2, 8: 4},
-      "OEM_TO_STUDENT_PRETRAIN changed from the grounded pre-training map (argmax of teacher confusion)")
+# 6 (Water) maps to 0, not to its argmax 2: the target taxonomy has no water class, so it is
+# excluded from the pre-training loss rather than forced onto the nearest class
+# (geoseg.taxonomy.OEM_NO_TARGET_COUNTERPART). Changed 2026-07-25.
+check(dict(tax.OEM_TO_STUDENT_PRETRAIN) == {0: 0, 1: 5, 2: 2, 3: 4, 4: 4, 5: 1, 6: 0, 7: 2, 8: 4},
+      "OEM_TO_STUDENT_PRETRAIN changed from the grounded pre-training map (argmax of teacher "
+      "confusion, less the declared no-counterpart exclusions)")
 check(tuple(tax.MINORITY_INDICES) == (4, 5) and tax.BACKGROUND_INDEX == 0,
       "MINORITY_INDICES / BACKGROUND_INDEX changed")
 
@@ -80,16 +84,29 @@ check(dict(OEM_ID_TO_TARGET6) == dict(tax.OEM_TO_STUDENT_PRETRAIN), "relabel OEM
 # confusion artifact when present; skipped on a fresh clone before the teacher/confusion exist.
 import os as _os
 import numpy as _np
-_CONF = "artifacts/teacher_oem_gt_confusion.npz"
+# Path is overridable: the campaign emits one matrix per split
+# (teacher_oem_gt_confusion_{a1,a2,a3,loso}.npz). Hard-coding the base name would keep validating
+# the stale random-split matrix while the per-split matrices went unchecked.
+_CONF = _os.environ.get("TEACHER_CONFUSION_NPZ", "artifacts/teacher_oem_gt_confusion.npz")
 if _os.path.exists(_CONF):
     _soft = _np.load(_CONF, allow_pickle=True)["soft"].astype(float)
     _argmax = {o: int(_soft[o].argmax()) for o in range(9)}
+    # Classes declared to have no counterpart in the target taxonomy are excluded from pre-training
+    # (mapped to the ignore_index) rather than forced onto their argmax. Assert that exclusion
+    # explicitly, so the departure stays deliberate and cannot drift back silently.
+    _excluded = getattr(tax, "OEM_NO_TARGET_COUNTERPART", {})
     for o in range(9):
+        if o in _excluded:
+            check(tax.OEM_TO_STUDENT_PRETRAIN[o] == 0,
+                  f"OEM class {o} has no target counterpart and must map to the ignore_index")
+            continue
         check(tax.OEM_TO_STUDENT_PRETRAIN[o] == _argmax[o],
               f"pretrain OEM class {o} ({tax.OEM_TO_STUDENT_PRETRAIN[o]}) != argmax(teacher confusion) ({_argmax[o]})")
     from geoseg.utils.kd_utils import build_mapping_from_confusion
     _B = build_mapping_from_confusion("B")
     for o in range(9):
+        if o in _excluded:
+            continue
         check(int(_B[o].argmax()) == tax.OEM_TO_STUDENT_PRETRAIN[o],
               f"KD-B argmax for OEM class {o} != grounded pretrain target")
 else:

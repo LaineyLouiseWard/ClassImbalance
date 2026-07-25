@@ -71,10 +71,43 @@ OEM_TO_STUDENT_PRETRAIN = {
     3: 4,  # Developed    -> Settlement    (59% GT Settlement)
     4: 4,  # Road         -> Settlement    (57% GT Settlement)
     5: 1,  # Tree         -> Forest        (75% GT Forest)
-    6: 2,  # Water        -> Grassland     [CHANGED from Background] (58% GT Grassland)
+    6: 0,  # Water        -> ignored        [no counterpart in the target taxonomy; see below]
     7: 2,  # Agriculture  -> Grassland     [CHANGED from Cropland]   (82% GT Grassland; Irish ag = pasture)
     8: 4,  # Building     -> Settlement    (85% GT Settlement)
 }
+
+
+# ---------------------------------------------------------------------------
+# Source classes with no counterpart in the target taxonomy.
+#
+# The six-class Biodiversity taxonomy has no water class, so OEM Water has nothing to map onto. The
+# confusion still returns an argmax for it (Grassland, 0.553), but that measures teacher DOMAIN
+# ERROR, not a correspondence: the matrix rows are the frozen teacher's PREDICTIONS on Irish
+# imagery, whereas the map is applied to OpenEarthMap GROUND-TRUTH labels on OpenEarthMap imagery.
+# Irish wet and shadowed grassland makes the teacher call grassland "water"; the inverse relabel
+# would assert that genuine OEM lakes and rivers are grassland and inject that into pre-training.
+#
+# Such classes are EXCLUDED from the pre-training loss (mapped to Background, the training
+# ignore_index) rather than forced onto the nearest class. This is the same treatment the
+# harmonisation already gives the unmatched direction -- no OEM class corresponds to Cropland -- so
+# it is one rule applied consistently to both, decided a priori from the class definitions rather
+# than from any confidence value. Water is the only OEM class meeting it.
+#
+# NOT applied to Bareland (argmax Seminatural, 0.442) or Rangeland (Grassland, 0.495) despite their
+# similarly weak argmax: both have genuine counterparts, and in the Irish uplands bare-looking
+# ground really is rough semi-natural habitat. Bareland additionally supplies every semi-natural
+# pixel in the relabelled pool, so excluding it would strip the priority class from pre-training.
+# Weak confidence alone is therefore NOT the criterion; absence of a counterpart is.
+# ---------------------------------------------------------------------------
+OEM_NO_TARGET_COUNTERPART = {
+    6: "Water — the target taxonomy has no water class; argmax Grassland (0.553) is teacher "
+       "domain error on Irish wet/shadowed grassland, not a taxonomic correspondence.",
+}
+for _o in OEM_NO_TARGET_COUNTERPART:
+    assert OEM_TO_STUDENT_PRETRAIN[_o] == 0, (
+        f"OEM class {_o} ({OEM_NATIVE_CLASSES[_o]}) is declared to have no target counterpart, so "
+        f"it must map to Background (the ignore_index), not {OEM_TO_STUDENT_PRETRAIN[_o]}"
+    )
 
 
 # The legacy name-based KD soft map (oem_to_student_kd) was REMOVED 2026-06-19.

@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""
+Preflight gate: refuse to train if any held-out tile has reached the training side.
+
+The original campaign leaked because the tiles are chipped on a 50% stride and the split was
+random by tile (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md). The split is now spatially blocked, but
+several artefacts are DERIVED from the training set and silently outlive a re-split:
+
+  - data/biodiversity_oem_combined/train  (the stage2a pre-training pool -- if stale, the transfer
+    arm pre-trains on tiles that are now test, contaminating the cell carrying the positive result)
+  - artifacts/sampler_weights_clsbal*.tsv
+  - artifacts/train_augmentation_list.json
+  - artifacts/teacher_oem_gt_confusion.npz  (grounded on confusion over the training set)
+
+This asserts, for a given split root:
+  1. the three split directories are disjoint by tile id;
+  2. no val/test tile id appears in the OEM combined pre-training pool;
+  3. no val/test tile id appears in any training-side artefact;
+  4. no val/test tile shares ground with a training tile (independent geometry re-read).
+
+Exit code 0 = safe to train. Non-zero = stop.
+
+Run:
+    PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py \
+        --split-root data/biodiversity_split_spatial_a1 \
+        --oem-root data/biodiversity_oem_combined_a1 \
+        --sampler-tsv artifacts/sampler_weights_clsbal_a1.tsv
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import numpy as np
+import rasterio
+
+SPLITS = ("train", "val", "test")
+
+
+def find_repo_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "data").is_dir() and (parent / "artifacts").is_dir():
+            return parent
+    raise RuntimeError("repo root not found")
+
+
+def ids_in(d: Path, ext: str) -> set:
+    return {f.stem for f in d.glob(f"*.{ext}")} if d.is_dir() else set()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--split-root", required=True)
+    ap.add_argument("--oem-root", default=None,
+                    help="combined Biodiversity+OEM pre-training root (stage2a pool)")
+    ap.add_argument("--sampler-tsv", default=None)
+    ap.add_argument("--augmentation-list", default="artifacts/train_augmentation_list.json")
+    args = ap.parse_args()
+
+    root = find_repo_root()
+    split_root = root / args.split_root
+    failures, checks = [], []
+
+    split_ids = {s: ids_in(split_root / s / "images", "tif") for s in SPLITS}
+    for s in SPLITS:
+        if not split_ids[s]:
+            failures.append(f"split '{s}' is empty at {split_root / s}")
+    held_out = split_ids["val"] | split_ids["test"]
+    checks.append(f"split sizes: " + "  ".join(f"{s}={len(split_ids[s])}" for s in SPLITS))
+
+    # 1. disjoint by id
+    for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
+        shared = split_ids[a] & split_ids[b]
+        if shared:
+            failures.append(f"{len(shared)} tile ids in BOTH {a} and {b}, e.g. {sorted(shared)[:3]}")
+    checks.append("split directories are disjoint by tile id")
+
+    # 2. OEM combined pre-training pool
+    if args.oem_root:
+        oem_train = ids_in(root / args.oem_root / "train" / "images", "tif")
+        if not oem_train:
+            failures.append(f"OEM combined train pool is empty at {args.oem_root}")
+        bleed = oem_train & held_out
+        if bleed:
+            failures.append(f"{len(bleed)} held-out tiles are in the OEM pre-training pool, "
+                            f"e.g. {sorted(bleed)[:3]}")
+        missing = split_ids["train"] - oem_train
+        if missing:
+            failures.append(f"OEM pool is missing {len(missing)} current training tiles "
+                            f"(stale pool from an older split?), e.g. {sorted(missing)[:3]}")
+        checks.append(f"OEM pre-training pool: {len(oem_train)} tiles, no held-out bleed")
+
+    # 3. training-side artefacts
+    if args.sampler_tsv:
+        p = root / args.sampler_tsv
+        if not p.exists():
+            failures.append(f"sampler TSV not found: {args.sampler_tsv}")
+        else:
+            # No header row: build_clsbal_sampler.py writes "<tile_id>\t<weight>" from line one.
+            tsv_ids = {ln.split("\t")[0].strip() for ln in p.read_text().splitlines()
+                       if ln.strip() and "\t" in ln}
+            bleed = tsv_ids & held_out
+            if bleed:
+                failures.append(f"{len(bleed)} held-out tiles in {args.sampler_tsv}, "
+                                f"e.g. {sorted(bleed)[:3]}")
+            missing = split_ids["train"] - tsv_ids
+            if missing:
+                failures.append(f"sampler TSV missing {len(missing)} current training tiles "
+                                f"(stale from an older split), e.g. {sorted(missing)[:3]}")
+            checks.append(f"sampler TSV: {len(tsv_ids)} ids, matches training set")
+
+    aug = root / args.augmentation_list
+    if aug.exists():
+        blob = json.loads(aug.read_text())
+        aug_ids = set(blob if isinstance(blob, list) else blob.get("ids", []))
+        bleed = aug_ids & held_out
+        if bleed:
+            failures.append(f"{len(bleed)} held-out tiles in {args.augmentation_list}, "
+                            f"e.g. {sorted(bleed)[:3]}")
+        checks.append(f"augmentation list: {len(aug_ids)} ids, no held-out bleed")
+
+    # 4. geometry, re-read from the rasters
+    by_crs = defaultdict(list)
+    for s in SPLITS:
+        for f in sorted((split_root / s / "images").glob("*.tif")):
+            with rasterio.open(f) as d:
+                b = d.bounds
+                by_crs[str(d.crs)].append((f.stem, s, b.left, b.bottom, b.right, b.top))
+    n_overlap = 0
+    example = None
+    for crs, rows in by_crs.items():
+        arr = np.array([r[2:] for r in rows], float)
+        L, B, R, T = arr.T
+        tol = 1e-6 * float(np.min(R - L))
+        for i, (ti, si, *_) in enumerate(rows):
+            ox = np.minimum(R[i], R) - np.maximum(L[i], L)
+            oy = np.minimum(T[i], T) - np.maximum(B[i], B)
+            hit = (ox > tol) & (oy > tol)
+            hit[i] = False
+            for j in np.where(hit)[0]:
+                if rows[j][1] != si:
+                    n_overlap += 1
+                    example = example or (ti, si, rows[j][0], rows[j][1])
+    if n_overlap:
+        failures.append(f"{n_overlap} cross-split footprint overlaps, e.g. {example}")
+    checks.append(f"geometry: {sum(len(v) for v in by_crs.values())} tiles across "
+                  f"{len(by_crs)} CRS, {n_overlap} cross-split overlaps")
+
+    for c in checks:
+        print(f"  ok   {c}")
+    if failures:
+        print("\nLEAKAGE PREFLIGHT FAILED:")
+        for f in failures:
+            print(f"  FAIL {f}")
+        return 1
+    print("\nLEAKAGE PREFLIGHT PASSED — safe to train")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

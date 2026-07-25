@@ -41,6 +41,20 @@ fi
 # ====================================================================
 
 # ---- Canonical paths ----
+# --- Split selection -------------------------------------------------------
+# The original random-by-tile split LEAKS: tiles are chipped on a 50% stride, so ~93% of each
+# held-out tile's ground area also sat inside a training tile (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md).
+# The campaign runs on spatially blocked splits built by scripts/data_prep/build_spatial_split.py.
+# Override to select an assignment, e.g.
+#   SPLIT_TAG=a1 bash RUNBOOK.sh --from A2
+SPLIT_TAG="${SPLIT_TAG:-a1}"
+SPLIT_ROOT="${SPLIT_ROOT:-data/biodiversity_split_spatial_${SPLIT_TAG}}"
+OEM_COMBINED="${OEM_COMBINED:-"$OEM_COMBINED"_${SPLIT_TAG}}"
+SAMPLER_TSV="${SAMPLER_TSV:-artifacts/sampler_weights_clsbal_${SPLIT_TAG}.tsv}"
+TEACHER_CONFUSION_NPZ="${TEACHER_CONFUSION_NPZ:-artifacts/teacher_oem_gt_confusion_${SPLIT_TAG}.npz}"
+# Exported so the cell configs and the taxonomy guard pick the same split up.
+export BIO_SPLIT="$SPLIT_ROOT" BIO_OEM_COMBINED="$OEM_COMBINED" SAMPLER_TSV TEACHER_CONFUSION_NPZ
+
 BIO_RAW=data/biodiversity_raw
 OEM_RAW=data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD
 TEACHER_PTH=pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
@@ -57,7 +71,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ordered list of all stages
-STAGES=(A0 A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B5 N3 C1 C2 C3 C4 D E)
+STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B5 N3 C1 C2 C3 C4 D E)
 
 # Validate --from value
 valid=false
@@ -156,18 +170,41 @@ fi
 # Order reflects the dependency teacher -> confusion -> grounded mappings -> OEM relabel -> student.
 
 if run_stage A1; then
-  echo "[A1] Splitting Biodiversity into train / val / test"
+  # NOTE: this stage no longer decides the experimental split. It only unpacks the raw tiles into
+  # the legacy three-directory layout, which downstream tooling reads as a flat POOL of all 2,143
+  # tiles; the train/val/test assignment it writes is discarded and never trained on. The real
+  # split is built in A1b. Splitting these overlap-chipped tiles at random is what leaked
+  # (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md), so nothing may consume this assignment.
+  echo "[A1] Unpacking Biodiversity tiles into the pool layout (assignment discarded; see A1b)"
   PYTHONPATH=. python scripts/data_prep/split_biodiversity_dataset.py \
     --in-root  "$BIO_RAW" \
     --out-root data/biodiversity_split \
     --seed 42 --mode copy --overwrite
 fi
 
+if run_stage A1b; then
+  echo "[A1b] Building the spatially blocked split '$SPLIT_TAG' -> $SPLIT_ROOT"
+  # Replays a committed manifest when one exists, so every machine materialises the identical
+  # split; otherwise derives it. Both paths re-read the GeoTIFF geometry and abort on any
+  # cross-split footprint overlap.
+  MANIFEST="artifacts/spatial_split_manifest_${SPLIT_TAG}.json"
+  if [ -f "$MANIFEST" ]; then
+    PYTHONPATH=. python scripts/data_prep/build_spatial_split.py \
+      --from-manifest "$MANIFEST" --materialise --mode symlink --out-root "$SPLIT_ROOT"
+  else
+    PYTHONPATH=. python scripts/data_prep/build_spatial_split.py \
+      --out "$MANIFEST" --materialise --mode symlink --out-root "$SPLIT_ROOT"
+  fi
+  require_nonempty "$SPLIT_ROOT"/train/masks A1b
+  echo "[A1b] Leakage preflight"
+  PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py --split-root "$SPLIT_ROOT"
+fi
+
 if run_stage A2; then
-  require_nonempty data/biodiversity_split/train/masks A1
+  require_nonempty "$SPLIT_ROOT"/train/masks A1
   echo "[A2] Identifying minority-rich tiles (for the D-stage sampler-uplift analysis)"
   PYTHONPATH=. python scripts/data_prep/analyze_class_distribution.py \
-    --data-root data/biodiversity_split/train \
+    --data-root "$SPLIT_ROOT"/train \
     --out       artifacts/train_augmentation_list.json \
     --overwrite
 fi
@@ -216,11 +253,18 @@ fi
 
 if run_stage A7; then
   require_file "$TEACHER_PTH" A6
-  require_nonempty data/biodiversity_split/train/masks A1
+  require_nonempty "$SPLIT_ROOT"/train/masks A1
   echo "[A7] Measuring teacher->GT confusion on the training set (grounds the OEM->student mappings)"
-  # Writes artifacts/teacher_oem_gt_confusion.npz (committed; the grounded pre-train map in
-  # taxonomy.py is its argmax and the campaign KD map is its row-normalised soft form -- A0 asserts this).
-  PYTHONPATH=. python scripts/analysis/teacher_oem_to_gt_confusion.py
+  # Measured on THIS split's training set and written per split, because the matrix is fitted on
+  # training labels: the committed base matrix was measured over the old random split, whose
+  # training set held tiles that are now test. Its argmax IS taxonomy.OEM_TO_STUDENT_PRETRAIN,
+  # which relabels the OEM tiles for pre-training, so a change here reaches the transfer arm.
+  PYTHONPATH=. python scripts/analysis/teacher_oem_to_gt_confusion.py \
+    --data-root "$SPLIT_ROOT"/train \
+    --out       "$TEACHER_CONFUSION_NPZ"
+  # Re-run the taxonomy guard against the matrix just written, not the stale committed one.
+  TEACHER_CONFUSION_NPZ="$TEACHER_CONFUSION_NPZ" \
+    PYTHONPATH=. python scripts/verify_taxonomy_consistency.py
 fi
 
 if run_stage A8; then
@@ -242,13 +286,13 @@ if run_stage A9; then
 fi
 
 if run_stage A10; then
-  require_nonempty data/biodiversity_split/train/images A1
+  require_nonempty "$SPLIT_ROOT"/train/images A1
   require_nonempty data/openearthmap_relabelled_filtered/masks A9
   echo "[A10] Creating combined Biodiversity + OEM dataset (Stage 2a pre-training pool)"
   PYTHONPATH=. python scripts/data_prep/create_biodiversity_oem_combined.py \
-    --bio-root data/biodiversity_split \
+    --bio-root "$SPLIT_ROOT" \
     --oem-root data/openearthmap_relabelled_filtered \
-    --out-root data/biodiversity_oem_combined \
+    --out-root "$OEM_COMBINED" \
     --overwrite
 fi
 
@@ -256,14 +300,14 @@ fi
 # Seed-varying. Honours $SEED (default 42) in train_supervision.
 
 if run_stage B1; then
-  require_nonempty data/biodiversity_split/train/images A1
+  require_nonempty "$SPLIT_ROOT"/train/images A1
   echo "[B1] Stage 1: Baseline"
   PYTHONPATH=. python -m train.train_supervision \
     -c config/biodiversity/stage1_baseline.py $FORCE_TRAIN
 fi
 
 if run_stage B2; then
-  require_nonempty data/biodiversity_oem_combined/train/images A10
+  require_nonempty "$OEM_COMBINED"/train/images A10
   echo "[B2] Stage 2a: OEM pre-training (combined Bio + OEM)"
   PYTHONPATH=. python -m train.train_supervision \
     -c config/biodiversity/stage2a_oem_pretrain.py $FORCE_TRAIN
@@ -277,18 +321,18 @@ if run_stage B3; then
 fi
 
 if run_stage B4; then
-  require_nonempty data/biodiversity_split/train/images A1
+  require_nonempty "$SPLIT_ROOT"/train/images A1
   echo "[B4] Building class-balanced (clsbal) sampler weights"
   PYTHONPATH=. python scripts/data_prep/build_clsbal_sampler.py \
-    --data_root data/biodiversity_split/train \
-    --out       artifacts/sampler_weights_clsbal.tsv \
+    --data_root "$SPLIT_ROOT"/train \
+    --out       "$SAMPLER_TSV" \
     --q 1.0 --settlement_target 1.27 \
     --force
 fi
 
 if run_stage B5; then
   require_file model_weights/biodiversity/stage2b_oem_finetune/stage2b_oem_finetune.ckpt B3
-  require_file artifacts/sampler_weights_clsbal.tsv B4
+  require_file "$SAMPLER_TSV" B4
   echo "[B5] Stage 3: Class-balanced (clsbal) sampling — FINAL shipped model"
   PYTHONPATH=. python -m train.train_supervision \
     -c config/biodiversity/stage3_clsbal.py $FORCE_TRAIN
@@ -303,12 +347,12 @@ fi
 
 if run_stage C1; then
   require_nonempty model_weights/biodiversity B1
-  require_nonempty data/biodiversity_split/val/images A1
+  require_nonempty "$SPLIT_ROOT"/val/images A1
   echo "[C1] Evaluating validation set (all stage checkpoints)"
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split val \
     --base-dir model_weights/biodiversity \
-    --data-root data/biodiversity_split/val \
+    --data-root "$SPLIT_ROOT"/val \
     --out-dir evaluation/evaluation_results/val \
     --force
 fi
@@ -316,19 +360,19 @@ fi
 if run_stage C2; then
   require_file model_weights/biodiversity/stage1_baseline/stage1_baseline.ckpt B1
   require_file model_weights/biodiversity/stage3_clsbal/stage3_clsbal.ckpt B5
-  require_nonempty data/biodiversity_split/test/images A1
+  require_nonempty "$SPLIT_ROOT"/test/images A1
   echo "[C2] Evaluating held-out test set (Stage 1 baseline + Stage 3 final; intermediate stages not on test)"
   # Baseline AND final on the test split, WITHOUT TTA — C4 (export_final_test_table) needs both metrics.json files.
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split test \
     --base-dir model_weights/biodiversity/stage1_baseline \
-    --data-root data/biodiversity_split/test \
+    --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test \
     --force
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split test \
     --base-dir model_weights/biodiversity/stage3_clsbal \
-    --data-root data/biodiversity_split/test \
+    --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test \
     --force
   # Final shipped model (Stage 3 clsbal): ALSO evaluate the test split WITH TTA so the paper
@@ -340,7 +384,7 @@ if run_stage C2; then
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split test \
     --base-dir model_weights/biodiversity/stage3_clsbal \
-    --data-root data/biodiversity_split/test \
+    --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test_tta \
     --tta --tta-flips hv --tta-scales 0.75,1.0,1.25 \
     --force

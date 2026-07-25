@@ -44,6 +44,12 @@ max_epoch = 45
 ignore_index = 0
 
 # --- Batch/LR variant (env-gated): BATCH_VARIANT=b2 (default) | b4 — MUST match across all 5 cells ---
+# --- Data split (env-gated): BIO_SPLIT selects which spatially blocked assignment to use.
+#   Default is the legacy random-by-tile split, which LEAKS (see
+#   notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
+_BIO_SPLIT = os.environ.get("BIO_SPLIT", "data/biodiversity_split")
+_BIO_OEM = os.environ.get("BIO_OEM_COMBINED", "data/biodiversity_oem_combined")
+
 _BV = os.environ.get("BATCH_VARIANT", "b2")
 assert _BV in ("b2", "b4"), f"BATCH_VARIANT must be b2 or b4, got {_BV!r}"
 _LR_SCALE = 2.0 if _BV == "b4" else 1.0
@@ -72,7 +78,11 @@ log_name = f"biodiversity/{weights_name}"
 monitor = "val_mIoU"
 monitor_mode = "max"
 save_top_k = 1
-save_last = False
+# save_last kept alongside save_top_k so the last-epoch model can be reported as a
+# selection-rule sensitivity. Best-val stays primary (matches the FT-UNetFormer reference
+# implementation); 45 epochs = two full CosineAnnealingWarmRestarts cycles (T_0=15, T_mult=2),
+# so the last epoch lands at a learning-rate minimum.
+save_last = True
 check_val_every_n_epoch = 1
 
 # init from the Stage 2a OEM pretrain checkpoint
@@ -110,17 +120,17 @@ use_aux_loss = False
 # Datasets  -- Biodiversity train at native class frequency (no replication)
 # -------------------
 train_dataset = BiodiversityTrainDataset(
-    data_root="data/biodiversity_split/train",
+    data_root=f"{_BIO_SPLIT}/train",
     transform=train_aug_random,
 )
 
 val_dataset = BiodiversityValDataset(
-    data_root="data/biodiversity_split/val",
+    data_root=f"{_BIO_SPLIT}/val",
     transform=val_aug,
 )
 
 test_dataset = BiodiversityTestDataset(
-    data_root="data/biodiversity_split/test",
+    data_root=f"{_BIO_SPLIT}/test",
 )
 
 

@@ -10,14 +10,26 @@ From it, the grounded mappings are derived: the pre-train target is the argmax o
 "of the pixels the teacher calls OEM-class X, what are they REALLY?" — e.g. teacher-Agriculture is
 82% Grassland (Irish farmland is pasture), not Cropland.
 
-This depends only on the frozen teacher + fixed training masks, so it is computed ONCE for the campaign.
+This depends on the frozen teacher + the TRAINING masks, so it must be recomputed whenever the
+split changes. The committed matrix was measured on the pre-2026-07-25 random split, whose training
+set contained tiles that are now held out -- so information from now-test tiles fed a preprocessing
+decision (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md). Recompute per split and compare the derived
+argmax mapping across splits: if it is identical everywhere, the harmonisation is not a source of
+split-dependent variation and the relabelled OEM pool stays valid, which is worth stating in the
+manuscript. If it moves, the OEM relabel (A8) and the combined pool (A10) must be rebuilt per split.
+
 Also serves as the teacher-reliability evidence for the manuscript.
 
 Run from repo root:
   PYTHONPATH=. python scripts/analysis/teacher_oem_to_gt_confusion.py
+  PYTHONPATH=. python scripts/analysis/teacher_oem_to_gt_confusion.py \
+      --data-root data/biodiversity_split_spatial_a1/train \
+      --out artifacts/teacher_oem_gt_confusion_a1.npz
 """
 
 from __future__ import annotations
+
+import argparse
 
 import numpy as np
 import torch
@@ -33,12 +45,18 @@ NS, NO = len(STUDENT_CLASSES), len(OEM_NATIVE_CLASSES)  # 6, 9
 
 @torch.no_grad()
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data-root", default="data/biodiversity_split/train",
+                    help="training split the confusion is measured over")
+    ap.add_argument("--out", default="artifacts/teacher_oem_gt_confusion.npz")
+    args = ap.parse_args()
+
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     teacher = TeacherUNet(num_classes=NO, pretrained=False)
     teacher.load_checkpoint(TEACHER_CKPT)
     teacher.freeze(); teacher.to(dev)
 
-    ds = BiodiversityTrainDataset(data_root="data/biodiversity_split/train", transform=val_aug)
+    ds = BiodiversityTrainDataset(data_root=args.data_root, transform=val_aug)
     dl = DataLoader(ds, batch_size=8, num_workers=4, shuffle=False, pin_memory=True)
 
     hard = np.zeros((NO, NS), dtype=np.int64)     # [teacher argmax OEM, GT student]
@@ -63,9 +81,9 @@ def main() -> None:
 
     import os
     os.makedirs("artifacts", exist_ok=True)
-    np.savez("artifacts/teacher_oem_gt_confusion.npz", hard=hard, soft=soft,
+    np.savez(args.out, hard=hard, soft=soft,
              oem_classes=np.array(OEM_NATIVE_CLASSES), student_classes=np.array(STUDENT_CLASSES))
-    print("saved artifacts/teacher_oem_gt_confusion.npz")
+    print(f"saved {args.out}  (measured over {args.data_root})")
 
     # Annotate each row with the GROUNDED pre-train target = argmax of the teacher's confusion
     # (geoseg.taxonomy.OEM_TO_STUDENT_PRETRAIN), NOT the legacy name-based map. This matches the

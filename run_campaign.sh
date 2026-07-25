@@ -15,7 +15,7 @@
 #   - remaining seeds then run, and finally the cross-seed aggregate is built.
 #
 # Run it inside tmux so it survives the terminal closing:
-#   conda activate ClassImbalance
+#   conda activate label-quality-ceiling
 #   tmux new -s seeds          # detach: Ctrl-b then d   |   reattach: tmux attach -t seeds
 #   bash run_campaign.sh
 #
@@ -39,7 +39,7 @@ CAMPAIGN_COMMIT="$(cd "$ROOT" && git rev-parse HEAD)"
 
 # Fail fast if the conda env is not active (else the first seed dies hours in).
 if ! python -c "import torch" >/dev/null 2>&1; then
-  echo "ERROR: active 'python' has no PyTorch — run 'conda activate ClassImbalance' first."
+  echo "ERROR: active 'python' has no PyTorch — run 'conda activate label-quality-ceiling' first."
   exit 1
 fi
 
