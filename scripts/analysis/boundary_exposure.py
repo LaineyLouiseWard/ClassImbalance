@@ -21,12 +21,30 @@ from __future__ import annotations
 
 import glob
 import json
+import pathlib
 from pathlib import Path
 
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 
-GSD_M = 0.5
+GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
+# --- Per-site ground sample distance -------------------------------------------------------------
+# Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
+# isotropic; both upland sites are geographic (EPSG:4326) and ANISOTROPIC, so a single 0.5 m figure
+# is wrong for 191 of 2,143 tiles -- it makes the "<=1.5 m" boundary band really <=1.9 m in x and the
+# ">8 m" interior really >10.3 m in x at those sites. Pass sampling=(gsd_y, gsd_x) to
+# scipy.ndimage.distance_transform_edt so distances come out in metres directly.
+GSD_BY_SITE = {
+    "biodiversity": (0.500, 0.500),   # (y, x) metres per pixel
+    "ireland1":     (0.515, 0.641),
+    "ireland2":     (0.515, 0.634),
+}
+
+
+def gsd_for(tile_id):
+    """(gsd_y, gsd_x) in metres for a tile id, keyed on its site prefix."""
+    return GSD_BY_SITE.get(str(tile_id).split("_")[0], (0.5, 0.5))
+
 BAND_M = 2.0
 NAMES = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 
@@ -57,7 +75,10 @@ def main() -> None:
             b = m == c
             if not b.any():
                 continue
-            dist_m = distance_transform_edt(b) * GSD_M   # m to nearest own-class edge
+            # sampling=(gsd_y, gsd_x) per site: upland pixels are ~0.64 x 0.51 m, so a single
+            # scalar 0.5 m overstates the band by up to 1.28x there. Returns metres directly.
+            gsd_y, gsd_x = gsd_for(pathlib.Path(f).stem)
+            dist_m = distance_transform_edt(b, sampling=(gsd_y, gsd_x))
             within[c].append((dist_m[b] <= BAND_M).astype(np.float32))
 
     exposure = {NAMES[c]: float(100.0 * np.concatenate(within[c]).mean()) for c in NAMES}
@@ -70,7 +91,7 @@ def main() -> None:
     out = {
         "n_tiles": len(masks),
         "band_m": BAND_M,
-        "gsd_m": GSD_M,
+        "gsd_by_site": {k: list(v) for k, v in GSD_BY_SITE.items()},
         "distance": "euclidean EDT to own-class boundary",
         "exposure_pct_within_band": {k: round(v, 1) for k, v in exposure.items()},
         "baseline_iou_pct": {NAMES[c]: round(iou[NAMES[c]] * 100, 1) for c in NAMES},

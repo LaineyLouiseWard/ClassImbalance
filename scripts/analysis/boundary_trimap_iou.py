@@ -39,7 +39,7 @@ from scipy import ndimage
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
-    STUDENT_CLASSES, C, GSD_M, DIST_BIN_EDGES_PX,
+    STUDENT_CLASSES, C, GSD_M, DIST_BIN_EDGES_PX, DIST_BIN_EDGES_M,
     boundary_distance, load_mask, load_seed_stack, list_val_tiles, seed_dir,
     tile_uncertainty,
 )
@@ -48,6 +48,10 @@ FOREGROUND = list(range(1, C))                 # 1..5
 HARD = {1: "Forest", 4: "Settlement", 5: "Seminatural"}  # narrative-focus classes
 # Boundary-exclusion radii in px. -1 = no exclusion (the true whole-image baseline == compute_metrics).
 RADII_PX = [-1, 0, 1, 2, 3, 4, 6, 8, 12, 16]
+# boundary_distance() returns METRES (per-site anisotropic sampling), so exclusion radii and bin
+# edges must be in metres as well. Digitising a metre distance against pixel edges would silently
+# halve every band. -1 stays a sentinel for "no exclusion".
+RADII_M = [(-1.0 if N < 0 else N * 0.5) for N in RADII_PX]
 # Boundary-IoU band widths (Cheng et al. 2021), in px. Headline = 3 px = 1.5 m at 0.5 m GSD;
 # swept 0.5-4 m so no single d is load-bearing.
 BIOU_D_PX = [1, 2, 3, 4, 6, 8]
@@ -99,7 +103,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     if dropped:
         print(f"[{cell}] scoring {len(img_ids)} Irish val tiles; dropped {len(dropped)} "
               f"non-Irish dump tiles ({', '.join(dropped[:6])}{'...' if len(dropped) > 6 else ''})")
-    nR = len(RADII_PX)
+    nR = len(RADII_M)
     # Global confusions: ensemble + one per seed, per radius.
     conf_ens = np.zeros((nR, C, C), dtype=np.int64)
     conf_seed = np.zeros((len(seeds), nR, C, C), dtype=np.int64)
@@ -107,7 +111,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     n_kept = np.zeros(nR, dtype=np.int64)
 
     # A2: error-vs-distance accumulators (ensemble), overall + per HARD class.
-    nb = len(DIST_BIN_EDGES_PX) - 1
+    nb = len(DIST_BIN_EDGES_M) - 1
     err_n = np.zeros(nb, dtype=np.int64)            # foreground pixels per bin
     err_e = np.zeros(nb, dtype=np.int64)            # foreground errors per bin
     # per-class error vs distance for ALL foreground classes (panel c: boundary vs interior floor)
@@ -125,13 +129,13 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
         mask = load_mask(mask_dir, iid)
         if mask.shape != stack.shape[-2:]:
             raise ValueError(f"shape mismatch {iid}: mask {mask.shape} vs {stack.shape}")
-        dist = boundary_distance(mask)
+        dist = boundary_distance(mask, iid)
         ens_pred = stack.mean(axis=0).argmax(axis=0).astype(np.int64)
         seed_preds = stack.argmax(axis=1).astype(np.int64)        # (N,H,W)
         fg = mask != 0
 
         # --- A1: trimap recovery per radius ---
-        for ri, N in enumerate(RADII_PX):
+        for ri, N in enumerate(RADII_M):
             keep = fg & (dist > N)
             if not keep.any():
                 continue
@@ -156,7 +160,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
         # --- A2: error + ensemble entropy vs distance ---
         total_H, _, _ = tile_uncertainty(stack)                  # H[mean_p], (H,W) in [0,1]
         err = (ens_pred != mask) & fg
-        bidx = np.digitize(dist, DIST_BIN_EDGES_PX[1:-1])         # 0..nb-1
+        bidx = np.digitize(dist, DIST_BIN_EDGES_M[1:-1])          # 0..nb-1 (metres)
         fg_b = bidx[fg]
         err_b = bidx[err]
         err_n += np.bincount(fg_b, minlength=nb)
@@ -174,7 +178,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
                             for si in range(len(seeds))])          # (nSeed, nR, 5)
     seed_macro = np.nanmean(seed_curve, axis=2)                    # (nSeed, nR)
 
-    radii_m = [(-0.5 if N < 0 else N * GSD_M) for N in RADII_PX]   # -0.5 marks the 'none' baseline slot
+    radii_m = [(-0.5 if N < 0 else N) for N in RADII_M]            # -0.5 marks the 'none' baseline slot
     # per-class per-seed recovery (FLAG-1: headline panel a uses per-seed mean, NOT ensemble argmax)
     cls_mean = np.nanmean(seed_curve, axis=0)                      # (nR, 5)
     cls_std = np.nanstd(seed_curve, axis=0)                        # (nR, 5)
@@ -216,7 +220,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
         n = np.where(n > 0, n, 1)
         return (e / n).tolist()
     ent_n = np.where(err_n > 0, err_n, 1)
-    edges_m = DIST_BIN_EDGES_PX * GSD_M
+    edges_m = DIST_BIN_EDGES_M
     # boundary band <= 1.5 m (matches headline d=3px); interior > 8 m (the floor).
     BND_MAX_M, INT_MIN_M = 1.5, 8.0
     bnd_bins = np.where(edges_m[1:] <= BND_MAX_M + 1e-9)[0]      # bins fully within 1.5 m
@@ -255,7 +259,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     base = ens_curve[0]            # N=-1, no exclusion
     print(f"\n[{cell}]  trimap IoU recovery (ensemble argmax, {len(seeds)} seeds, {len(img_ids)} tiles)")
     print(f"  {'class':12s} {'baseline':>9s} {'-1px':>7s} {'-2px':>7s} {'-4px':>7s} {'-8px':>7s}  recovery(0->8px)")
-    cols = {-1: 0, 1: RADII_PX.index(1), 2: RADII_PX.index(2), 4: RADII_PX.index(4), 8: RADII_PX.index(8)}
+    cols = {-1: 0, 1: RADII_M.index(0.5), 2: RADII_M.index(1.0), 4: RADII_M.index(2.0), 8: RADII_M.index(4.0)}
     for name in [STUDENT_CLASSES[k] for k in HARD] + ["macro_fg"]:
         b = base[name]
         vals = [ens_curve[cols[r]][name] for r in (1, 2, 4, 8)]

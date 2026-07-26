@@ -54,9 +54,29 @@ FOREGROUND = list(range(1, C))    # 1..5
 EPS = 1e-12
 
 # Distance bins in PIXELS. GSD = 0.5 m/px, so metres = pixels * 0.5.
-GSD_M = 0.5
+GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
+# --- Per-site ground sample distance -------------------------------------------------------------
+# Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
+# isotropic; both upland sites are geographic (EPSG:4326) and ANISOTROPIC, so a single 0.5 m figure
+# is wrong for 191 of 2,143 tiles -- it makes the "<=1.5 m" boundary band really <=1.9 m in x and the
+# ">8 m" interior really >10.3 m in x at those sites. Pass sampling=(gsd_y, gsd_x) to
+# scipy.ndimage.distance_transform_edt so distances come out in metres directly.
+GSD_BY_SITE = {
+    "biodiversity": (0.500, 0.500),   # (y, x) metres per pixel
+    "ireland1":     (0.515, 0.641),
+    "ireland2":     (0.515, 0.634),
+}
+
+
+def gsd_for(tile_id):
+    """(gsd_y, gsd_x) in metres for a tile id, keyed on its site prefix."""
+    return GSD_BY_SITE.get(str(tile_id).split("_")[0], (0.5, 0.5))
+
 # Edges chosen to resolve the boundary band finely then widen; last bin is open-ended.
 DIST_BIN_EDGES_PX = np.array([0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, np.inf])
+# boundary_distance now returns METRES, so bin edges must be in metres too. These are
+# the same nominal bands as before (px * 0.5) but are no longer site-dependent.
+DIST_BIN_EDGES_M = DIST_BIN_EDGES_PX * 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -83,11 +103,18 @@ def tile_uncertainty(seed_probs: np.ndarray):
     return total, expected, mi
 
 
-def boundary_distance(mask: np.ndarray) -> np.ndarray:
-    """Euclidean distance (px) from each pixel to the nearest GT class boundary.
+def boundary_distance(mask: np.ndarray, tile_id: str | None = None) -> np.ndarray:
+    """Distance from each pixel to the nearest GT class boundary, in METRES.
 
-    A boundary pixel is one whose label differs from any 4-neighbour. Distance is the EDT
-    of the complement of the boundary set, so boundary pixels get distance 0. Uses GT only.
+    A boundary pixel is one whose label differs from any 4-neighbour. Distance is the EDT of the
+    complement of the boundary set, so boundary pixels get distance 0. Uses GT only.
+
+    ANISOTROPY: pass `tile_id` so the transform is scaled by that site's real pixel size via
+    `sampling=(gsd_y, gsd_x)`. The two upland sites have ~0.64 x 0.51 m pixels, so an isotropic
+    transform scaled by a single 0.5 m makes a nominal 8 m band up to 10.3 m wide there -- and those
+    191 tiles are the whole of the generalisation test set. A wider band captures more boundary error,
+    which flatters the label-ceiling claim, so this must be correct BEFORE Test B is scored.
+    Omitting tile_id falls back to 0.5 m isotropic and is only valid for the inland site.
     """
     m = mask
     bnd = np.zeros(m.shape, dtype=bool)
@@ -98,8 +125,10 @@ def boundary_distance(mask: np.ndarray) -> np.ndarray:
     if not bnd.any():
         # single-class tile: every pixel is infinitely far from a boundary
         return np.full(m.shape, np.inf, dtype=np.float32)
-    # EDT of the "background" (non-boundary); boundary pixels -> 0.
-    return ndimage.distance_transform_edt(~bnd).astype(np.float32)
+    # EDT of the "background" (non-boundary); boundary pixels -> 0. `sampling` is (dy, dx) and makes
+    # the returned distances metres directly rather than pixels.
+    gsd_y, gsd_x = gsd_for(tile_id) if tile_id is not None else (GSD_M, GSD_M)
+    return ndimage.distance_transform_edt(~bnd, sampling=(gsd_y, gsd_x)).astype(np.float32)
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +189,7 @@ class Accumulator:
         n = np.where(self.d_n > 0, self.d_n, 1)
         return {
             "edges_px": DIST_BIN_EDGES_PX.tolist(),
-            "edges_m": (DIST_BIN_EDGES_PX * GSD_M).tolist(),
+            "edges_m": DIST_BIN_EDGES_M.tolist(),
             "n": self.d_n.tolist(),
             "mean_total": (self.d_tot / n).tolist(),
             "mean_expected": (self.d_exp / n).tolist(),
@@ -280,7 +309,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir, save_maps_for=None):
         mask = load_mask(mask_dir, iid)
         if mask.shape != total.shape:
             raise ValueError(f"shape mismatch {iid}: mask {mask.shape} vs softmax {total.shape}")
-        dist = boundary_distance(mask)
+        dist = boundary_distance(mask, iid)
         acc.add(total, expected, mi, dist, mask)
         if iid in save_maps_for:
             saved_maps[iid] = {

@@ -37,7 +37,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from geoseg.taxonomy import STUDENT_CLASSES, STUDENT_PALETTE  # noqa: E402
 
 C = len(STUDENT_CLASSES)
-GSD_M = 0.5
+GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
+# --- Per-site ground sample distance -------------------------------------------------------------
+# Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
+# isotropic; both upland sites are geographic (EPSG:4326) and ANISOTROPIC, so a single 0.5 m figure
+# is wrong for 191 of 2,143 tiles -- it makes the "<=1.5 m" boundary band really <=1.9 m in x and the
+# ">8 m" interior really >10.3 m in x at those sites. Pass sampling=(gsd_y, gsd_x) to
+# scipy.ndimage.distance_transform_edt so distances come out in metres directly.
+GSD_BY_SITE = {
+    "biodiversity": (0.500, 0.500),   # (y, x) metres per pixel
+    "ireland1":     (0.515, 0.641),
+    "ireland2":     (0.515, 0.634),
+}
+
+
+def gsd_for(tile_id):
+    """(gsd_y, gsd_x) in metres for a tile id, keyed on its site prefix."""
+    return GSD_BY_SITE.get(str(tile_id).split("_")[0], (0.5, 0.5))
+
 FG = list(range(1, C))
 PAL = np.array(STUDENT_PALETTE) / 255.0
 CLASS_CMAP = ListedColormap(PAL)
