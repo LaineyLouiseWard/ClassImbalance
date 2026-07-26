@@ -26,7 +26,16 @@ import argparse
 import os
 import random
 import shutil
+from collections import Counter
 from pathlib import Path
+
+# The three Irish sites this study is about. data/biodiversity_raw also holds 164 tiles from
+# Colombia (col1, 36) and Denmark (den0..den6, 128), which were excluded when the pool was built and
+# are not part of the design: different biome, different field structure, different acquisition.
+# That exclusion lived only in whatever was on disk -- this stage passed the whole raw directory, so
+# a from-scratch run silently rebuilt a 2,307-tile pool instead of the 2,143-tile one every
+# pool-level number in this repository was measured on. Naming the sites makes it reproducible.
+STUDY_SITES = ("biodiversity", "ireland1", "ireland2")
 
 
 def ensure_clean_out_root(out_root: Path, overwrite: bool) -> None:
@@ -75,6 +84,9 @@ def main() -> None:
     ap.add_argument("--mask-ext", default=".png")
     ap.add_argument("--mode", choices=["copy", "symlink"], default="copy")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--sites", nargs="+", default=list(STUDY_SITES),
+                    help=f"tile-id prefixes to keep. Default: the {len(STUDY_SITES)} Irish study "
+                         f"sites. Pass explicitly to widen it.")
     args = ap.parse_args()
 
     if abs((args.train_frac + args.val_frac + args.test_frac) - 1.0) > 1e-6:
@@ -98,10 +110,24 @@ def main() -> None:
     if not stems:
         raise RuntimeError("No matched image/mask pairs found.")
 
+    keep = set(args.sites)
+    missing = keep - {s.split("_")[0] for s in stems}
+    if missing:
+        raise RuntimeError(
+            f"--sites names {sorted(missing)}, which is not in {images_dir}. A study site silently "
+            f"absent from the pool is how a split gets built over less ground than it claims.")
+
     stems = sorted(stems)
     rnd = random.Random(args.seed)
     rnd.shuffle(stems)
 
+    # The non-study sites are dropped AFTER the shuffle AND after the slicing, not before. That
+    # reproduces the pool the shipped split was actually built from: this stage was run over all
+    # eleven sites and the 164 non-Irish tiles were removed from the result afterwards, by hand and
+    # without a record. Filtering earlier moves 543 tiles between directories, which would strand
+    # 435 of data/split_f1's symlinks until A1b re-materialised them. The assignment itself is
+    # discarded -- downstream reads the pool as a flat set -- but the DIRECTORY each tile lands in is
+    # what every split symlink resolves through, so it has to be reproducible.
     n = len(stems)
     n_train = int(round(n * args.train_frac))
     n_val = int(round(n * args.val_frac))
@@ -115,6 +141,20 @@ def main() -> None:
         "val": stems[n_train : n_train + n_val],
         "test": stems[n_train + n_val :],
     }
+
+    excluded: Counter = Counter()
+    for split, ids in splits.items():
+        kept = []
+        for s in ids:
+            site = s.split("_")[0]
+            if site in keep:
+                kept.append(s)
+            else:
+                excluded[site] += 1
+        splits[split] = kept
+    if excluded:
+        print("  excluded non-study sites: "
+              + ", ".join(f"{s}={n}" for s, n in sorted(excluded.items())))
 
     out_root = Path(args.out_root)
     ensure_clean_out_root(out_root, overwrite=args.overwrite)

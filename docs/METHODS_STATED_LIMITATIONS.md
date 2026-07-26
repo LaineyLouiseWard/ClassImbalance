@@ -201,3 +201,35 @@ only non-leaking prior estimates available were 3.25 (baseline) and 4.77 (full m
 
 **What must be written:** if a threshold is used at all, its operating characteristic, computed
 before the campaign. If one is not, the coverage of whatever interval is reported, and n_eff.
+
+## 8. The study is three Irish sites; the raw pool holds eleven
+
+**Measured 2026-07-26 from the GeoTIFF geometry, not from a filename.** `data/biodiversity_raw`
+contains 2,307 image/mask pairs across eleven site prefixes. The study uses three:
+
+| site | tiles | centroid | |
+|---|---|---|---|
+| `biodiversity` | 1,952 | 52.60 N, 8.65 W | inland Ireland, UTM 29N, 0.500 × 0.500 m |
+| `ireland1` | 64 | 51.55 N, 9.63 W | upland Ireland, WGS84, anisotropic |
+| `ireland2` | 127 | 52.04 N, 9.26 W | upland Ireland, WGS84, anisotropic |
+| `col1` | 36 | **4.77 N, 74.23 W** | **Colombia — excluded** |
+| `den0`–`den6` | 128 | **55.10 N, 8.80 E** | **Denmark — excluded** |
+
+Excluding the 164 Colombian and Danish tiles is correct and was decided when the pool was built: a
+different biome, different field structure and different acquisition have no place in a claim about
+Irish rural land cover. **The exclusion was not the problem. Nothing enforcing it was.**
+
+It had been applied by hand to the built pool and left no record in code, so the stage that unpacks
+the raw tiles passed the whole directory. A from-scratch run therefore rebuilt a 2,307-tile pool,
+not the 2,143-tile pool every pool-level number in this repository was measured on — including the
+correlogram's 1,952 inland tiles and the "2,143 tiles" the leakage measurement was made over.
+
+The site list is now named in `split_biodiversity_dataset.py` (`STUDY_SITES`), and the exclusion is
+applied after the shuffle and the slicing, which is where it was applied historically. A from-scratch
+run now reproduces the shipped pool exactly: 1706 / 219 / 218, the same 2,143 ids, **zero tiles
+changing directory**. Applying it any earlier moves 543 tiles between pool directories and strands
+435 of `data/split_f1`'s 1,730 symlinks, because those symlinks resolve through the pool's directory
+layout even though the assignment itself is discarded.
+
+**What must be written:** the study is three sites of eleven in the delivered data, and which two
+were excluded and why.

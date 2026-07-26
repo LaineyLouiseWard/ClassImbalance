@@ -160,3 +160,60 @@ papers are in the group library, not the personal one. Cite nothing you have not
 7. **Options considered and rejected**, with reasons.
 8. **Anything you could not verify.**
 </output_format>
+
+---
+
+<supplied_evidence>
+**Item 2 of `<what_you_must_check_yourself>` has already been measured. Do not re-derive it; use these
+numbers, or attack them.** Measured 2026-07-26 on `data/split_f1`, before any training. Two
+implementations sharing no code — one using `utils.spatial_blocks`, one written from scratch against
+the rasters — agree on the geometry to seven digits.
+
+**The block structure.** Test A: 294 tiles, 16 blocks at 950 m, Kish n_eff **9.85**. Test B: 172
+scorable tiles after the registered boundary-free exclusion, 12 blocks, n_eff **7.36**. Test A's band
+area share 0.377737, Test B's 0.264796 — both reproduce the committed denominators exactly. Six of
+Test A's sixteen blocks hold 74% of its tiles; Test B's per-block band share spans 0.055 to 0.539.
+
+**How large rho must be for the lower bound to clear 4.0 with probability 0.80.** Simulated from the
+real per-block band and interior pixel counts, with log-normal block random effects on both the
+interior rate and the rate ratio (sigma_rho below; sigma_interior 0.35, interior rate 0.05):
+
+| sigma_rho | Test A percentile | Test A BCa | Test A jackknife-t | Test B percentile | Test B BCa | Test B jackknife-t |
+|---|---|---|---|---|---|---|
+| 0.00 | 4.25 | 4.50 | 4.50 | 5.25 | 5.50 | 6.00 |
+| 0.20 | 4.75 | 4.75 | 5.00 | 5.75 | 5.75 | 6.75 |
+| 0.35 | 5.25 | 5.25 | 5.50 | 6.25 | 6.50 | 7.50 |
+| 0.50 | 5.75 | 5.75 | 6.00 | 7.00 | 7.25 | 8.50 |
+
+**The registration is nowhere an 80%-power test at rho = 4.** Even with zero between-block
+heterogeneity the true ratio must reach about 4.25 on Test A and 5.25 on Test B. At the heterogeneity
+the audit assumed, 5.25 and 6.25. Test B needs roughly 1.0 to 1.4 more than Test A throughout, purely
+because it has fewer and more unequal blocks — nothing to do with label quality. The only non-leaking
+prior estimates are 3.25 (baseline, validation) and 4.77 (full model, validation).
+
+**Three claims adjudicated, because two of them are wrong.**
+
+- *"A properly-covering interval will be wider, so rho may fail where it previously passed."*
+  **Refuted.** BCa's median width is 1.012x the percentile's and its *lower* bound is HIGHER in 63 of
+  64 simulated cells (median +0.030). Switching to BCa flips a verdict 2–9% of the time, and more
+  often from fail to pass than the reverse.
+- *"The registered percentile interval under-covers."* **Confirmed.** Coverage 0.86–0.93 against a
+  nominal 0.95, and 0.92–0.93 even with no heterogeneity, which is six Monte-Carlo standard errors
+  low. The miss is asymmetric and on the side the gate reads: the interval lies entirely above the
+  truth about 7% of the time on Test A against a nominal 2.5%. BCa is worse, not better — 0.74–0.86,
+  because with twelve blocks its acceleration is estimated from twelve jackknife points. Only a
+  delete-one-block jackknife t-interval on log(rho) covers near nominal, and it is 20–45% wider.
+- *"A percentile interval on log(rho) is bit-identical."* **Refuted**, but only at 5e-8 — quantile
+  interpolation does not commute with a convex transform. Numerically irrelevant; the word
+  "bit-identical" should simply not be written down.
+
+**What this does and does not settle.** It does not decide question 1. It does establish that a bar of
+4.0 judged on a lower bound is not a bar of 4.0: its operating point is ~5.2 on Test A and ~6.3 on
+Test B. If the registration is kept, that operating characteristic has to be registered with it, and
+the interval has to be the jackknife rather than the percentile or BCa — which is two more pieces of
+apparatus defending the first one. Weigh that against the proportionality constraint above.
+
+Reproduce: `PYTHONPATH=. python scripts/analysis/block_phase_sweep.py` for the block structure and
+n_eff; the simulation is in the session scratch, not the repo, because it answers a question that may
+be withdrawn.
+</supplied_evidence>
