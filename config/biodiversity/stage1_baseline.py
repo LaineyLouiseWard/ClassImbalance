@@ -11,6 +11,10 @@ import torch
 MOSAIC_RATIO = float(os.environ.get("MOSAIC_RATIO", "0.0"))
 # Optional output-name suffix so screen variants don't collide (e.g. "_nomosaic").
 RUN_TAG = os.environ.get("RUN_TAG", "")
+# Fold tag in every output path. Without it f2 resumed from f1's last.ckpt and the
+# evaluation directories collided, while f1's training set holds 100% of f3's test tiles.
+FOLD_TAG = os.environ.get("SPLIT_TAG", "")
+_SUF = (f"_{FOLD_TAG}" if FOLD_TAG else "") + RUN_TAG
 
 from geoseg.losses import *
 from geoseg.datasets.biodiversity_dataset import (
@@ -28,7 +32,7 @@ from geoseg.utils.optim import Lookahead, process_model_params
 # -----------------------
 # Training hyperparams
 # -----------------------
-max_epoch = 45
+max_epoch = 50  # raised from 45: the folds train on ~1.1k tiles, not 1706
 
 # Loss/metric ignore label (you confirmed: background=0 should be ignored)
 ignore_index = 0
@@ -39,7 +43,7 @@ ignore_index = 0
 # --- Data split (env-gated): BIO_SPLIT selects which spatially blocked assignment to use.
 #   Default is the legacy random-by-tile split, which LEAKS (see
 #   notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
-_BIO_SPLIT = os.environ.get("BIO_SPLIT", "data/biodiversity_split")
+_BIO_SPLIT = os.environ["BIO_SPLIT"]  # required: the old default was the LEAKY split
 _BIO_OEM = os.environ.get("BIO_OEM_COMBINED", "data/biodiversity_oem_combined")
 
 _BV = os.environ.get("BATCH_VARIANT", "b2")
@@ -62,7 +66,7 @@ classes = CLASSES
 # -----------------------
 # Logging / checkpoints
 # -----------------------
-weights_name = f"stage1_baseline{RUN_TAG}"
+weights_name = f"stage1_baseline{_SUF}"
 weights_path = f"model_weights/biodiversity/{weights_name}"
 test_weights_name = weights_name
 log_name = f"biodiversity/{weights_name}"

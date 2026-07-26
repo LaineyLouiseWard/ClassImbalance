@@ -168,6 +168,50 @@ def class_counts(split_root: Path, pool: dict, cache: Path | None) -> dict:
     return out
 
 
+
+# Grid cell for counting INDEPENDENT ground, at the autocorrelation scale (950 m, the correlogram
+# range on the full tile pool). Two tiles in the same cell are within one correlation length and are
+# not independent evidence about a class.
+SUPPORT_BLOCK_M = 950.0
+# Minimum independent blocks a class needs in a split before a per-class number from it means
+# anything. This REPLACES the share floor as the binding criterion, because a share does not track
+# estimability: measured on the 2026-07-26 folds, validation semi-natural at 1.91% share had 11
+# blocks and was fine, while validation cropland at 7.00% share and 2.6M pixels had 3 blocks and was
+# not. The share floor passes the second and rejects the first, i.e. exactly backwards.
+MIN_CLASS_BLOCKS = 5
+
+
+def support_blocks(pool: dict, block_m: float = SUPPORT_BLOCK_M) -> dict:
+    """{tile_id: block key} on a grid at the autocorrelation scale, per site so CRSs never mix."""
+    out = {}
+    by_site = defaultdict(list)
+    for t in pool:
+        by_site[site_of(t)].append(t)
+    for site, ids in by_site.items():
+        cy = float(np.mean([(pool[t][2] + pool[t][4]) / 2 for t in ids]))
+        # Degrees if the coordinates are small enough to be lon/lat; metres otherwise.
+        geo = max(abs(pool[t][1]) for t in ids) <= 180
+        sx = block_m / (111320.0 * math.cos(math.radians(cy))) if geo else block_m
+        sy = block_m / 111132.0 if geo else block_m
+        for t in ids:
+            x = ((pool[t][1] + pool[t][3]) / 2) / sx
+            y = ((pool[t][2] + pool[t][4]) / 2) / sy
+            out[t] = (site, int(math.floor(x)), int(math.floor(y)))
+    return out
+
+
+def class_block_support(assign: dict, counts: dict, blocks: dict) -> dict:
+    """{split: {class: number of distinct independent blocks holding any pixel of that class}}."""
+    seen = {s: defaultdict(set) for s in SPLITS}
+    for tid, s in assign.items():
+        if s not in seen:
+            continue
+        for c in FOREGROUND:
+            if counts[tid][c] > 0:
+                seen[s][c].add(blocks[tid])
+    return {s: {c: len(seen[s][c]) for c in FOREGROUND} for s in SPLITS}
+
+
 def split_class_shares(assign: dict, counts: dict) -> dict:
     """Per-split share of foreground pixels held by each class."""
     tot = {s: Counter() for s in SPLITS}
@@ -238,6 +282,21 @@ def apply_cut_buffer(assign: dict, pool: dict, site: str, axis: str,
     return {t: s for t, s in assign.items() if t not in dropped}, dropped
 
 
+def _bounds_from_rasters(ids, root: Path, split_root: Path, orig: dict) -> dict:
+    """{tile: (left, bottom, right, top)} re-read from the GeoTIFFs, never from the cache.
+
+    pairwise_separation_m used to read `pool`, which is the mtime-keyed cache AND the same dict that
+    placed the cuts, so its docstring's independence claim was false: a doctored cache with a valid
+    fingerprint reported 20,384 m for a real 128 m gap and passed.
+    """
+    out = {}
+    for t in ids:
+        with rasterio.open(split_root / orig[t] / "images" / f"{t}.tif") as d:
+            b = d.bounds
+            out[t] = (b.left, b.bottom, b.right, b.top)
+    return out
+
+
 def pairwise_separation_m(kept: dict, pool: dict, site: str,
                           geographic: bool = False, lat: float = 0.0) -> dict:
     """{(split_a, split_b): minimum footprint-to-footprint distance in metres}.
@@ -274,7 +333,9 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
                        priors: list, min_tiles: int, max_test_overlap: float = 0.25,
                        min_class_share: float = MIN_CLASS_SHARE,
                        min_val_tiles: int | None = None,
-                       min_test_tiles: int | None = None) -> dict:
+                       min_test_tiles: int | None = None,
+                       min_class_blocks: int = MIN_CLASS_BLOCKS,
+                       blocks: dict | None = None) -> dict:
     """THE SHIPPED DESIGN. Cut one site into train | val | test strips; hold other sites out whole.
 
     Geometry, along one axis of the splittable site:
@@ -309,6 +370,8 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
     rng = np.random.default_rng(seed)
     best = None
     n_below_floor = 0
+    n_below_blocks = 0
+    blocks = blocks if blocks is not None else support_blocks(pool)
 
     for _ in range(restarts):
         axis = "x" if rng.random() < 0.5 else "y"
@@ -391,6 +454,14 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
             n_below_floor += 1
             continue
 
+        # The binding criterion. A class needs enough INDEPENDENT ground in a split, not enough
+        # pixels and not a high enough share: the 50% stride means neighbouring tiles repeat the same
+        # ground, so pixel counts and shares both overstate support, and they overstate it unevenly.
+        sup = class_block_support(kept, counts, blocks)
+        if min(sup[sp][c] for sp in SPLITS for c in FOREGROUND) < min_class_blocks:
+            n_below_blocks += 1
+            continue
+
         # Composition drift against the whole-site prior. Also confined to the dead path until now,
         # which let f2 ship with 13.84% cropland in validation against 2.13% in its own test set -- a
         # 6.5x ratio, so its checkpoint was selected against a prior neither its training nor its test
@@ -431,13 +502,16 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
 
     if best is None:
         raise SystemExit(
-            f"no viable cut placement in {restarts} tries ({n_below_floor} rejected for holding a "
-            f"foreground class below min_class_share={min_class_share:.2%} in some split; the rest "
+            f"no viable cut placement in {restarts} tries ({n_below_floor} rejected on class share, "
+            f"{n_below_blocks} rejected for a class with under {min_class_blocks} independent "
+            f"{SUPPORT_BLOCK_M:.0f} m blocks in some split; the rest "
             f"left under {min_tiles} tiles in a split or duplicated an earlier fold's test ground). "
             f"Raise --restarts, widen the strip fractions, or lower --min-split-tiles.")
     _, geom, kept, dropped, worst, shares = best
     return {"assignment": kept, "dropped": dropped, "geometry": geom,
-            "worst_class_share": worst, "class_shares": shares}
+            "worst_class_share": worst, "class_shares": shares,
+            "class_block_support": class_block_support(kept, counts, blocks),
+            "min_class_blocks": min_class_blocks, "support_block_m": SUPPORT_BLOCK_M}
 
 
 def materialise(kept: dict, pool: dict, root: Path, split_root: Path, out_root: str, mode: str):
@@ -511,12 +585,17 @@ def main() -> None:
     ap.add_argument("--three-region", metavar="SITE", default=None,
                     help="SHIPPED DESIGN: cut this site into train|val|test strips with two straight "
                          "cuts, holding --external-sites out whole. Searches cut placement for the "
-                         "candidate with the best worst-case per-class share.")
+                         "candidate with the least composition drift, rejecting any that leaves a class "
+                         "with under --min-class-blocks independent blocks in a split.")
     ap.add_argument("--buffer-test-m", type=float, default=650.0,
                     help="minimum separation between the validation and test strips, in metres. "
-                         "650 m = 2.5x the 256 m tile footprint (so no tile can share a pixel across "
-                         "the boundary) and above the measured autocorrelation range in tile class "
-                         "composition. This is the guarantee the reported test number rests on.")
+                         "650 m = 2.5x the 256 m tile footprint, so no tile can share a pixel across "
+                         "the boundary. It is NOT above the measured autocorrelation range: that is "
+                         "950 m on the full tile pool (750 m on the shipped subsample), and an earlier "
+                         "version of this help text claimed otherwise. Per the pre-registration the "
+                         "buffer keys on effect size, not range -- peak Mantel r is 0.044 and stable "
+                         "across every subsample, seed and permutation count tried -- and is anchored "
+                         "on the pixel-identity geometry. This is the guarantee the test number rests on.")
     ap.add_argument("--buffer-val-m", type=float, default=256.0,
                     help="minimum separation between the train and validation strips, in metres. "
                          "256 m is the exact pixel-identity distance: tiles are 512 px at 0.5 m on a "
@@ -527,6 +606,10 @@ def main() -> None:
                          "validation selects checkpoints and is never reported.")
     ap.add_argument("--min-test-tiles", type=int, default=150,
                     help="minimum test tiles. This split carries the reported estimate.")
+    ap.add_argument("--min-class-blocks", type=int, default=MIN_CLASS_BLOCKS,
+                    help=f"reject a candidate if any foreground class has fewer than this many "
+                         f"distinct {SUPPORT_BLOCK_M:.0f} m blocks in train, val or test. This is the "
+                         f"binding adequacy criterion; the share floor is a weak safety net.")
     ap.add_argument("--min-class-share", type=float, default=MIN_CLASS_SHARE,
                     help="reject any candidate holding a foreground class below this share of "
                          "foreground pixels in train, val or test. Not applied to external_test, "
@@ -571,6 +654,32 @@ def main() -> None:
         bad = verify_independent(kept, root, split_root, {t: pool[t][0] for t in kept})
         if bad:
             raise SystemExit(f"FAILED: {len(bad)} cross-split overlaps, e.g. {bad[:3]}")
+
+        # Replay used to check overlap ONLY, so a manifest with 384 m separation against a 650 m
+        # requirement, or with zero validation tiles, replayed clean. Zero overlap is far weaker than
+        # the buffer the design claims. Everything below is recomputed from the raw geometry and
+        # checked against what the manifest itself declares, so a doctored manifest fails.
+        got_counts = Counter(kept.values())
+        for sp in SPLITS:
+            if got_counts.get(sp, 0) == 0:
+                raise SystemExit(f"FAILED: manifest has zero {sp} tiles")
+        declared = src.get("counts") or {}
+        for sp, n in declared.items():
+            if got_counts.get(sp, 0) != n:
+                raise SystemExit(f"FAILED: manifest declares {n} {sp} tiles but its assignment holds "
+                                 f"{got_counts.get(sp, 0)}")
+        need_m = {tuple(k.split("-")): v for k, v in (src.get("required_separation_m") or {}).items()}
+        if need_m:
+            sep = pairwise_separation_m(kept, pool, src.get("site_split", "biodiversity"))
+            for pair, need in need_m.items():
+                if pair in sep and sep[pair] + 1e-6 < need:
+                    raise SystemExit(f"FAILED: {pair[0]}-{pair[1]} separation {sep[pair]:.0f} m is "
+                                     f"below the {need:.0f} m this manifest requires")
+            print("  VERIFIED separation: " + ",  ".join(
+                f"{a}-{b} {sep[(a, b)]:.0f} m (>= {need_m[(a, b)]:.0f})"
+                for (a, b) in need_m if (a, b) in sep))
+        else:
+            print("  WARNING: manifest declares no required_separation_m, so replay cannot check it")
         print("VERIFIED: zero cross-split footprint overlap")
         if args.materialise:
             materialise(kept, pool, root, split_root, args.out_root, args.mode)
@@ -589,13 +698,6 @@ def main() -> None:
         print(f"EXTERNAL TEST SITES (held out whole, outside the blocked design): {external}",
               flush=True)
 
-    priors = []
-    for m in (args.distinct_from or []):
-        prior_assign = json.loads((root / m).read_text())["assignment"]
-        priors.append(test_blocks_by_site(prior_assign, blocks))
-        print(f"  requiring different held-out ground from {m}: "
-              f"{ {s: sorted(v) for s, v in priors[-1].items()} }", flush=True)
-
     if args.three_region:
         priors = []
         for m in (args.distinct_from or []):
@@ -610,7 +712,8 @@ def main() -> None:
                                  args.buffer_test_m, args.buffer_val_m, args.seed,
                                  args.restarts, priors, args.min_split_tiles,
                                  args.max_test_overlap, args.min_class_share,
-                                 args.min_val_tiles, args.min_test_tiles)
+                                 args.min_val_tiles, args.min_test_tiles,
+                                 args.min_class_blocks)
         kept, dropped, geom, shares = (out["assignment"], out["dropped"],
                                        out["geometry"], out["class_shares"])
         got = Counter(kept.values())
@@ -661,6 +764,9 @@ def main() -> None:
             # across folds), so it is neither ranked nor rejected on composition.
             "min_class_share": args.min_class_share,
             "min_class_share_applies_to": list(SPLITS),
+            "min_class_blocks": out["min_class_blocks"],
+            "support_block_m": out["support_block_m"],
+            "class_block_support": out["class_block_support"],
             "composition_drift": geom.get("composition_drift"),
             "n_pool": len(pool), "n_kept": len(kept), "n_dropped_buffer": len(dropped),
             "counts": {sp: got.get(sp, 0) for sp in list(SPLITS) + [EXTERNAL]},

@@ -2,7 +2,7 @@
   "generated_by": "scripts/data_prep/build_spatial_split.py --three-region",
   "design": "three-region single-axis cuts + whole-site external test",
   "seed": 42,
-  "restarts": 12000,
+  "restarts": 15000,
   "site_split": "biodiversity",
   "external_sites": [
     "ireland1",
@@ -39,12 +39,37 @@
     "proportion_deviation": 0.0266
   },
   "max_test_overlap_allowed": 0.25,
-  "min_class_share": 0.015,
+  "min_class_share": 0.01,
   "min_class_share_applies_to": [
     "train",
     "val",
     "test"
   ],
+  "min_class_blocks": 5,
+  "support_block_m": 950.0,
+  "class_block_support": {
+    "train": {
+      "1": 32,
+      "2": 32,
+      "3": 23,
+      "4": 31,
+      "5": 31
+    },
+    "val": {
+      "1": 8,
+      "2": 8,
+      "3": 8,
+      "4": 8,
+      "5": 5
+    },
+    "test": {
+      "1": 16,
+      "2": 16,
+      "3": 7,
+      "4": 13,
+      "5": 11
+    }
+  },
   "composition_drift": 0.2487,
   "n_pool": 2143,
   "n_kept": 1738,

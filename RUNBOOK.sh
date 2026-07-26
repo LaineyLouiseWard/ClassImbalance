@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ordered list of all stages
-STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B4b B5 N3 C1 C2 C3 C4 D E)
+STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B4b B4c B5 N3 C1 C1b C2 C3 C4 D E)
 
 # Validate --from value
 valid=false
@@ -358,6 +358,14 @@ if run_stage B4b; then
     --confusion-npz "$TEACHER_CONFUSION_NPZ"
 fi
 
+if run_stage B4c; then
+  require_file "$SAMPLER_TSV" B4
+  echo "[B4c] Sampler-only cell (4th factorial cell; was in NO runbook stage before 2026-07-26,"
+  echo "      so an end-to-end run trained three of the four cells and the factorial could not be assembled)"
+  PYTHONPATH=. python -m train.train_supervision \
+    -c config/biodiversity/stage_sampler_only.py $FORCE_TRAIN
+fi
+
 if run_stage B5; then
   require_file model_weights/biodiversity/stage2b_oem_finetune/stage2b_oem_finetune.ckpt B3
   require_file "$SAMPLER_TSV" B4
@@ -383,6 +391,24 @@ if run_stage C1; then
     --data-root "$SPLIT_ROOT"/val \
     --out-dir evaluation/evaluation_results/val \
     --force
+fi
+
+if run_stage C1b; then
+  echo "[C1b] Test B — the held-out upland sites. This is the generalisation number the paper leads on,"
+  echo "      and until 2026-07-26 no runnable path scored it at all."
+  for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
+    CKPT="model_weights/biodiversity/${CELL}_${SPLIT_TAG}/${CELL}_${SPLIT_TAG}.ckpt"
+    [ -f "$CKPT" ] || { echo "  skip $CELL (no checkpoint at $CKPT)"; continue; }
+    PYTHONPATH=. python evaluation/compute_metrics.py \
+      --checkpoints "$CKPT" \
+      --data-root  "$SPLIT_ROOT"/external_test \
+      --split test \
+      --out-dir    evaluation/evaluation_results/external_${SPLIT_TAG}/${CELL} \
+      --ignore-index 0
+  done
+  echo "[C1b] Per-class support for Test B (a share is not a support; classes under 5 independent"
+  echo "      950 m blocks are reported as unestimable, never as an estimate)"
+  PYTHONPATH=. python scripts/analysis/report_class_support.py --split-root "$SPLIT_ROOT"
 fi
 
 if run_stage C2; then
