@@ -238,10 +238,26 @@ def fmt_p(p: float) -> str:
 
 # ── loading ──────────────────────────────────────────────────────────────────
 
-def load_metrics_file(path: Path) -> dict:
-    """Read one metrics.json → simplified dict with everything in PERCENT."""
+def load_metrics_file(path: Path, folder: str) -> dict:
+    """Read one metrics.json → simplified dict with everything in PERCENT.
+
+    The file must say which checkpoint produced it, and that checkpoint must be this cell's, for
+    this SPLIT_TAG. Resolving by path alone is not enough: the flat campaign drops are named
+    `seed<N>_<cell>.json` with no tag in them at all, so `--results-dir sonic/results/final_results`
+    reads the WITHDRAWN leaking campaign's forty files and produces a complete factorial with
+    p-values and manuscript-ready tables, exit 0. Every metrics.json already records its own
+    checkpoint; this reads it instead of discarding it.
+    """
     with open(path, encoding="utf-8") as f:
         m = json.load(f)
+    got = Path(m.get("checkpoint", "")).name
+    want = f"{cell_dir(folder)}.ckpt"
+    if got != want:
+        raise SystemExit(
+            f"{path}\n  was produced by checkpoint '{got or '(none recorded)'}', not '{want}'.\n"
+            f"  This is a metrics file from a different cell, a different split tag, or the "
+            f"withdrawn pre-2026-07-26 campaign. Point --results-dir at the current drop, or set "
+            f"SPLIT_TAG to the campaign you mean (currently '{SPLIT_TAG}').")
     iou, f1 = m["per_class_iou"], m["per_class_f1"]
     return {
         "mIoU_excluding_bg": m["mIoU_excluding_bg"] * 100,
@@ -492,7 +508,7 @@ def main() -> None:
             for s in seeds:
                 p = cell_metrics_path(s, root_seed, split, folder, flat_for)
                 if p.exists():
-                    seedmap[s] = load_metrics_file(p)
+                    seedmap[s] = load_metrics_file(p, folder)
             if seedmap:
                 data[split][folder] = {"label": label, "seedmap": seedmap}
 
@@ -509,7 +525,8 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     summary = {
         "generated_from": {"seeds": seeds, "root_seed": root_seed, "repo": str(REPO),
-                            "results_dir": str(results_dir) if results_dir else None},
+                            "split_tag": SPLIT_TAG,
+                            "results_dir": {k: str(v) for k, v in flat_for.items() if v}},
         "design": "2x2 factorial over {OEM transfer} x {clsbal sampler}",
         "cells": {label: {"folder": folder, "transfer": tr, "sampler": sm}
                   for label, folder, tr, sm in CELLS},

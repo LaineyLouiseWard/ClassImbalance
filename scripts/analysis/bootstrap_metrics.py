@@ -30,7 +30,7 @@ from tqdm import tqdm
 # ── repo root ───────────────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.analysis.utils import find_repo_root
+from scripts.analysis.utils import SPLIT_TAG, cell_dir, find_repo_root, spatial_blocks
 
 REPO = find_repo_root()
 
@@ -49,11 +49,15 @@ NUM_CLASSES = 6
 IGNORE_INDEX = 0
 CLASS_NAMES_5 = ["Forest", "Grassland", "Cropland", "Settlement", "Seminatural"]
 
-STAGES = {
-    "stage1_baseline": REPO / "model_weights" / "biodiversity" / "stage1_baseline" / "stage1_baseline.ckpt",
-    "stage2b_oem_finetune": REPO / "model_weights" / "biodiversity" / "stage2b_oem_finetune" / "stage2b_oem_finetune.ckpt",
-    "stage3_clsbal": REPO / "model_weights" / "biodiversity" / "stage3_clsbal" / "stage3_clsbal.ckpt",
-}
+# All four factorial cells, tagged. The untagged spellings this used to hard-code point at the
+# WITHDRAWN campaign's checkpoints, which still exist under _archive/stale_checkpoints_pre_rebuild/;
+# restoring one made this script print bootstrap intervals on the leaking split and exit 0.
+CELLS = ["stage1_baseline", "stage2b_oem_finetune", "stage_sampler_only", "stage3_clsbal"]
+
+
+def stage_ckpt(cell: str) -> Path:
+    d = cell_dir(cell)
+    return REPO / "model_weights" / "biodiversity" / d / f"{d}.ckpt"
 
 
 # ── per-tile inference ──────────────────────────────────────────────────────
@@ -63,17 +67,17 @@ def collect_per_tile_cms(
     ckpt_path: Path,
     split: str,
     device: torch.device,
+    data_root: Path,
 ) -> list[np.ndarray]:
-    """Return a list of (6,6) int64 confusion matrices, one per tile."""
+    """Return a list of (6,6) int64 confusion matrices, one per tile, in sorted tile-id order."""
     model = build_model(num_classes=NUM_CLASSES).to(device)
     model = load_checkpoint_into_model(model, ckpt_path, device)
     model.eval()
 
-    data_root = str(REPO / "data" / "biodiversity_split" / split)
     if split == "val":
-        ds = BiodiversityValDataset(data_root=data_root)
+        ds = BiodiversityValDataset(data_root=str(data_root))
     else:
-        ds = BiodiversityTestWithMasksDataset(data_root=data_root)
+        ds = BiodiversityTestWithMasksDataset(data_root=str(data_root))
 
     loader = DataLoader(ds, batch_size=1, shuffle=False, num_workers=0,
                         pin_memory=(device.type == "cuda"))

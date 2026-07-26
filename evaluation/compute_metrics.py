@@ -361,7 +361,12 @@ def main() -> None:
     device = torch.device(args.device if (args.device == "cpu" or torch.cuda.is_available()) else "cpu")
 
     if args.checkpoints:
-        ckpts = [Path(c).resolve() for c in args.checkpoints]
+        # absolute() rather than resolve(): the output directory is named after the checkpoint's
+        # PARENT (safe_name below), so following a symlink would name the run directory after the
+        # link TARGET. A tagged path pointing at an archived untagged checkpoint would then write
+        # the withdrawn campaign's directory name while every reader looks for the tagged one, and
+        # the stage would exit 0. The file is opened through the link either way.
+        ckpts = [Path(c).absolute() for c in args.checkpoints]
         missing = [str(c) for c in ckpts if not c.is_file()]
         if missing:
             raise FileNotFoundError(f"checkpoints not found: {missing}")

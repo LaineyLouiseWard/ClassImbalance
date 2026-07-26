@@ -71,17 +71,35 @@ class Evaluator(object):
         return tp / (tp + fn + self.eps)
 
     def F1(self):
+        """Per-class F1, NaN for a class absent from both ground truth and prediction.
+
+        Same reasoning as Intersection_over_Union: mF1_excluding_bg is a nanmean, so an absent
+        class must be NaN for that mean to mean what it says.
+        """
+        tp, fp, _, fn = self.get_tp_fp_tn_fn()
         p = self.Precision()
         r = self.Recall()
-        return (2.0 * p * r) / (p + r + self.eps)
+        f1 = (2.0 * p * r) / (p + r + self.eps)
+        return np.where(tp + fp + fn > 0, f1, np.nan)
 
     def OA(self):
         # Overall accuracy computed on INCLUDED pixels only (since CM built on included pixels)
         return np.diag(self.confusion_matrix).sum() / (self.confusion_matrix.sum() + self.eps)
 
     def Intersection_over_Union(self):
+        """Per-class IoU. A class absent from BOTH ground truth and prediction is NaN, not 0.
+
+        With `+ eps` alone an absent class gave 0 / (0 + 1e-8) = 0.0, so `np.nanmean(iou[1:])` --
+        documented throughout this project as the convention that drops absent classes -- never
+        dropped anything and averaged in a hard zero at full weight. On a full split every class is
+        present and nothing changed; it bit on SUBSETS. A block-bootstrap resample that happens to
+        contain no Cropland scored Cropland IoU = 0 rather than excluding it, which drags the
+        resampled mIoU distribution down and widens it. Test A cropland sits in 8 blocks of 16 and
+        Test B cropland in 4 of 12, so that draw is common, not rare.
+        """
         tp, fp, _, fn = self.get_tp_fp_tn_fn()
-        return tp / (tp + fp + fn + self.eps)
+        denom = tp + fp + fn
+        return np.where(denom > 0, tp / (denom + self.eps), np.nan)
 
     def Dice(self):
         tp, fp, _, fn = self.get_tp_fp_tn_fn()

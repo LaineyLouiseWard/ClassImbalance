@@ -10,6 +10,7 @@ Writes:
 """
 
 import json
+import os
 from pathlib import Path
 import numpy as np
 
@@ -33,10 +34,19 @@ def main() -> None:
     args = ap.parse_args()
 
     eval_root = Path(args.eval_root)
-    metrics_files = sorted(eval_root.rglob("metrics.json"))
+    # Only this split tag's run directories. An unfiltered rglob picks up the WITHDRAWN campaign's
+    # untagged directories, which are still on disk under evaluation/evaluation_results/val/, and
+    # ranks them in the same table as the current cells -- plausible numbers off a leaking split,
+    # exit 0. Matching on the directory name is the same rule compute_metrics.py writes under.
+    split_tag = os.environ.get("SPLIT_TAG", "f1")
+    metrics_files = sorted(p for p in eval_root.rglob("metrics.json")
+                           if p.parent.name.endswith(f"_{split_tag}"))
     if not metrics_files:
+        found = sorted(p.parent.name for p in eval_root.rglob("metrics.json"))
         raise FileNotFoundError(
-            f"No metrics.json files found under {eval_root}. Run compute_metrics.py first."
+            f"No metrics.json for SPLIT_TAG={split_tag} under {eval_root}. Run compute_metrics.py "
+            f"first, or set SPLIT_TAG to the campaign you mean. Run directories present: "
+            f"{found or '(none)'}"
         )
 
     rows = []

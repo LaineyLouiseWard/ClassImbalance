@@ -329,3 +329,20 @@ at least N independent locations — and not as a derived criterion.
 constants. `py_compile` passed, because Python does not resolve names at compile time, and I reported
 "compile ok" on a file that would have raised at runtime. Caught by actually running it. Compiling is
 not running.
+
+## D16a — The withdrawal in D16 is REOPENED, not settled — 2026-07-26
+
+D16 withdrew the pre-registration on my own judgement. That was a decision to hand over, not to take:
+it changes what the paper claims and how, and it was made in one exchange.
+
+`docs/BRIEF_RHO_THRESHOLD_PROVENANCE.md` puts it to an independent chat with both sides argued —
+including the case AGAINST withdrawing, which nobody had made properly: that a timestamped commitment
+is the only clean answer to the suspicion that a second set of numbers was tuned after a first set was
+withdrawn for leakage, and that without a bar the claim is settled by interpretation, which is what
+produced the unsupportable "every class collapses to a near-zero interior rate" in the first place.
+
+Until that comes back, treat the pre-registration as **suspended, not withdrawn**.
+`docs/PREREGISTRATION_P1_AMENDMENT.md` keeps its withdrawal header and its full history; if the
+decision reverses, the header is removed and the reversal is dated in the open.
+
+Nothing has been trained, so either outcome remains legitimate.

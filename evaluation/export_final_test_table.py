@@ -26,8 +26,11 @@ from pathlib import Path
 # ── Paths (relative to repo root) ──────────────────────────────────────────
 
 SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
-TEST_DIR = Path("evaluation/evaluation_results/test")
-OUTPUT_PATH = Path("evaluation/evaluation_results/final_test_table.tex")
+# Repo-root-relative, not CWD-relative: run from anywhere but the repo root, the old paths either
+# errored or wrote the manuscript table into whatever tree the shell happened to be in.
+REPO_ROOT = next(p for p in Path(__file__).resolve().parents if (p / "artifacts").is_dir())
+TEST_DIR = REPO_ROOT / "evaluation/evaluation_results/test"
+OUTPUT_PATH = REPO_ROOT / "evaluation/evaluation_results/final_test_table.tex"
 
 # Stages to include (order matters — rows appear in this order)
 STAGES = [
