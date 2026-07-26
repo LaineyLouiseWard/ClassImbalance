@@ -212,8 +212,17 @@ first — research papers are in the group library, not the personal one.
   that ordinary CV is acceptable for a map-accuracy claim citing Wadoux. They argue the opposite, that
   probability sampling with design-based inference is the sound route. That sentence was drafted once
   and is banned.
-- **Shaikh, McNicholas, Antonie & Murphy 2013 (arXiv:1308.3740) §2.2** — why the retracted `lift`
-  statistic was landscape-dependent. Only needed if anyone reopens the pre-registration.
+- **Shaikh, McNicholas, Antonie & Murphy 2013 (arXiv:1308.3740) §2.2** — CITE THIS, do not re-derive
+  it. It states the area-confounding problem almost verbatim: two rules with identical lift 1.95, one
+  bounded above by 2 and the other by 10, *"the interpretation of the two lift values should not be the
+  same because the maximum attainable value is different."* Substituting "within 8 m of a boundary"
+  gives the Test A / Test B situation exactly. This is why the manuscript's 92% / 96% error-share
+  statistic is not comparable across the two test sets, and it is a published result, not this
+  project's reasoning. Kohli 2009 states the mirror image — few pixels lie near a boundary, so global
+  accuracy is insensitive to boundary quality — which is why trimap evaluation exists.
+
+  The methods must cite both when explaining why the reported statistic is a rate ratio rather than a
+  share. Verify the quotes against the sources before using them.
 
 **Split:** `data/split_f1` — train 1072 / val 173 / test 294 / external_test 191.
 </context>
