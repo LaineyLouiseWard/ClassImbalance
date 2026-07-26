@@ -55,7 +55,10 @@ SAMPLER_TSV="${SAMPLER_TSV:-artifacts/sampler_weights_clsbal_${SPLIT_TAG}.tsv}"
 TEACHER_CONFUSION_NPZ="${TEACHER_CONFUSION_NPZ:-artifacts/teacher_oem_gt_confusion_${SPLIT_TAG}.npz}"
 AUG_LIST="${AUG_LIST:-artifacts/train_augmentation_list_${SPLIT_TAG}.json}"
 # Exported so the cell configs and the taxonomy guard pick the same split up.
-export BIO_SPLIT="$SPLIT_ROOT" BIO_OEM_COMBINED="$OEM_COMBINED" SAMPLER_TSV TEACHER_CONFUSION_NPZ AUG_LIST
+# SPLIT_TAG must be exported: the cell configs build every checkpoint path from it, and without
+# it they resolve untagged while C1b looks for tagged paths, so Test B printed "skip" for all
+# four cells and the stage exited 0 -- the number the paper leads on produced by nothing.
+export SPLIT_TAG BIO_SPLIT="$SPLIT_ROOT" BIO_OEM_COMBINED="$OEM_COMBINED" SAMPLER_TSV TEACHER_CONFUSION_NPZ AUG_LIST
 
 BIO_RAW=data/biodiversity_raw
 OEM_RAW=data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD
@@ -398,7 +401,8 @@ if run_stage C1b; then
   echo "      and until 2026-07-26 no runnable path scored it at all."
   for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
     CKPT="model_weights/biodiversity/${CELL}_${SPLIT_TAG}/${CELL}_${SPLIT_TAG}.ckpt"
-    [ -f "$CKPT" ] || { echo "  skip $CELL (no checkpoint at $CKPT)"; continue; }
+    # A hard failure, not a skip. This stage silently succeeded over four missing checkpoints.
+    require_file "$CKPT" B5
     PYTHONPATH=. python evaluation/compute_metrics.py \
       --checkpoints "$CKPT" \
       --data-root  "$SPLIT_ROOT"/external_test \

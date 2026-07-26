@@ -216,7 +216,7 @@ def _bounds_from_rasters(ids, root: Path, split_root: Path, orig: dict) -> dict:
     return out
 
 
-def pairwise_separation_m(kept: dict, pool: dict, site: str,
+def pairwise_separation_m(kept: dict, root: Path, split_root: Path, orig: dict, site: str,
                           geographic: bool = False, lat: float = 0.0) -> dict:
     """{(split_a, split_b): minimum footprint-to-footprint distance in metres}.
 
@@ -227,8 +227,12 @@ def pairwise_separation_m(kept: dict, pool: dict, site: str,
     Recomputed from raw GeoTIFF bounds, independently of the band arithmetic that produced the split,
     so it cannot pass by construction.
     """
+    # Re-read from the GeoTIFFs. This used to take the cached `pool` -- the SAME dict that placed the
+    # cuts -- so the docstring's independence claim was false and a cache with a reconstructed
+    # fingerprint reported 41,536 m for a real 1,664 m gap and exited 0.
+    bnds = _bounds_from_rasters(list(kept), root, split_root, orig)
     ids = [t for t in kept if site_of(t) == site and kept[t] in SPLITS]
-    arr = np.array([pool[t][1:5] for t in ids], float)
+    arr = np.array([bnds[t] for t in ids], float)   # (left, bottom, right, top)
     lab = np.array([kept[t] for t in ids])
     L, B, R, T = arr.T
     mx, my = ((111320.0 * math.cos(math.radians(lat)), 111132.0) if geographic else (1.0, 1.0))
@@ -569,9 +573,39 @@ def main() -> None:
             if got_counts.get(sp, 0) != n:
                 raise SystemExit(f"FAILED: manifest declares {n} {sp} tiles but its assignment holds "
                                  f"{got_counts.get(sp, 0)}")
+        # Recompute adequacy from the MASKS and check it against what the manifest declares. Without
+        # this the class-share and block-support criteria bind only at derivation time: RUNBOOK.sh
+        # exits unless a committed manifest exists and then only ever calls --from-manifest, so a
+        # hand-edited manifest with every validation class collapsed into one 950 m block replays and
+        # materialises without objection. `class_counts` is called AFTER the return below, so the
+        # masks were never even opened on this path.
+        declared_sup = src.get("class_block_support")
+        if declared_sup:
+            rcounts = class_counts(split_root, pool, cache_dir / "tile_class_counts.json")
+            rblocks = support_blocks(pool, src.get("support_block_m", SUPPORT_BLOCK_M))
+            actual = class_block_support(kept, rcounts, rblocks)
+            need_b = {"train": src.get("min_class_blocks", MIN_CLASS_BLOCKS),
+                      "val": src.get("min_class_blocks", MIN_CLASS_BLOCKS),
+                      "test": src.get("min_test_class_blocks",
+                                      src.get("min_class_blocks", MIN_CLASS_BLOCKS))}
+            for sp in SPLITS:
+                for c in FOREGROUND:
+                    got_b, want_b = actual[sp][c], need_b[sp]
+                    if got_b < want_b:
+                        raise SystemExit(f"FAILED: {sp}/{FOREGROUND[c]} occupies {got_b} independent "
+                                         f"blocks, below the {want_b} this manifest requires")
+                    if declared_sup.get(sp, {}).get(str(c), got_b) != got_b:
+                        raise SystemExit(
+                            f"FAILED: manifest declares {declared_sup[sp][str(c)]} blocks for "
+                            f"{sp}/{FOREGROUND[c]} but the masks give {got_b}")
+            print(f"  VERIFIED block support recomputed from masks: min "
+                  f"{min(actual[sp][c] for sp in SPLITS for c in FOREGROUND)} blocks")
+        else:
+            print("  WARNING: manifest declares no class_block_support; replay cannot check adequacy")
+
         need_m = {tuple(k.split("-")): v for k, v in (src.get("required_separation_m") or {}).items()}
         if need_m:
-            sep = pairwise_separation_m(kept, pool, src.get("site_split", "biodiversity"))
+            sep = pairwise_separation_m(kept, root, split_root, {t: pool[t][0] for t in kept}, src.get("site_split", "biodiversity"))
             for pair, need in need_m.items():
                 if pair in sep and sep[pair] + 1e-6 < need:
                     raise SystemExit(f"FAILED: {pair[0]}-{pair[1]} separation {sep[pair]:.0f} m is "
@@ -623,7 +657,7 @@ def main() -> None:
         # Independent check: recompute the realised separation from the raw GeoTIFF geometry, not
         # from the band arithmetic that produced the split. Must meet the requested guarantee.
         print("verifying separation from the raw geometry ...", flush=True)
-        sep = pairwise_separation_m(kept, pool, args.three_region)
+        sep = pairwise_separation_m(kept, root, split_root, {t: pool[t][0] for t in kept}, args.three_region)
         required = {("train", "val"): args.buffer_val_m,
                     ("train", "test"): args.buffer_test_m,
                     ("val", "test"): args.buffer_test_m}
