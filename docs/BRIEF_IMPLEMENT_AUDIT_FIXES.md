@@ -174,8 +174,46 @@ in the repository is from the withdrawn campaign — treat them as absent. `READ
 4. `CLAUDE.md`, the "STATE AS OF 2026-07-26" section — conventions that are easy to get wrong.
 5. `docs/PREREGISTRATION_P1_AMENDMENT.md` — the registered claim.
 
+**Commands that actually work** (the repo's default python is a different env with no lightning, and
+that trap cost hours):
+
+    export PATH="$HOME/miniconda3/envs/label-quality-ceiling/bin:$PATH"    # torch 2.9.1, lightning 2.3.0
+    cd /home/lainey/Documents/Github/label-quality-ceiling                 # always; the shell resets
+
+    # the full gate, with every artefact supplied -- not just --split-root
+    SPLIT_TAG=f1 AUG_LIST=artifacts/train_augmentation_list_f1.json \
+      TEACHER_CONFUSION_NPZ=artifacts/teacher_oem_gt_confusion_f1.npz PYTHONPATH=. \
+      python scripts/data_prep/assert_no_split_leakage.py --split-root data/split_f1 \
+        --oem-root data/oem_combined_f1 --sampler-tsv artifacts/sampler_weights_clsbal_f1.tsv
+
+    PYTHONPATH=. python scripts/data_prep/build_spatial_split.py --from-manifest artifacts/spatial_split_manifest_f1.json
+    PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py --self-test
+    SPLIT_TAG=f1 PYTHONPATH=. python scripts/verify_taxonomy_consistency.py
+
+Beware: `pkill -f <pattern>` matches its own command line and will kill your shell (exit 144), which
+silently resets the working directory. Use `ps -eo pid,args` and kill by pid.
+
 **Environment.** `conda activate label-quality-ceiling` (torch 2.9.1, lightning 2.3.0). The repo default
 python may be a different env that lacks lightning. Local GPU is an RTX 5060, 8 GB.
+
+**Literature the methods rest on.** Read before writing any justification; do not cite from memory.
+Check `~/Documents/Github/papers-md/` first (markdown conversions, glob by author). If a paper is not
+there, use the Zotero MCP but run `zotero_switch_library(library_id="6343594", library_type="group")`
+first — research papers are in the group library, not the personal one.
+
+- **Roberts et al. 2017** — blocked cross-validation, buffered leave-one-out, and the packing argument
+  that justifies holding the upland sites out whole. The design's backbone.
+- **Kohli, Ladicky & Torr 2009** and **Csurka, Larlus & Perronnin 2013** — trimap evaluation. The 8 m
+  band and the boundary/interior stratification descend from these.
+- **Cheng et al. 2021, Boundary IoU** — a reviewer will ask why it is not used. The answer is that it
+  intersects both masks, so it depends on the prediction and would destroy the GT-only stratification.
+  That answer must be IN the paper, and you should read the paper before writing it.
+- **Wadoux et al. 2021** — the objection that any spatial-CV radius is subjective. Note: do NOT write
+  that ordinary CV is acceptable for a map-accuracy claim citing Wadoux. They argue the opposite, that
+  probability sampling with design-based inference is the sound route. That sentence was drafted once
+  and is banned.
+- **Shaikh, McNicholas, Antonie & Murphy 2013 (arXiv:1308.3740) §2.2** — why the retracted `lift`
+  statistic was landscape-dependent. Only needed if anyone reopens the pre-registration.
 
 **Split:** `data/split_f1` — train 1072 / val 173 / test 294 / external_test 191.
 </context>
@@ -196,6 +234,23 @@ and leave the code alone.
   measured false. Do not revert it.
 - The combined Biodiversity + OEM pre-training pool (D12).
 </protected>
+
+<do_this_first>
+Before anything else, spend thirty minutes on the one check that can invalidate the paper, because
+there is no point closing twenty items and then discovering it.
+
+**Item 12 — does a properly-covering interval leave rho able to clear 4.0?** The registered threshold is
+judged on the LOWER bound of a bootstrap CI. The current percentile interval under-covers; a BCa or
+block-jackknife interval will be WIDER. With only 16 independent blocks on Test A and 12 on Test B, the
+lower bound may sit well below the point estimate. You cannot compute rho itself without trained models,
+but you CAN characterise the interval width: simulate from plausible rho values with the real block
+structure (`utils.spatial_blocks` on `data/split_f1`), and report how large rho must be for the lower
+bound to clear 4.0 at n_blocks = 16 and 12.
+
+If that number is implausibly high, the pre-registration is unpassable as written and must be
+re-declared BEFORE the campaign — which is legitimate, since no results exist — rather than after,
+which is not. Report this as the first item in your report whatever it says.
+</do_this_first>
 
 <tasks>
 Ordered. Items 1–8 block the campaign; 9–20 are needed before submission but not before launching. Do
@@ -249,7 +304,26 @@ counts. Do NOT change the pool — see D12 for why the obvious fix is worse.
 `run_campaign.sh` pins nine seeds to HEAD. Make it refuse to start on a dirty tree.
 *Verify:* dirty the tree, show it refuses.
 
-**8. Re-run the full preflight gate and record the output.**
+**8. Write the block-size justification (promoted from the "before submitting" list by D14).**
+`SUPPORT_BLOCK_M = 950.0` is not only the bootstrap unit — it is the block size in `MIN_CLASS_BLOCKS`,
+the criterion that ADMITTED this split. Reproduce this table before writing anything (it took one
+script against the shipped manifest):
+
+    650 m   train 33  val 12  test  9   PASSES
+    750 m   train 29  val 10  test  9   PASSES
+    950 m   train 23  val  6  test  8   PASSES
+    1350 m  train 14  val  8  test  6   FAILS
+
+The split's admissibility therefore depends on which correlogram number is used, and it fails under the
+spectral one. This cannot be deferred: changing it after the runs would mean re-cutting the split.
+*The resolution is reasoning, not re-cutting* — block support is a class-COMPOSITION criterion, so the
+composition range (750 m subsample, 950 m full pool) is the right denominator and the split passes at
+both; 1350 m is the SPECTRAL range and answers a different question. Write that argument into the
+methods and into the docstrings at `utils.py:130`, `build_spatial_split.py:145,511`,
+`report_class_support.py:49-54`. Commit the correlogram output so the numbers are checkable from a
+fresh clone.
+
+**9. Re-run the full preflight gate and record the output.**
 Note: with the auditor's recalibration, the true launch-blocking set is small — items 1, 2 and 3 are
 the code bugs that stop the campaign being assembled; 4, 5, 7 and 8 are hygiene; 6 is a documentation
 act that must nonetheless happen before results exist. Do not let the length of the list below suggest
