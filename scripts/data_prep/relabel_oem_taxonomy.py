@@ -13,9 +13,11 @@ Output:
     masks/*.png   (uint8 label masks, remapped)
 
 Notes:
-- Background (0) is a semantic class, not ignore.
-- No ignore_index is introduced here.
-- Any unmapped IDs default to background (0).
+- Class 0 is written here as a plain label value; this script applies no ignore semantics.
+- Downstream it IS the ignore class: every cell config sets ignore_index=0, and every reported
+  metric excludes it. So an OEM class mapped to 0 is dropped from the loss, not learnt as
+  "background" -- which is how OEM Water is excluded (see taxonomy.OEM_NO_TARGET_COUNTERPART).
+- Any unmapped IDs default to 0, and therefore to being ignored.
 """
 
 from __future__ import annotations

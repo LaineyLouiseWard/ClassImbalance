@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from pathlib import Path
 
 # ── Repo root detection ─────────────────────────────────────────────────────
@@ -17,6 +18,28 @@ def find_repo_root(start: Path | None = None) -> Path:
 
 
 REPO_ROOT = find_repo_root()
+
+# ── Split-scoped artefacts ──────────────────────────────────────────────────
+
+# Which fold's artefacts these scripts analyse. RUNBOOK.sh exports SPLIT_TAG; f1 is its default too.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
+def resolve_artifact(env_var: str, template: str) -> Path:
+    """Resolve a per-fold artefact path: $env_var if set, else the tagged file for $SPLIT_TAG.
+
+    The untagged artefacts from the pre-2026-07-25 random split are still in the repo, and were
+    previously the hard-coded default here. They were built on a split whose held-out tiles overlap
+    the current training set, so loading one silently mixes leaked ground into an analysis. They are
+    deliberately NOT a fallback: to analyse them, name them explicitly through the environment.
+    """
+    env = os.environ.get(env_var)
+    path = REPO_ROOT / env if env else REPO_ROOT / "artifacts" / template.format(tag=SPLIT_TAG)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{path.relative_to(REPO_ROOT)} not found (SPLIT_TAG={SPLIT_TAG}). Build it with "
+            f"RUNBOOK.sh, or set ${env_var} to the artefact you mean.")
+    return path
 
 # ── Canonical stage definitions ─────────────────────────────────────────────
 
@@ -66,8 +89,8 @@ def load_val_metrics(stage_dir: str) -> dict:
 
 
 def load_weights_tsv(path: Path | None = None) -> dict[str, float]:
-    """Load a sampler-weights TSV → {img_id: weight} (default: clsbal)."""
-    path = path or REPO_ROOT / "artifacts" / "sampler_weights_clsbal.tsv"
+    """Load a sampler-weights TSV → {img_id: weight} (default: this fold's clsbal weights)."""
+    path = path or resolve_artifact("SAMPLER_TSV", "sampler_weights_clsbal_{tag}.tsv")
     weights = {}
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -80,7 +103,7 @@ def load_weights_tsv(path: Path | None = None) -> dict[str, float]:
 
 
 def load_augmentation_list(path: Path | None = None) -> dict:
-    """Load train_augmentation_list.json."""
-    path = path or REPO_ROOT / "artifacts" / "train_augmentation_list.json"
+    """Load this fold's minority-rich tile list."""
+    path = path or resolve_artifact("AUG_LIST", "train_augmentation_list_{tag}.json")
     with open(path) as f:
         return json.load(f)

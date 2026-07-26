@@ -17,6 +17,7 @@ Run: conda run -n ClassImbalance python scripts/figures/_gen_mapping_values.py
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -39,7 +40,10 @@ from geoseg.taxonomy import (  # noqa: E402
     OEM_TO_STUDENT_PRETRAIN,
 )
 
-NPZ = REPO / "artifacts" / "teacher_oem_gt_confusion.npz"
+# Per fold, as exported by RUNBOOK.sh. The untagged matrix is not a fallback: it was fitted on the
+# leaky random split, so the printed mapping percentages would not be the ones the model was trained on.
+NPZ = REPO / os.environ.get("TEACHER_CONFUSION_NPZ",
+                            f"artifacts/teacher_oem_gt_confusion_{os.environ.get('SPLIT_TAG', 'f1')}.npz")
 
 
 def main() -> None:

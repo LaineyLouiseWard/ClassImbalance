@@ -1,5 +1,7 @@
 """Knowledge Distillation utilities for model distillation and class remapping."""
 
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,8 +23,12 @@ NEW_CLASSES = list(STUDENT_CLASSES)
 # Tuple form for equality comparison against biodiversity_dataset.CLASSES.
 REMAP_OUTPUT_CLASSES = tuple(NEW_CLASSES)
 
-def build_mapping_from_confusion(mode="B", conf_path="artifacts/teacher_oem_gt_confusion.npz"):
+def build_mapping_from_confusion(mode="B", conf_path=None):
     """Build the 9x6 KD mapping matrix GROUNDED in the teacher's training-set confusion.
+
+    conf_path defaults to $TEACHER_CONFUSION_NPZ, which RUNBOOK.sh exports per fold. There is no
+    fallback to the untagged file: it was fitted on the pre-2026-07-25 random split, so grounding a
+    mapping in it would carry that split's leaked confusion into a different training set.
 
     Reads the soft (prob-weighted) confusion saved by
     scripts/analysis/teacher_oem_to_gt_confusion.py and row-normalises it to
@@ -34,6 +40,13 @@ def build_mapping_from_confusion(mode="B", conf_path="artifacts/teacher_oem_gt_c
     """
     if mode != "B":
         raise ValueError(f"only mode 'B' (grounded) is supported, got {mode!r}")
+    if conf_path is None:
+        conf_path = os.environ.get("TEACHER_CONFUSION_NPZ")
+        if not conf_path:
+            raise ValueError(
+                "no teacher confusion given: pass conf_path, or set $TEACHER_CONFUSION_NPZ to this "
+                "fold's matrix (RUNBOOK.sh exports it). The untagged artefact is not used as a "
+                "default because it was fitted on the leaky random split.")
     data = np.load(conf_path, allow_pickle=True)
     soft = data["soft"].astype(np.float64)                       # (9, 6)
     rownorm = soft / soft.sum(axis=1, keepdims=True).clip(min=1e-12)

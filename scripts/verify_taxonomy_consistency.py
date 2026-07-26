@@ -84,10 +84,12 @@ check(dict(OEM_ID_TO_TARGET6) == dict(tax.OEM_TO_STUDENT_PRETRAIN), "relabel OEM
 # confusion artifact when present; skipped on a fresh clone before the teacher/confusion exist.
 import os as _os
 import numpy as _np
-# Path is overridable: the campaign emits one matrix per split
-# (teacher_oem_gt_confusion_{a1,a2,a3,loso}.npz). Hard-coding the base name would keep validating
-# the stale random-split matrix while the per-split matrices went unchecked.
-_CONF = _os.environ.get("TEACHER_CONFUSION_NPZ", "artifacts/teacher_oem_gt_confusion.npz")
+# Path is overridable: the campaign emits one matrix per fold
+# (teacher_oem_gt_confusion_{f1,f2,f3}.npz). Hard-coding the base name would keep validating
+# the stale random-split matrix while the per-fold matrices went unchecked.
+_CONF = _os.environ.get(
+    "TEACHER_CONFUSION_NPZ",
+    f"artifacts/teacher_oem_gt_confusion_{_os.environ.get('SPLIT_TAG', 'f1')}.npz")
 if _os.path.exists(_CONF):
     _soft = _np.load(_CONF, allow_pickle=True)["soft"].astype(float)
     _argmax = {o: int(_soft[o].argmax()) for o in range(9)}
@@ -103,7 +105,9 @@ if _os.path.exists(_CONF):
         check(tax.OEM_TO_STUDENT_PRETRAIN[o] == _argmax[o],
               f"pretrain OEM class {o} ({tax.OEM_TO_STUDENT_PRETRAIN[o]}) != argmax(teacher confusion) ({_argmax[o]})")
     from geoseg.utils.kd_utils import build_mapping_from_confusion
-    _B = build_mapping_from_confusion("B")
+    # Pass _CONF explicitly. Left to its own default this read the untagged matrix, so the argmax
+    # check above and the KD map below were validated against two different splits.
+    _B = build_mapping_from_confusion("B", conf_path=_CONF)
     for o in range(9):
         if o in _excluded:
             continue

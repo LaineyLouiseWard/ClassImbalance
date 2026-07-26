@@ -15,9 +15,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from utils import REPO_ROOT, load_weights_tsv, load_augmentation_list
+from utils import load_weights_tsv, load_augmentation_list
 
-CLSBAL_WEIGHTS = REPO_ROOT / "artifacts" / "sampler_weights_clsbal.tsv"
 
 
 def mean(values: list[float]) -> float:
@@ -29,7 +28,7 @@ def main() -> None:
     print("A3: Stage 3 clsbal Sampling Weight Uplift")
     print("=" * 60)
 
-    weights = load_weights_tsv(CLSBAL_WEIGHTS)
+    weights = load_weights_tsv()
     aug = load_augmentation_list()
 
     settlement_ids = set(aug["settlement_images"])
