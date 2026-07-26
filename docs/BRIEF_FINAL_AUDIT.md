@@ -48,7 +48,7 @@ training. Treat every such number as absent, not provisional.
 **Split:** `data/split_f1` — train 1072 / val 173 / test 294 (Test A, inland strip) /
 external_test 191 (Test B, two upland sites held out whole).
 
-**Read first, in this order:**
+**Read these — but AFTER dimension 1, not before. See `<do_this_first>`.**
 1. `docs/PRE_SUBMISSION_LEDGER.md` — the 42 findings of the sixth review and what was done about each.
 2. `docs/DECISIONS_REBUILD_2026-07.md` — D1 to D19, the settled decisions with evidence.
 3. `docs/METHODS_STATED_LIMITATIONS.md` — eleven properties the methods section must state, each with
@@ -74,6 +74,23 @@ external_test 191 (Test B, two upland sites held out whole).
 Beware: `pkill -f <pattern>` matches its own command line and kills your shell (exit 144), silently
 resetting the working directory. Kill by pid.
 </what_this_is>
+
+<do_this_first>
+**Derive dimension 1 BEFORE you read anything that states a number, and write your derivation down
+before you look.** That means: before `docs/`, before `artifacts/`, before any docstring or comment
+carrying a figure, and before the ledger.
+
+This is not ceremony. The most serious defect in this repository's history survived six consecutive
+reviews because every reviewer checked the repo's number against the repo's own function, and two of
+those functions disagreed with each other — 12 blocks against 14 for the same ground, both plausible,
+both quoted in the paper's own documentation as though the difference were a scientific effect. A
+reviewer who has already read "Test B has 14 blocks" will find 14 and stop.
+
+So: open the rasters and the configs, compute, record your numbers in a file, and only then read the
+documents and compare. If you cannot resist reading first, say so in your report and mark dimension 1
+as verification rather than derivation — that is a weaker result honestly labelled, and far better
+than an independent-looking check that was not.
+</do_this_first>
 
 <the_five_dimensions>
 
@@ -121,7 +138,9 @@ aggregation and its `--strict` flag; the two campaign launchers; the stage windo
 
 **5. Review the last session's diff as a stranger's code.**
 
-    git diff df8177d..HEAD          # ~70 files, ~4,700 insertions
+    git diff df8177d..f317068       # ~70 files, ~4,700 insertions
+    # Pinned deliberately: HEAD moves once your own fixes land, and then the range
+    # silently stops being the session you were asked to review.
 
 That session fixed 42 findings and introduced at least two of its own: a provenance block reading an
 argument that did not exist, which would have crashed all 40 runs, and a stage reorder that changed an
