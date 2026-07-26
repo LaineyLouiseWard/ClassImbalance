@@ -10,7 +10,7 @@ disk — never from a code comment, a note, or the withdrawn leaking campaign. A
 when the property is discovered, not when the results make it convenient.
 
 Related records: `docs/DECISIONS_REBUILD_2026-07.md` (why each design decision was taken),
-`docs/PREREGISTRATION_P1_AMENDMENT.md` (withdrawn 2026-07-26, retained with its history intact).
+`docs/PREREGISTRATION_P1_AMENDMENT.md` (SUSPENDED 2026-07-26 pending D16a, retained in full).
 
 ---
 
@@ -128,3 +128,76 @@ failure themselves and finds no mention of it in the paper will reasonably concl
 
 **What must NOT be written:** that 950 m is the inland site's measured range, or that it is a
 full-pool measurement of which 750 m is the subsample. There is no full-pool inland measurement.
+
+## 5. The 950 m block grid is phase-dependent, and the split's own gate turns on the offset
+
+**Measured 2026-07-26 by `scripts/analysis/block_phase_sweep.py`.** The grid is anchored at the CRS
+origin — for the inland site, the UTM 29N false easting of 500,000 m. That origin has nothing to do
+with the landscape, so the shipped partition is one member of a family indexed by the offset.
+
+Ten offsets, 0.1 of a cell (95 m) apart, both axes together:
+
+| split | shipped | min | max |
+|---|---|---|---|
+| train | 32 | 28 | 40 |
+| val | 8 | 7 | 16 |
+| test (Test A) | 16 | 8 | 16 |
+| external_test (Test B) | 14 | 10 | 14 |
+
+Two things rest on that offset. Interval width scales roughly as 1/sqrt(n_blocks), so the same data
+at an equally arbitrary offset gives a Test A interval up to **1.41× wider**. And the adequacy
+criterion moves with it: **the shipped split clears its own class-support floors at 5 of the 10
+phases.** The shipped phase sits at the top of the Test A range.
+
+**What must be written:** the sweep, as a sensitivity. The split is not wrong — no offset is more
+correct than another — but a criterion that passes at half the offsets of an arbitrary grid is a
+property of the criterion, not of the ground, and belongs in the methods rather than in a reviewer's
+discovery.
+
+## 6. Nominal block counts overstate the support; report Kish n_eff beside them
+
+**Measured 2026-07-26, same script.** The blocks are badly unequal, so resampling them as
+exchangeable draws claims more independence than there is.
+
+| split | tiles | blocks | n_eff (tiles) | n_eff (foreground px) | tiles per block |
+|---|---|---|---|---|---|
+| train | 1072 | 32 | 27.46 | 26.93 | 55 … 8 |
+| val | 173 | 8 | 7.52 | 7.43 | 28 … 12 |
+| test (Test A) | 294 | 16 | **9.85** | 9.77 | 43, 36, 36, 35, 34, 33, 18, 17, 8, 7, 7, 6, 5, 4, 3, 2 |
+| external_test (Test B) | 191 | 14 | **7.15** | 5.78 | 42, 37, 34, 15, 14, 14, 9, 6, 6, 4, 4, 2, 2, 2 |
+
+Restricted to the 172 Test B tiles that carry a ground-truth boundary, the count is 12 blocks and
+n_eff **7.36** by tiles — independently reproduced twice from the raw rasters.
+
+**What must be written:** n_eff beside n_blocks wherever a block bootstrap is reported. Six of Test
+A's sixteen blocks hold 74% of its tiles.
+
+## 7. Test A's interval is not what a nominal 95% interval claims
+
+**Measured 2026-07-26 by simulation on the real per-block band and interior pixel counts**, and
+independently re-derived from the rasters by a second implementation sharing no code. Error is drawn
+per block with a log-normal random effect on both the interior rate and the rate ratio.
+
+- The **percentile** interval under-covers at these block counts: 0.86–0.93 against a nominal 0.95,
+  and 0.92–0.93 even with zero between-block heterogeneity, which is six Monte-Carlo standard errors
+  low. The miss is asymmetric and on the side that matters — the interval sits entirely above the
+  truth about 7% of the time on Test A against a nominal 2.5%.
+- **BCa does not fix it and is worse**, which contradicts the assumption that a better interval would
+  be wider. BCa's median width is 1.012× the percentile's, its *lower* bound is HIGHER in 63 of 64
+  simulated cells, and its coverage falls to 0.74–0.86 — with 12 blocks the acceleration is estimated
+  from 12 jackknife points and is unstable.
+- A **delete-one-block jackknife t-interval on log** is the only one of the three that covers near
+  nominal (0.97 with no heterogeneity, 0.89–0.94 with it), and it is 20–45% wider.
+- The claim that a percentile interval on log(rho) is *bit-identical* to one on rho is false, though
+  only at 5e-8 — quantile interpolation on a convex transform does not commute. It is numerically
+  irrelevant and the word should not be written down.
+
+**Why this matters beyond the interval.** A threshold judged on a lower bound is not the threshold it
+appears to be. For a lower bound to clear 4.0 with 80% probability, the true rate ratio must be about
+**5.2 on Test A and 6.3 on Test B** under moderate heterogeneity, rising to 5.8 and 7.0 under strong
+heterogeneity, and 5.5 / 7.5 if the properly-covering jackknife interval is used. Test B needs roughly
+1.0–1.4 more than Test A for the same power, purely because it has fewer and more unequal blocks. The
+only non-leaking prior estimates available were 3.25 (baseline) and 4.77 (full model) on validation.
+
+**What must be written:** if a threshold is used at all, its operating characteristic, computed
+before the campaign. If one is not, the coverage of whatever interval is reported, and n_eff.
