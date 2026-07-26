@@ -38,7 +38,12 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
-SPLITS = ("train", "val", "test")
+INTERNAL = ("train", "val", "test")
+# The uplands are held out whole as a fourth split. It was originally omitted from this gate, so its
+# 191 tiles went unchecked: never confirmed disjoint from train, never confirmed non-empty, and
+# skipped by every bleed check. An empty external_test would have passed the gate and then produced
+# an evaluation over nothing at all.
+EXTERNAL = "external_test"
 
 
 def find_repo_root() -> Path:
@@ -66,25 +71,43 @@ def main() -> int:
                     help="teacher->GT confusion for this split. Recorded for provenance: it carries "
                          "no tile ids, so it cannot be checked for held-out bleed directly, but a "
                          "matrix whose pixel count disagrees with the training set is stale.")
+    ap.add_argument("--no-external-test", action="store_true",
+                    help="declare that this split intentionally has no held-out external site. "
+                         "Without it, a missing external_test/ is a failure rather than a silent "
+                         "omission.")
     args = ap.parse_args()
 
     root = find_repo_root()
     split_root = root / args.split_root
     failures, checks = [], []
 
-    split_ids = {s: ids_in(split_root / s / "images", "tif") for s in SPLITS}
-    for s in SPLITS:
+    splits = list(INTERNAL)
+    split_ids = {s: ids_in(split_root / s / "images", "tif") for s in INTERNAL}
+    for s in INTERNAL:
         if not split_ids[s]:
             failures.append(f"split '{s}' is empty at {split_root / s}")
-    held_out = split_ids["val"] | split_ids["test"]
-    checks.append(f"split sizes: " + "  ".join(f"{s}={len(split_ids[s])}" for s in SPLITS))
 
-    # 1. disjoint by id
-    for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
-        shared = split_ids[a] & split_ids[b]
-        if shared:
-            failures.append(f"{len(shared)} tile ids in BOTH {a} and {b}, e.g. {sorted(shared)[:3]}")
-    checks.append("split directories are disjoint by tile id")
+    ext_ids = ids_in(split_root / EXTERNAL / "images", "tif")
+    if ext_ids:
+        split_ids[EXTERNAL] = ext_ids
+        splits.append(EXTERNAL)
+    elif not args.no_external_test:
+        failures.append(f"no tiles at {split_root / EXTERNAL} — the held-out external site is the "
+                        f"only test ground fully independent of the training site. Pass "
+                        f"--no-external-test if this split is deliberately without one.")
+
+    # Every held-out split, so the artefact bleed checks below cover the external site too.
+    held_out = set().union(*(split_ids[s] for s in splits if s != "train"))
+    checks.append(f"split sizes: " + "  ".join(f"{s}={len(split_ids[s])}" for s in splits))
+
+    # 1. disjoint by id, over every pair
+    for i, a in enumerate(splits):
+        for b in splits[i + 1:]:
+            shared = split_ids[a] & split_ids[b]
+            if shared:
+                failures.append(f"{len(shared)} tile ids in BOTH {a} and {b}, "
+                                f"e.g. {sorted(shared)[:3]}")
+    checks.append(f"split directories are disjoint by tile id ({len(splits)} splits)")
 
     # 2. OEM combined pre-training pool
     if args.oem_root:
@@ -150,9 +173,11 @@ def main() -> int:
                             f"e.g. {sorted(bleed)[:3]}")
         checks.append(f"augmentation list ({aug.name}): {len(aug_ids)} ids, no held-out bleed")
 
-    # 4. geometry, re-read from the rasters
+    # 4. geometry, re-read from the rasters. Grouped by CRS because the inland site is in UTM metres
+    # and the uplands in WGS84 degrees; comparing footprints across the two would be meaningless. The
+    # sites are tens of km apart, so no genuine overlap is being hidden by that grouping.
     by_crs = defaultdict(list)
-    for s in SPLITS:
+    for s in splits:
         for f in sorted((split_root / s / "images").glob("*.tif")):
             with rasterio.open(f) as d:
                 b = d.bounds

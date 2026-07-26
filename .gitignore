@@ -5,7 +5,10 @@ data/
 pretrain_weights/
 model_weights/
 bin/
-sonic/
+# Cluster working directory: 19 GB of fetched results, and the older campaign scripts
+# hard-code the UCD login. Publishable, parameterised job scripts go in sonic/campaign/.
+sonic/*
+!sonic/campaign/
 
 # --------------------
 # Logs / outputs

@@ -45,11 +45,12 @@ fi
 # The original random-by-tile split LEAKS: tiles are chipped on a 50% stride, so ~93% of each
 # held-out tile's ground area also sat inside a training tile (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md).
 # The campaign runs on spatially blocked splits built by scripts/data_prep/build_spatial_split.py.
-# Override to select an assignment, e.g.
-#   SPLIT_TAG=a1 bash RUNBOOK.sh --from A2
-SPLIT_TAG="${SPLIT_TAG:-a1}"
-SPLIT_ROOT="${SPLIT_ROOT:-data/biodiversity_split_spatial_${SPLIT_TAG}}"
-OEM_COMBINED="${OEM_COMBINED:-"$OEM_COMBINED"_${SPLIT_TAG}}"
+# Three folds, f1 to f3, each cutting a different strip of the inland site. Select one with
+#   SPLIT_TAG=f2 bash RUNBOOK.sh --from A2
+# Every default below must name a directory build_spatial_split.py --materialise actually writes.
+SPLIT_TAG="${SPLIT_TAG:-f1}"
+SPLIT_ROOT="${SPLIT_ROOT:-data/split_${SPLIT_TAG}}"
+OEM_COMBINED="${OEM_COMBINED:-data/oem_combined_${SPLIT_TAG}}"
 SAMPLER_TSV="${SAMPLER_TSV:-artifacts/sampler_weights_clsbal_${SPLIT_TAG}.tsv}"
 TEACHER_CONFUSION_NPZ="${TEACHER_CONFUSION_NPZ:-artifacts/teacher_oem_gt_confusion_${SPLIT_TAG}.npz}"
 AUG_LIST="${AUG_LIST:-artifacts/train_augmentation_list_${SPLIT_TAG}.json}"

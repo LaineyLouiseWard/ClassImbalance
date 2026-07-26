@@ -83,6 +83,16 @@ def main():
     print(f"  calibrating uplift against: {aug_path or 'artifacts/train_augmentation_list.json'}")
     aug_present = {4: set(aug["settlement_images"]), 5: set(aug["seminatural_images"])}
 
+    # The untagged legacy list is still on disk and was built on the leaky random split, so naming
+    # nothing at all silently calibrates against tiles this split holds out. Any id outside the
+    # current training set proves the list belongs to a different split.
+    stray = (aug_present[4] | aug_present[5]) - set(ids)
+    if stray:
+        raise SystemExit(
+            f"augmentation list {aug_path or 'artifacts/train_augmentation_list.json'} holds "
+            f"{len(stray)} ids absent from {args.data_root} (e.g. {sorted(stray)[:3]}) — it was "
+            f"built on a different split. Point --aug-list or $AUG_LIST at this split's list.")
+
     def weights(scale):
         w = {}
         for i in ids:
