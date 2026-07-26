@@ -95,7 +95,8 @@ OEM_TO_STUDENT_PRETRAIN = {
 # Source classes with no counterpart in the target taxonomy.
 #
 # The six-class Biodiversity taxonomy has no water class, so OEM Water has nothing to map onto. The
-# confusion still returns an argmax for it (Grassland, 0.553), but that measures teacher DOMAIN
+# confusion still returns an argmax for it (Grassland, 0.7525 soft / 0.7485 hard on the shipped
+# f1 matrix; the 0.553 previously quoted here was the withdrawn split's), but that measures teacher DOMAIN
 # ERROR, not a correspondence: the matrix rows are the frozen teacher's PREDICTIONS on Irish
 # imagery, whereas the map is applied to OpenEarthMap GROUND-TRUTH labels on OpenEarthMap imagery.
 # Irish wet and shadowed grassland makes the teacher call grassland "water"; the inverse relabel
@@ -132,7 +133,7 @@ OEM_TO_STUDENT_PRETRAIN = {
 # exception, and the absent classes are reported as a stated limitation.
 # ---------------------------------------------------------------------------
 OEM_NO_TARGET_COUNTERPART = {
-    6: "Water — the target taxonomy has no water class; argmax Grassland (0.553) is teacher "
+    6: "Water — the target taxonomy has no water class; argmax Grassland (0.7525) is teacher "
        "domain error on Irish wet/shadowed grassland, not a taxonomic correspondence.",
 }
 for _o in OEM_NO_TARGET_COUNTERPART:

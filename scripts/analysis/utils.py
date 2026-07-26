@@ -130,7 +130,8 @@ def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict
 
     Tiles are chipped on a 50% stride, so neighbours repeat ground and resampling tile ids treats
     dependent tiles as independent draws: 294 test tiles are only ~105 pixel-disjoint footprints, and
-    ~14 independent units at the 950 m autocorrelation scale. Intervals built on tile ids are roughly
+    16 independent units at the 950 m block scale (measured, not estimated: the earlier "~14" in
+    this docstring was never checked against what the function returns). Intervals built on tile ids are roughly
     1.6x too narrow at footprint level and 10-26x too narrow at the correlation scale (round-2 audit,
     item B6).
 

@@ -2,8 +2,8 @@
 Stage 3 — STANDARD class-balanced minority oversampler (defensibility arm; Kang 2020,
 arXiv:1910.09217). Clone of stage3_sampler.py (A0) with ONLY the sampler weights swapped: A0's
 bespoke `hardness^0.5 x pooled-richness^1.0` TSV -> a citable frequency-only inverse-tile-frequency
-TSV (artifacts/sampler_weights_clsbal.tsv), calibrated so Settlement stays flat (~1.27x) and
-Semi-natural gets ~2.1x. Everything else (loss, init, optimiser, epochs, num_samples) is IDENTICAL
+TSV ($SAMPLER_TSV, tagged per split), calibrated so Settlement stays flat (~1.27x); the
+realised semi-natural uplift on the f1 split is ~2.84x. Everything else (loss, init, optimiser, epochs, num_samples) is IDENTICAL
 to A0 so the only difference is the sampler formula.
 
 Ship rule (course-correction §15): ship this if it TIES A0 on Semi-natural val IoU (>=~74-75, no
@@ -162,12 +162,11 @@ if missing > 0:
         f"[Stage3-clsbal] {missing}/{len(train_dataset.img_ids)} train ids have no sampling weight."
     )
 
-# num_samples = len(train set) = 1846, matching Stages 1/2a/2b (plain shuffled loader over the same
-# 1846 Bio tiles). 2026-06-22: was 2646 — a STALE legacy value (the size of a former replicated train
-# set; the data was later trimmed to 1846 but this number was never updated). At 2646 Stage 3 drew ~43%
-# more samples/epoch than the stages it is compared against, confounding the sampler-weights effect with
-# extra gradient steps. The minority oversampling is unchanged (it lives in `weights`); only the per-epoch
-# draw count is now matched. Re-measure Stage 3 on the next run.
+# num_samples = len(train_dataset), so the sampler changes WHICH tiles are drawn and never how many.
+# On the f1 split that is 1072, matching stages 1/2a/2b at 536 steps per epoch. Two stale values have
+# been corrected here: 2646 (a former replicated training set) and then 1846 (the pool before the
+# 2026-07-25 leakage rebuild). Neither is the current training set. Taking the length from the dataset
+# rather than writing a number is what stops it going stale a third time.
 sampler = WeightedRandomSampler(weights=weights, num_samples=len(train_dataset), replacement=True)
 
 # ====================== Loaders (IDENTICAL to A0) ======================

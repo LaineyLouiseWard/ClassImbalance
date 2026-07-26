@@ -54,9 +54,21 @@ def main() -> None:
     # (a) soft, row-normalised x100
     soft_pct = 100.0 * soft / soft.sum(axis=1, keepdims=True).clip(min=1e-12)
 
-    # (b) per-row argmax == hard pre-training map
+    # (b) per-row argmax == hard pre-training map, EXCEPT the declared no-counterpart classes.
+    # OEM Water has no counterpart in the target taxonomy, so it is mapped to the ignore_index
+    # rather than forced onto its argmax (geoseg.taxonomy.OEM_NO_TARGET_COUNTERPART, and
+    # verify_taxonomy_consistency.py checks the same exclusion). This assert did not know about it,
+    # so the generator crashed on row 6 every time -- which is why the manuscript's oem_mapping
+    # figure still carried the WITHDRAWN matrix's numbers: the values could never be regenerated,
+    # and the drift was invisible because the crash was never on a path anyone ran.
+    from geoseg.taxonomy import OEM_NO_TARGET_COUNTERPART
     argmax = soft_pct.argmax(axis=1)
     for i in range(9):
+        if i in OEM_NO_TARGET_COUNTERPART:
+            assert OEM_TO_STUDENT_PRETRAIN[i] == 0, (
+                f"row {i} ({OEM_NATIVE_CLASSES[i]}) has no target counterpart and must map to the "
+                f"ignore_index, not to {OEM_TO_STUDENT_PRETRAIN[i]}")
+            continue
         assert argmax[i] == OEM_TO_STUDENT_PRETRAIN[i], (
             f"row {i} ({OEM_NATIVE_CLASSES[i]}): argmax={argmax[i]} "
             f"!= PRETRAIN={OEM_TO_STUDENT_PRETRAIN[i]}"

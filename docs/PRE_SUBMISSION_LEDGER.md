@@ -16,10 +16,10 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | B2 | documented resume `--from B1` skips the sampler build and the only full gate | B | DONE |
 | B3 | "all 432 parameter tensors identical across seeds" — false, measured in one process | B | DONE |
 | **C. Withdrawn-campaign contamination and the evidence path** ||||
-| C1 | stage E rebuilds the whole 13-figure manuscript set from the withdrawn split, reports 13/13 OK | C | OPEN |
-| C2 | stage E syncs five of those figures into `manuscript/Figures/` | C | OPEN |
-| C3 | `ablation_qualitative` figure built from the withdrawn campaign, exit 0 | C | OPEN |
-| C4 | `oem_mapping.tex` (main.tex:181) embeds the withdrawn confusion matrix; its generator crashes so drift is invisible | C | OPEN |
+| C1 | stage E rebuilds the whole 13-figure manuscript set from the withdrawn split, reports 13/13 OK | C | DONE |
+| C2 | stage E syncs five of those figures into `manuscript/Figures/` | C | DONE |
+| C3 | `ablation_qualitative` figure built from the withdrawn campaign, exit 0 | C | DONE |
+| C4 | `oem_mapping.tex` (main.tex:181) embeds the withdrawn confusion matrix; its generator crashes so drift is invisible | C | DONE |
 | C5 | C3/C4 runbook stages accept a metrics.json of withdrawn provenance; only `aggregate_seeds` validates | C | OPEN |
 | C6 | withdrawn deliverables sit at the exact output paths the pipeline writes, unmarked | C | OPEN |
 | C7 | **the trimap exclusion curve — the primary evidence since D18 — is in no RUNBOOK stage**, and one input is produced by nothing | C | DONE |
@@ -28,20 +28,20 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | C10 | `dump_seed_softmax.py` defaults to the withdrawn split; help text says 231 tiles | C | DONE |
 | C11 | `boundary_rate_ratio.py --self-test` exercises neither the band definition, the tile-exclusion rule, nor the per-site distance conventions | C | DONE |
 | **D. Gate and launcher hardening** ||||
-| D1 | `external_test` is in no separation pair — Test B independence is asserted, never verified | D | OPEN |
-| D2 | the gate never reads `masks/`, so a split that has lost masks passes with wrong counts printed | D | OPEN |
+| D1 | `external_test` is in no separation pair — Test B independence is asserted, never verified | D | DONE |
+| D2 | the gate never reads `masks/`, so a split that has lost masks passes with wrong counts printed | D | DONE |
 | D3 | a manifest waives its own adequacy check by omitting the keys; nothing downstream restores it | D | OPEN |
 | D4 | the A0 taxonomy gate prints PASS and exits 0 when the name it guards is deleted | D | OPEN |
-| D5 | B5's `require_file` gates on stage2b, but `stage3_clsbal` initialises from stage2a | D | OPEN |
+| D5 | B5's `require_file` gates on stage2b, but `stage3_clsbal` initialises from stage2a | D | DONE |
 | D6 | the clean-tree check runs on the submitting checkout; array tasks run from unverified `$SONIC_SCRATCH/seed<N>` | D | OPEN |
 | **E. False statements in tracked text** ||||
-| E1 | D2's "18% of tiles lost to buffers" — measured 19.3% of the pool, 21.2% of the cut site | E | OPEN |
-| E2 | D14 asserts "950 m on the full pool", which METHODS §4 explicitly forbids and no artefact supports | E | OPEN |
-| E3 | CLAUDE.md's "registered claim" section contradicts D18; `boundary_rate_ratio.py` still prints a registered verdict | E | OPEN |
-| E4 | `utils.spatial_blocks` docstring says "~14 independent units at 950 m"; the function returns 16 | E | OPEN |
-| E5 | `stage3_clsbal.py`: "num_samples = len(train set) = 1846 ... the same 1846 Bio tiles" — it is 1072 | E | OPEN |
-| E6 | `taxonomy.py`: OEM Water "argmax Grassland (0.553)" — the shipped matrix says 0.7525 soft / 0.7485 hard | E | OPEN |
-| E7 | shipped factorial configs carry stale comments and a copy-pasted docstring misdescribing the cells | E | OPEN |
+| E1 | D2's "18% of tiles lost to buffers" — measured 19.3% of the pool, 21.2% of the cut site | E | DONE |
+| E2 | D14 asserts "950 m on the full pool", which METHODS §4 explicitly forbids and no artefact supports | E | DONE |
+| E3 | CLAUDE.md's "registered claim" section contradicts D18; `boundary_rate_ratio.py` still prints a registered verdict | E | DONE |
+| E4 | `utils.spatial_blocks` docstring says "~14 independent units at 950 m"; the function returns 16 | E | DONE |
+| E5 | `stage3_clsbal.py`: "num_samples = len(train set) = 1846 ... the same 1846 Bio tiles" — it is 1072 | E | DONE |
+| E6 | `taxonomy.py`: OEM Water "argmax Grassland (0.553)" — the shipped matrix says 0.7525 soft / 0.7485 hard | E | DONE |
+| E7 | shipped factorial configs carry stale comments and a copy-pasted docstring misdescribing the cells | E | DONE |
 | E8 | METHODS §6 changes what "block" means mid-paragraph; the boundary-free exclusion costs zero blocks | E | OPEN |
 | E9 | METHODS §7's interval numbers have no committed code, contradicting the file's own opening rule | E | OPEN |
 | E10 | `artifacts/replication_exposure_report.json` is a month stale, matches no split, referenced by nothing | E | OPEN |

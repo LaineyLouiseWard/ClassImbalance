@@ -14,7 +14,10 @@ over all 2,143 tiles. Not a judgement call.
 ## D2 — Two straight cuts, not a block grid
 
 **Decision:** cut the inland site along one axis into train | val | test strips. **Why:** measured, not
-asserted — a block grid loses **44.3%** of tiles to buffers against **18%** for two cuts. Verified by
+asserted — a block grid loses **44.3%** of tiles to buffers against **19.3%** for two cuts.
+**Corrected 2026-07-26:** this said 18%. Measured on the shipped manifest, the two cuts drop 413 of
+2,143 pool tiles = 19.3%, or 21.2% of the inland site that was actually cut. Quote whichever
+denominator the sentence needs, but not 18%. Verified by
 running the block-grid path: it returned val=44, test=78.
 
 ## D3 — Hold the two upland sites out whole
@@ -212,8 +215,12 @@ size in `MIN_CLASS_BLOCKS`, the criterion that admitted this split. Measured on 
 
 So the split's admissibility depends on which correlogram number is used, and it fails under the
 spectral one. **Resolution, which is reasoning rather than re-cutting:** block support is a
-class-composition criterion, so the composition range is the right denominator — 750 m on the shipped
-subsample, 950 m on the full pool — and the split passes at both. The 1350 m figure is the *spectral*
+class-composition criterion, so the composition range is the right denominator. **Corrected 2026-07-26:**
+an earlier version of this paragraph said "750 m on the shipped subsample, 950 m on the full pool".
+There is no full-pool inland measurement. The committed correlogram gives the inland site 750 m for
+composition and 1,350 m for spectral similarity; 950 m is ireland2's composition range. 950 m sits
+ABOVE the inland composition range, so it counts fewer independent units than that scale would and
+is conservative for this criterion. The split passes at 650, 750 and 950 m. See METHODS §4. The 1350 m figure is the *spectral*
 range and answers a different question (imagery similarity, not class-composition independence). This
 argument must be written into the methods now. No re-cut is needed, but it cannot be left to be
 discovered under review.

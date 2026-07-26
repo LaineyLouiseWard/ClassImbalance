@@ -4,8 +4,9 @@ rho — the pre-registered primary statistic for the boundary-concentration clai
 
     rho = (foreground error rate within 8 m of a GT boundary) / (error rate beyond 8 m)
 
-Registered in docs/PREREGISTRATION_P1_AMENDMENT.md (version 2). Threshold: rho >= 4.0 on BOTH test
-sets, judged on the LOWER bound of a bootstrap 95% CI; dead below 2.0; weak in between.
+Reported DESCRIPTIVELY. The pre-registration that carried a rho >= 4.0 threshold was withdrawn on
+2026-07-26 (D18); the boundary claim rests on the trimap exclusion curve and the per-class boundary
+and interior rates. rho is a one-line summary of those rates. There is no threshold and nothing fails.
 
 WHY A RATE RATIO AND NOT A SHARE. Two earlier forms were registered and retracted the same day:
 
@@ -58,8 +59,10 @@ from scripts.analysis.seed_disagreement import boundary_distance
 from scripts.analysis.utils import spatial_blocks, resample_blocks
 
 BAND_M = 8.0
-THRESHOLD = 4.0          # registered: claim holds at or above this, on the lower CI bound
-DEAD_BELOW = 2.0         # registered: claim dead below this
+# NO THRESHOLD. The pre-registered rho >= 4.0, its 2.0 dead band and its weak band were retired on
+# 2026-07-26 (D18): the bar was arbitrary, and a lower-bound rule at 12-16 blocks has an operating
+# point near 5.2 and 6.3 rather than 4.0, so defending it needed two further pieces of apparatus.
+# rho is reported as a descriptive summary of the boundary and interior rates. Nothing "fails".
 FOREGROUND = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 BACKGROUND = 0
 
@@ -127,16 +130,6 @@ def bootstrap(counts: dict, groups: dict, n_boot: int, rng) -> tuple:
     return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)), n_units)
 
 
-def verdict(lo: float) -> str:
-    if not np.isfinite(lo):
-        return "UNDETERMINED"
-    if lo >= THRESHOLD:
-        return "HOLDS"
-    if lo < DEAD_BELOW:
-        return "DEAD"
-    return "WEAK"
-
-
 def report(name: str, counts: dict, groups: dict, n_boot: int, rng) -> dict:
     point = rho_from(counts, list(counts))
     lo, hi, n_groups = bootstrap(counts, groups, n_boot, rng)
@@ -145,14 +138,14 @@ def report(name: str, counts: dict, groups: dict, n_boot: int, rng) -> dict:
     print(f"\n{name}")
     print(f"  near-boundary error rate  {100*en/max(nn,1):7.4f}%   ({en:,} / {nn:,} px)")
     print(f"  beyond-8 m error rate     {100*ef/max(nf,1):7.4f}%   ({ef:,} / {nf:,} px)")
-    print(f"  rho = {point:.3f}   95% CI [{lo:.3f}, {hi:.3f}]  over {n_groups} footprint groups "
+    print(f"  rho = {point:.3f}   95% CI [{lo:.3f}, {hi:.3f}]  over {n_groups} blocks "
           f"({len(counts)} tiles)")
-    print(f"  registered verdict on the LOWER bound: {verdict(lo)}   "
-          f"(holds >= {THRESHOLD}, dead < {DEAD_BELOW})")
+    print(f"  descriptive: no threshold is applied to this number (D18). The interval is a "
+          f"percentile block bootstrap and under-covers at this many blocks.")
     return {"rho": point, "ci95": [lo, hi], "n_groups": n_groups, "n_tiles": len(counts),
             "err_near": en, "n_near": nn, "err_far": ef, "n_far": nf,
             "rate_near": en / max(nn, 1), "rate_far": ef / max(nf, 1),
-            "verdict_on_lower_bound": verdict(lo)}
+            "threshold": None}
 
 
 def self_test() -> int:
@@ -310,8 +303,8 @@ def main() -> int:
     rng = np.random.default_rng(args.seed)
 
     out = {"split_root": args.split_root, "split": args.split, "cell": args.cell,
-           "seeds": args.seeds, "band_m": BAND_M, "threshold": THRESHOLD,
-           "dead_below": DEAD_BELOW, "unit_of_analysis": f"spatial block at {args.block_m:.0f} m"}
+           "seeds": args.seeds, "band_m": BAND_M,
+           "unit_of_analysis": f"spatial block at {args.block_m:.0f} m"}
     out["pooled"] = report(f"{args.split} — pooled", counts, groups, args.n_boot, rng)
 
     if args.per_site:
