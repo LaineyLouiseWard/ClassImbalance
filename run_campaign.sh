@@ -35,7 +35,18 @@ mkdir -p "$STATE"
 # Pin worktrees to the root's current commit, DETACHED (not a branch): a branch can
 # only be checked out in one worktree, and the seeds only ever write gitignored
 # outputs, so they never need their own branch. Keep the code fixed during the run.
-CAMPAIGN_COMMIT="$(cd "$ROOT" && git rev-parse HEAD)"
+#
+# Which is exactly why a dirty tree cannot be allowed to start: the root seed would run the
+# working tree and the other nine would run HEAD, so one run of ten differs from the other nine
+# and nothing records which. Refuse rather than warn.
+DIRT="$(git -C "$ROOT" status --porcelain)"
+if [ -n "$DIRT" ]; then
+  echo "ERROR: the working tree is dirty. Commit or stash before launching:" >&2
+  while IFS= read -r line; do echo "    $line" >&2; done <<<"$DIRT"
+  echo "  Seed $ROOT_SEED would run these changes and seeds 43-51 would not." >&2
+  exit 1
+fi
+CAMPAIGN_COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
 
 # Fail fast if the conda env is not active (else the first seed dies hours in).
 if ! python -c "import torch" >/dev/null 2>&1; then

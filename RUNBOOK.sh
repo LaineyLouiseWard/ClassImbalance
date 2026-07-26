@@ -428,7 +428,7 @@ if run_stage C1b; then
       --checkpoints "$CKPT" \
       --data-root  "$SPLIT_ROOT"/external_test \
       --split test \
-      --out-dir    evaluation/evaluation_results/external_${SPLIT_TAG} \
+      --out-dir    "evaluation/evaluation_results/external_${SPLIT_TAG}" \
       --ignore-index 0 \
       --force
   done
