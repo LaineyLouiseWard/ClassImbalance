@@ -89,8 +89,10 @@ Thumbs.db
 # Legacy/archived configs — kept locally, never published
 config/biodiversity/_archive/
 
-# Regenerable analysis outputs (drafts, stale KD, imagery-derived previews) — not shared
-analysis/
+# Regenerable analysis outputs (drafts, stale KD, imagery-derived previews) — not shared.
+# Leading slash matters: unanchored, this also matched scripts/analysis/ and silently kept
+# seven analysis scripts out of the repo.
+/analysis/
 evaluation/bakeoff_gates/
 
 # Archived cut-figure outputs (kept locally, out of git)
