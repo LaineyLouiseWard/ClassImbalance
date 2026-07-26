@@ -34,6 +34,11 @@ from scripts.analysis.seed_disagreement import (  # noqa: E402
 )
 from geoseg.taxonomy import STUDENT_CLASSES  # noqa: E402
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 C = len(STUDENT_CLASSES)                 # 6 (0 = background, 1..5 = foreground)
 FOREGROUND = np.arange(1, C)
 # Metres. These were BND_M/INT_M = 3.0/16.0 applied to distances that boundary_distance
@@ -110,7 +115,7 @@ def confusion_pairs(flag, labels, argmax, fg, top=12):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/val/masks")
     ap.add_argument("--cell", default="stage3_clsbal")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--out-dir", default="analysis/label_ceiling")

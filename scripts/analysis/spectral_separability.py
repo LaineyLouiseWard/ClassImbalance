@@ -28,6 +28,11 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 SEMI, GRASS, FOREST = 5, 2, 1
 
 
@@ -47,8 +52,8 @@ def cohens_d(a: np.ndarray, b: np.ndarray) -> float:
 
 def main() -> None:
     root = find_repo_root()
-    imgs = sorted(glob.glob(str(root / "data/biodiversity_split/val/images/*.tif")))
-    mdir = root / "data/biodiversity_split/val/masks"
+    imgs = sorted(glob.glob(str(root / f"data/split_{SPLIT_TAG}/val/images/*.tif")))
+    mdir = root / f"data/split_{SPLIT_TAG}/val/masks"
 
     # detect Red band (0 or 2) by which gives higher forest NDVI on a sample
     ndvi_test = {0: [], 2: []}

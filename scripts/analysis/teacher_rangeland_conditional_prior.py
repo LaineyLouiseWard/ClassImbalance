@@ -28,6 +28,11 @@ from geoseg.datasets.biodiversity_dataset import BiodiversityTrainDataset, val_a
 from geoseg.models.unet import TeacherUNet
 from geoseg.taxonomy import OEM_NATIVE_CLASSES, STUDENT_CLASSES
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 OEM_RANGELAND = 2          # teacher output channel (geoseg.taxonomy.OEM_NATIVE_CLASSES)
 GRASSLAND, SEMINATURAL = 2, 5
 TEACHER_CKPT = "pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth"
@@ -43,7 +48,7 @@ def main() -> None:
     teacher.freeze()
     teacher.to(dev)
 
-    ds = BiodiversityTrainDataset(data_root="data/biodiversity_split/train", transform=val_aug)
+    ds = BiodiversityTrainDataset(data_root=f"data/split_{SPLIT_TAG}/train", transform=val_aug)
     dl = DataLoader(ds, batch_size=8, num_workers=4, shuffle=False, pin_memory=True)
 
     hard_gt_hist = np.zeros(6, dtype=np.int64)      # GT histogram of teacher-argmax-Rangeland pixels

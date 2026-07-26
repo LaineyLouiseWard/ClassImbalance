@@ -31,6 +31,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import sys
+
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
     list_val_tiles, load_mask, load_seed_stack, tile_uncertainty,
@@ -108,7 +113,7 @@ def curves(n_hist, e_hist, n_pts=101):
 
 def render(root, out_dir, seeds, use_tex):
     setup_font(use_tex)
-    sr, md, cell = "sonic/results", "data/biodiversity_split/val/masks", "stage3_clsbal"
+    sr, md, cell = "sonic/results", f"data/split_{SPLIT_TAG}/val/masks", "stage3_clsbal"
     n_hist, e_hist, n = sparsification(root, sr, md, cell, seeds)
     f, unc, oracle, random, ause, base_err = curves(n_hist, e_hist)
     print(f"[uncertainty_quality] cell={cell}  AUSE={ause:.4f}")

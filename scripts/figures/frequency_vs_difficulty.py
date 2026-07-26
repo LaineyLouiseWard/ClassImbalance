@@ -53,6 +53,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 # Canonical class order: Background=0, Forest=1, Grassland=2, Cropland=3,
 # Settlement=4, Seminatural=5 (geoseg/datasets/biodiversity_dataset.py).
 CLASS_IDS = [1, 2, 3, 4, 5]
@@ -116,7 +121,7 @@ def setup_font(use_tex: bool):
 def class_frequencies(root: Path) -> dict[int, float]:
     """% of foreground pixels per class over the training masks."""
     counts = np.zeros(6, dtype=np.int64)
-    files = sorted(glob.glob(str(root / "data/biodiversity_split/train/masks/*.png")))
+    files = sorted(glob.glob(str(root / f"data/split_{SPLIT_TAG}/train/masks/*.png")))
     if not files:
         raise FileNotFoundError("no training masks under data/biodiversity_split/train/masks")
     for f in files:

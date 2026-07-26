@@ -31,6 +31,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.confident_learning_check import build_arrays  # noqa: E402
 from geoseg.taxonomy import STUDENT_CLASSES  # noqa: E402
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 FG_NAMES = STUDENT_CLASSES[1:]          # Forest, Grassland, Cropland, Settlement, Seminatural
 BND_PX, INT_PX = 3.0, 16.0              # <=1.5 m boundary band; >8 m deep interior
 
@@ -38,7 +43,7 @@ BND_PX, INT_PX = 3.0, 16.0              # <=1.5 m boundary band; >8 m deep inter
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/val/masks")
     ap.add_argument("--cell", default="stage3_clsbal")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--out-dir", default="analysis/label_ceiling")

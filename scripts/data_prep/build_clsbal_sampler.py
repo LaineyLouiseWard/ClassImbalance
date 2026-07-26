@@ -44,7 +44,7 @@ MINORITY = (4, 5)
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--data_root", default="data/biodiversity_split/train")
+    p.add_argument("--data_root", default=f"data/split_{SPLIT_TAG}/train")
     p.add_argument("--out", default=f"artifacts/sampler_weights_clsbal_{SPLIT_TAG}.tsv")
     p.add_argument("--q", type=float, default=1.0, help="inverse-frequency exponent (1.0=class-balanced)")
     p.add_argument("--settlement_target", type=float, default=1.27,

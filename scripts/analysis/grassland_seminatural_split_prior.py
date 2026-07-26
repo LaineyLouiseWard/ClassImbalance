@@ -23,13 +23,18 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 GRASSLAND, SEMINATURAL = 2, 5
 NAMES = {0: "Background", 1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--data-root", default="data/biodiversity_split/train",
+    ap.add_argument("--data-root", default=f"data/split_{SPLIT_TAG}/train",
                     help="Split root containing masks/ (default: training split)")
     args = ap.parse_args()
 

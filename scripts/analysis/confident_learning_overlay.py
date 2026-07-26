@@ -32,6 +32,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from geoseg.taxonomy import STUDENT_CLASSES  # noqa: E402
 C = len(STUDENT_CLASSES)
 from scripts.analysis.confident_learning_check import build_arrays  # noqa: E402
+
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 from scripts.analysis.draft_boundary_overlay import (  # noqa: E402
     setup_font, gt_boundary_mask, _rgb_for, PAL, CLASS_CMAP, CLASS_NORM,
 )
@@ -149,8 +154,8 @@ def render(tiles, data, img_dir, out_dir, use_tex):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
-    ap.add_argument("--img-dir", default="data/biodiversity_split/val/images")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/val/masks")
+    ap.add_argument("--img-dir", default=f"data/split_{SPLIT_TAG}/val/images")
     ap.add_argument("--cell", default="stage3_clsbal")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--tiles", nargs="+", default=DEFAULT_TILES)

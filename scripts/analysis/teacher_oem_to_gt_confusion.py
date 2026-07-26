@@ -50,7 +50,7 @@ NS, NO = len(STUDENT_CLASSES), len(OEM_NATIVE_CLASSES)  # 6, 9
 @torch.no_grad()
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data-root", default="data/biodiversity_split/train",
+    ap.add_argument("--data-root", default=f"data/split_{SPLIT_TAG}/train",
                     help="training split the confusion is measured over")
     ap.add_argument("--out", default=f"artifacts/teacher_oem_gt_confusion_{SPLIT_TAG}.npz")
     args = ap.parse_args()

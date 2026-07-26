@@ -137,19 +137,23 @@ def main() -> None:
         marker = "SKIP" if status == "skipped" else ("OK  " if status is True else "FAIL")
         print(f"  Figure {fig_num}: {marker}")
 
-    # Sync freshly built figures into the submission bundle (main.tex reads from
-    # manuscript/Figures/). Only copy figures that built OK this run.
+    failed = [n for n, s in results.items() if s is False]
+
+    # Sync into the submission bundle (main.tex reads from manuscript/Figures/) ONLY when every
+    # requested figure built. Copying the ones that happened to succeed leaves the manuscript with a
+    # mixture of fresh and stale figures and no way to tell which is which -- and the stale ones are
+    # from the withdrawn leaking campaign.
+    if failed:
+        print(f"\n{len(failed)} figure(s) failed: {', '.join(failed)}")
+        print(f"NOT syncing to {SUBMISSION_FIGS_DIR.relative_to(REPO_ROOT)}/ — a partial sync mixes "
+              f"fresh figures with whatever was there before, undetectably.")
+        sys.exit(1)
     if SUBMISSION_FIGS_DIR.is_dir():
         for name, status in results.items():
             pdf = FIGURES_DIR / f"{name}.pdf"
             if status is True and pdf.exists():
                 shutil.copyfile(pdf, SUBMISSION_FIGS_DIR / f"{name}.pdf")
         print(f"\nSynced built figures -> {SUBMISSION_FIGS_DIR.relative_to(REPO_ROOT)}/")
-
-    failed = [n for n, s in results.items() if s is False]
-    if failed:
-        print(f"\n{len(failed)} figure(s) failed: {', '.join(failed)}")
-        sys.exit(1)
     print("\nAll requested figures built successfully.")
 
 

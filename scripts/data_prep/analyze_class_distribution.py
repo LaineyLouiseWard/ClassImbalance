@@ -158,7 +158,7 @@ def main() -> None:
     parser.add_argument(
         "--data-root",
         type=str,
-        default="data/biodiversity_split/train",
+        default=f"data/split_{SPLIT_TAG}/train",
         help="Dataset root containing images/ and masks/",
     )
     parser.add_argument(

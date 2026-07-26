@@ -36,6 +36,11 @@ from PIL import Image
 from rasterio.merge import merge
 from rasterio.warp import reproject, Resampling
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 SEMI, GRASS = 5, 2
 MIN_PX = 200  # per class, per tile, for a within-tile comparison
 
@@ -87,8 +92,8 @@ def onto_tile(field, src_tf, src_crs, ds):
 def main() -> None:
     root = find_repo_root()
     elev, slope, tf, crs, dem_files = build_dem(root)
-    imgs = sorted(glob.glob(str(root / "data/biodiversity_split/val/images/*.tif")))
-    mdir = root / "data/biodiversity_split/val/masks"
+    imgs = sorted(glob.glob(str(root / f"data/split_{SPLIT_TAG}/val/images/*.tif")))
+    mdir = root / f"data/split_{SPLIT_TAG}/val/masks"
 
     semi_e, grass_e, semi_s, grass_s = [], [], [], []      # pooled pixel pools
     wt_elev_d, wt_slope_d = [], []                          # within-tile d

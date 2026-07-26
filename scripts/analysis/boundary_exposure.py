@@ -27,6 +27,11 @@ from pathlib import Path
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
 # --- Per-site ground sample distance -------------------------------------------------------------
 # Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
@@ -65,7 +70,7 @@ def load_mask(path: str) -> np.ndarray:
 
 def main() -> None:
     root = find_repo_root()
-    masks = sorted(glob.glob(str(root / "data/biodiversity_split/val/masks/*")))
+    masks = sorted(glob.glob(str(root / f"data/split_{SPLIT_TAG}/val/masks/*")))
     iou = json.load(open(root / "analysis/eval_219/per_class_iou.json"))["stage1_baseline"]["per_class_iou_mean"]
 
     within = {c: [] for c in NAMES}   # per-pixel indicator lists, per class

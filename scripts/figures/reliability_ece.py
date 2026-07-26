@@ -32,6 +32,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import sys
+
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
     list_val_tiles, load_mask, load_seed_stack, boundary_distance,
@@ -118,7 +123,7 @@ def run_cell(root, softmax_root, mask_dir, cell, seeds, stratify=False):
 
 def render(root, out_dir, seeds, use_tex):
     setup_font(use_tex)
-    sr, md = "sonic/results", "data/biodiversity_split/val/masks"
+    sr, md = "sonic/results", f"data/split_{SPLIT_TAG}/val/masks"
     base, _, _, n = run_cell(root, sr, md, "stage1_baseline", seeds, stratify=False)
     full, b_near, b_far, _ = run_cell(root, sr, md, "stage3_clsbal", seeds, stratify=True)
 

@@ -44,6 +44,11 @@ from geoseg.datasets.biodiversity_dataset import (
 )
 from geoseg.models.ftunetformer import ft_unetformer
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 
 # ------------------
 # Helpers
@@ -59,7 +64,7 @@ def _norm_id(x: str) -> str:
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--data_root", type=str, default="data/biodiversity_split/train")
+    p.add_argument("--data_root", type=str, default=f"data/split_{SPLIT_TAG}/train")
     p.add_argument("--ckpt", type=str, required=True, help="Stage 2b OEM-transfer Lightning checkpoint")
     p.add_argument("--out", type=str, default="artifacts/sampler_weights.tsv")
     p.add_argument("--batch_size", type=int, default=2)

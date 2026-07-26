@@ -36,6 +36,11 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from geoseg.taxonomy import STUDENT_CLASSES, STUDENT_PALETTE  # noqa: E402
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 C = len(STUDENT_CLASSES)
 GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
 # --- Per-site ground sample distance -------------------------------------------------------------
@@ -273,7 +278,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--stats-dir", default="analysis/label_ceiling")
     ap.add_argument("--out-dir", default="analysis/label_ceiling")
-    ap.add_argument("--img-dir", default="data/biodiversity_split/val/images")
+    ap.add_argument("--img-dir", default=f"data/split_{SPLIT_TAG}/val/images")
     ap.add_argument("--cells", nargs="+", default=["stage3_clsbal", "stage1_baseline"])
     ap.add_argument("--no-tex", action="store_true", help="force mathtext fallback")
     args = ap.parse_args()

@@ -46,6 +46,11 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from geoseg.taxonomy import STUDENT_CLASSES, STUDENT_PALETTE  # noqa: E402
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 # Reuse the canonical uncertainty + IO machinery so the decomposition is identical.
 from scripts.analysis.seed_disagreement import (  # noqa: E402
     C,
@@ -283,8 +288,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
-    ap.add_argument("--img-dir", default="data/biodiversity_split/val/images")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/val/masks")
+    ap.add_argument("--img-dir", default=f"data/split_{SPLIT_TAG}/val/images")
     ap.add_argument("--cell", default="stage3_clsbal")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--tiles", nargs="+", default=DEFAULT_TILES)

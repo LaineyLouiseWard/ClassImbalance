@@ -40,6 +40,11 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
     STUDENT_CLASSES, C, GSD_M, DIST_BIN_EDGES_PX, DIST_BIN_EDGES_M,
@@ -56,11 +61,11 @@ EXPOSURE_BINS = [0, 1, 2, 3, 4, 5]          # 5 = "5 or more"
 
 # Runs: (split, cell, softmax_root, mask_dir, reference json for the sanity gate)
 RUNS = [
-    ("val", "stage3_clsbal", "sonic/results", "data/biodiversity_split/val/masks",
+    ("val", "stage3_clsbal", "sonic/results", f"data/split_{SPLIT_TAG}/val/masks",
      "analysis/label_ceiling/boundary_trimap_stage3_clsbal.json"),
-    ("val", "stage1_baseline", "sonic/results", "data/biodiversity_split/val/masks",
+    ("val", "stage1_baseline", "sonic/results", f"data/split_{SPLIT_TAG}/val/masks",
      "analysis/label_ceiling/boundary_trimap_stage1_baseline.json"),
-    ("test", "stage3_clsbal", "analysis/test_softmax", "data/biodiversity_split/test/masks",
+    ("test", "stage3_clsbal", "analysis/test_softmax", f"data/split_{SPLIT_TAG}/test/masks",
      "analysis/label_ceiling_test/boundary_trimap_stage3_clsbal.json"),
 ]
 

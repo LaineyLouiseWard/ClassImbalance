@@ -32,6 +32,11 @@ from pathlib import Path
 import numpy as np
 
 import sys
+
+import os  # noqa: E402
+# The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
     STUDENT_CLASSES, C, list_val_tiles, load_mask, seed_dir,
@@ -104,7 +109,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/val/masks")
     ap.add_argument("--cell", action="append", dest="cells", default=None)
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--out-dir", default="analysis/eval_219")
