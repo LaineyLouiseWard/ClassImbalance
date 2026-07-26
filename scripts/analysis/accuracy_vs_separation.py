@@ -143,12 +143,22 @@ def macro_iou(tiles: list, per_tile: dict) -> float:
     return float(np.mean(vals)) if vals else float("nan")
 
 
-def bootstrap_ci(tiles: list, per_tile: dict, n_boot: int, rng) -> tuple:
-    """Tile-level bootstrap CI. The tile is the resampling unit, never the pixel."""
+def bootstrap_ci(tiles: list, per_tile: dict, n_boot: int, rng, blocks: dict | None = None) -> tuple:
+    """Bootstrap CI resampling SPATIAL BLOCKS, not tile ids.
+
+    The tile is not an independent unit: on a 50% stride, 294 tiles are 104 pixel-disjoint footprints
+    and 16 independent units at the 950 m correlation scale, so resampling tile ids returns intervals
+    1.6-26x too narrow (round-2 audit, B6). `blocks` comes from utils.spatial_blocks; passing None
+    falls back to tile ids and is only correct for already-disjoint inputs.
+    """
     if len(tiles) < 3:
         return (float("nan"), float("nan"))
-    vals = [macro_iou(list(rng.choice(tiles, len(tiles), replace=True)), per_tile)
-            for _ in range(n_boot)]
+    if blocks is None:
+        vals = [macro_iou(list(rng.choice(tiles, len(tiles), replace=True)), per_tile)
+                for _ in range(n_boot)]
+    else:
+        from scripts.analysis.utils import resample_blocks
+        vals = [macro_iou(resample_blocks(tiles, blocks, rng)[0], per_tile) for _ in range(n_boot)]
     vals = [v for v in vals if np.isfinite(v)]
     if not vals:
         return (float("nan"), float("nan"))
@@ -169,6 +179,11 @@ def main() -> None:
     bounds = read_bounds(root / args.split_root)
     dist = distance_to_training_m(bounds)
     per_tile = load_per_tile_iou(root / args.metrics_dir)
+    from scripts.analysis.utils import spatial_blocks
+    blocks = {}
+    for sp in ("test", "external_test"):
+        if (root / args.split_root / sp / "images").is_dir():
+            blocks.update(spatial_blocks(root / args.split_root, sp, 950.0))
 
     print(f"{len(dist)} held-out tiles from {args.split_root}")
     strata, rows = [], []
@@ -177,7 +192,7 @@ def main() -> None:
         if not sel:
             continue
         v = macro_iou(sel, per_tile)
-        ci = bootstrap_ci(sel, per_tile, args.n_boot, rng)
+        ci = bootstrap_ci(sel, per_tile, args.n_boot, rng, blocks)
         by_split = defaultdict(int)
         for t in sel:
             by_split[bounds[t][0]] += 1

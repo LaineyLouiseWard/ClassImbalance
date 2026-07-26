@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -122,17 +123,39 @@ def bootstrap_ci(
     n_boot: int = 2000,
     alpha: float = 0.05,
     seed: int = 42,
+    block_of: list | None = None,
 ) -> dict:
-    """Tile-level bootstrap: resample tiles, aggregate CMs, compute metrics."""
+    """Bootstrap over SPATIAL BLOCKS, aggregate CMs, compute metrics.
+
+    `block_of[i]` is the block id of `tile_cms[i]`, from utils.spatial_blocks. The tile is NOT an
+    independent unit: on a 50% stride the 294-tile test split is 104 pixel-disjoint footprints and 16
+    independent units at the 950 m correlation scale, so resampling tile indices returns intervals
+    1.6-26x too narrow (round-2 audit, B6). Passing None keeps the old tile-index behaviour and is
+    only correct for already-disjoint inputs; it warns.
+    """
     rng = np.random.default_rng(seed)
     n = len(tile_cms)
     cms = np.stack(tile_cms)  # (N, 6, 6)
+    if block_of is None:
+        logging.warning("bootstrap_ci: resampling TILE indices, which understates the interval on "
+                        "overlap-chipped tiles. Pass block_of= from utils.spatial_blocks.")
+        groups = None
+    else:
+        from collections import defaultdict
+        by_block = defaultdict(list)
+        for i, b in enumerate(block_of):
+            by_block[b].append(i)
+        groups = [np.array(v) for v in by_block.values()]
 
     boot_miou, boot_mf1, boot_oa = [], [], []
     boot_per_class = {c: [] for c in CLASS_NAMES_5}
 
     for _ in range(n_boot):
-        idx = rng.integers(0, n, size=n)
+        if groups is None:
+            idx = rng.integers(0, n, size=n)
+        else:
+            pick = rng.integers(0, len(groups), size=len(groups))
+            idx = np.concatenate([groups[k] for k in pick])
         agg_cm = cms[idx].sum(axis=0)
         m = metrics_from_cm(agg_cm)
         boot_miou.append(m["mIoU"])

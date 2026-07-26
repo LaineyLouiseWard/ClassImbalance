@@ -7,6 +7,8 @@ import json
 import os
 from pathlib import Path
 
+import numpy as np
+
 # ── Repo root detection ─────────────────────────────────────────────────────
 
 def find_repo_root(start: Path | None = None) -> Path:
@@ -107,3 +109,60 @@ def load_augmentation_list(path: Path | None = None) -> dict:
     path = path or resolve_artifact("AUG_LIST", "train_augmentation_list_{tag}.json")
     with open(path) as f:
         return json.load(f)
+
+# ── Unit of analysis: independent ground, not tiles ─────────────────────────
+
+def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict:
+    """{tile_id: block_id} on a grid of `block_m` cells, per CRS. THE BOOTSTRAP UNIT.
+
+    Tiles are chipped on a 50% stride, so neighbours repeat ground and resampling tile ids treats
+    dependent tiles as independent draws: 294 test tiles are only ~105 pixel-disjoint footprints, and
+    ~14 independent units at the 950 m autocorrelation scale. Intervals built on tile ids are roughly
+    1.6x too narrow at footprint level and 10-26x too narrow at the correlation scale (round-2 audit,
+    item B6).
+
+    WHY A GRID AND NOT CONNECTED COMPONENTS. The obvious reading of "non-overlapping footprint group"
+    is a single-linkage merge of overlapping tiles. That is wrong here and was tried first: a
+    contiguous test strip is one connected component under overlap (A overlaps B, B overlaps C), so
+    all 294 tiles collapse into ONE group and the bootstrap becomes degenerate. A grid partitions
+    space instead of chaining through it, so the unit count reflects area rather than connectivity.
+
+    block_m defaults to 950 m, the measured correlogram range, matching the scale used for class
+    support. Pass 256.0 (one tile footprint) for the pixel-disjoint count instead — that is the less
+    conservative unit, and the two should be reported together.
+    """
+    import math
+    from collections import defaultdict
+    import rasterio
+
+    rows = []
+    for f in sorted((split_root / split / "images").glob("*.tif")):
+        with rasterio.open(f) as d:
+            b = d.bounds
+            rows.append((f.stem, (b.left + b.right) / 2, (b.bottom + b.top) / 2,
+                         bool(d.crs and d.crs.is_geographic), str(d.crs)))
+    out = {}
+    by_crs = defaultdict(list)
+    for r in rows:
+        by_crs[r[4]].append(r)
+    for crs, rs in by_crs.items():
+        lat = float(np.mean([r[2] for r in rs]))
+        if rs[0][3]:
+            sx = block_m / (111320.0 * math.cos(math.radians(lat)))
+            sy = block_m / 111132.0
+        else:
+            sx = sy = block_m
+        for tid, cx, cy, _, _ in rs:
+            out[tid] = (crs, int(math.floor(cx / sx)), int(math.floor(cy / sy)))
+    return out
+
+
+def resample_blocks(tiles, blocks: dict, rng):
+    """One bootstrap draw: resample BLOCKS with replacement, return the tiles they contain."""
+    from collections import defaultdict
+    by_block = defaultdict(list)
+    for t in tiles:
+        by_block[blocks.get(t, t)].append(t)
+    keys = sorted(by_block)
+    pick = rng.choice(len(keys), len(keys), replace=True)
+    return [t for k in pick for t in by_block[keys[k]]], len(keys)

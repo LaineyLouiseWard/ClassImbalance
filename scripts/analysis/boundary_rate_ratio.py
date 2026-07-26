@@ -26,10 +26,15 @@ TWO CONVENTIONS, fixed by the registration and not adjustable here:
   * tiles with NO ground-truth boundary are EXCLUDED. 19 of 191 upland tiles are single-class, so the
     near-boundary set is empty by construction and any error they hold can only depress rho.
 
-THE UNIT OF ANALYSIS IS THE FOOTPRINT GROUP, NOT THE TILE. Tiles are chipped on a 50% stride, so
-neighbours repeat ground: 294 test tiles are roughly 105 pixel-disjoint footprints. Resampling tiles
-would give intervals about 1.6x too narrow. The bootstrap here resamples non-overlapping footprint
-groups, which is the correction the round-2 audit asked for (its B6).
+THE UNIT OF ANALYSIS IS A SPATIAL BLOCK, NOT A TILE. Tiles are chipped on a 50% stride, so neighbours
+repeat ground: the 294-tile test split is 104 pixel-disjoint footprints and only 16 independent units
+at the 950 m correlogram range. Resampling tile ids gives intervals ~1.6x too narrow at footprint
+level and 10-26x too narrow at the correlation scale (round-2 audit, B6). The bootstrap resamples
+grid blocks via utils.spatial_blocks, defaulting to 950 m.
+
+Note single-linkage over overlapping footprints is the WRONG unit and was tried first: a contiguous
+test strip is one connected component (A overlaps B, B overlaps C), so all 294 tiles collapse into one
+group and the bootstrap becomes degenerate. A grid partitions space rather than chaining through it.
 
 Run:
     PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py --self-test
@@ -50,6 +55,7 @@ import rasterio
 from PIL import Image
 
 from scripts.analysis.seed_disagreement import boundary_distance
+from scripts.analysis.utils import spatial_blocks, resample_blocks
 
 BAND_M = 8.0
 THRESHOLD = 4.0          # registered: claim holds at or above this, on the lower CI bound
@@ -68,45 +74,6 @@ def find_repo_root() -> Path:
 def site_of(tile_id: str) -> str:
     return tile_id.split("_")[0]
 
-
-def footprint_groups(split_root: Path, split: str) -> dict:
-    """{tile_id: group_id}, one group per set of mutually overlapping tiles.
-
-    Single-linkage over footprint overlap, within a CRS. Two tiles sharing any ground land in the same
-    group, so a group is a unit of independent ground and is the correct bootstrap unit.
-    """
-    rows = []
-    for f in sorted((split_root / split / "images").glob("*.tif")):
-        with rasterio.open(f) as d:
-            b = d.bounds
-            rows.append((f.stem, b.left, b.bottom, b.right, b.top, str(d.crs)))
-    parent = {r[0]: r[0] for r in rows}
-
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    def union(a, b):
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[rb] = ra
-
-    by_crs = defaultdict(list)
-    for r in rows:
-        by_crs[r[5]].append(r)
-    for _, rs in by_crs.items():
-        arr = np.array([r[1:5] for r in rs], float)
-        L, B, R, T = arr.T
-        tol = 1e-9 * float(np.min(R - L))
-        for i, ri in enumerate(rs):
-            ox = np.minimum(R[i], R) - np.maximum(L[i], L)
-            oy = np.minimum(T[i], T) - np.maximum(B[i], B)
-            for j in np.where((ox > tol) & (oy > tol))[0]:
-                if j != i:
-                    union(ri[0], rs[j][0])
-    return {t: find(t) for t in parent}
 
 
 def per_tile_counts(mask_dir: Path, pred_for_tile) -> dict:
@@ -145,23 +112,19 @@ def rho_from(counts: dict, tiles) -> float:
 
 
 def bootstrap(counts: dict, groups: dict, n_boot: int, rng) -> tuple:
-    """Percentile CI, resampling FOOTPRINT GROUPS. The tile is not an independent unit here."""
-    by_group = defaultdict(list)
-    for t in counts:
-        by_group[groups.get(t, t)].append(t)
-    keys = sorted(by_group)
-    if len(keys) < 3:
-        return (float("nan"), float("nan"), len(keys))
+    """Percentile CI, resampling SPATIAL BLOCKS. The tile is not an independent unit here."""
+    n_units = len(set(groups.get(t, t) for t in counts))
+    if n_units < 3:
+        return (float("nan"), float("nan"), n_units)
     vals = []
     for _ in range(n_boot):
-        pick = rng.choice(keys, len(keys), replace=True)
-        tiles = [t for k in pick for t in by_group[k]]
+        tiles, _ = resample_blocks(list(counts), groups, rng)
         v = rho_from(counts, tiles)
         if np.isfinite(v):
             vals.append(v)
     if not vals:
-        return (float("nan"), float("nan"), len(keys))
-    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)), len(keys))
+        return (float("nan"), float("nan"), n_units)
+    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)), n_units)
 
 
 def verdict(lo: float) -> str:
@@ -215,7 +178,7 @@ def self_test() -> int:
             e_far = rng.binomial(n_far, R_FAR)
             t = f"tile_{i:04d}"
             counts[t] = (e_near, n_near, e_far, n_far)
-            groups[t] = f"g{i // 3}"        # 3 tiles per footprint group
+            groups[t] = ("synthetic", i // 3, 0)        # 3 tiles per footprint group
         r = rho_from(counts, list(counts))
         lo, hi, ng = bootstrap(counts, groups, 400, rng)
         good = abs(r - TRUE_RHO) < 0.15
@@ -233,8 +196,8 @@ def self_test() -> int:
             e_near = rng.binomial(n_near, TRUE_RHO * R_FAR); e_far = rng.binomial(n_far, R_FAR)
         t = f"t{i:04d}"
         counts[t] = (e_near, n_near, e_far, n_far)
-        groups[t] = f"g{i // 3}"
-        flat[t] = t
+        groups[t] = ("synthetic", i // 3, 0)
+        flat[t] = ("synthetic", i, 0)
     _, _, ng = bootstrap(counts, groups, 400, rng)
     g_lo, g_hi, _ = bootstrap(counts, groups, 400, np.random.default_rng(3))
     t_lo, t_hi, nt = bootstrap(counts, flat, 400, np.random.default_rng(3))
@@ -260,6 +223,9 @@ def main() -> int:
     ap.add_argument("--per-site", action="store_true",
                     help="also report each site separately. Registered as binding for external_test, "
                          "which pools two sites whose band area shares differ by 2x.")
+    ap.add_argument("--block-m", type=float, default=950.0,
+                    help="bootstrap block size. 950 m = the correlogram range, the "
+                         "conservative unit. 256 m gives the pixel-disjoint count.")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default=None)
@@ -285,7 +251,11 @@ def main() -> int:
             return None
         return stack.mean(axis=0).argmax(axis=0)
 
-    groups = footprint_groups(sr, args.split)
+    groups = spatial_blocks(sr, args.split, args.block_m)
+    fine = spatial_blocks(sr, args.split, 256.0)
+    print(f"unit of analysis: {len(set(groups.values()))} blocks at {args.block_m:.0f} m "
+          f"({len(set(fine.values()))} pixel-disjoint footprints at 256 m, "
+          f"{len(groups)} tiles)")
     counts = per_tile_counts(sr / args.split / "masks", pred_for_tile)
     if not counts:
         raise SystemExit(f"no scorable tiles for {args.split}: no predictions found, or every tile "
@@ -294,7 +264,7 @@ def main() -> int:
 
     out = {"split_root": args.split_root, "split": args.split, "cell": args.cell,
            "seeds": args.seeds, "band_m": BAND_M, "threshold": THRESHOLD,
-           "dead_below": DEAD_BELOW, "unit_of_analysis": "non-overlapping footprint group"}
+           "dead_below": DEAD_BELOW, "unit_of_analysis": f"spatial block at {args.block_m:.0f} m"}
     out["pooled"] = report(f"{args.split} — pooled", counts, groups, args.n_boot, rng)
 
     if args.per_site:
