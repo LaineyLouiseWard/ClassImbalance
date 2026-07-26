@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ordered list of all stages
-STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B4 B4b B1 B2 B3 B4c B5 C1 C1b C2 C3 C4 D E)
+STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A10 B4 B4b B1 B2 B3 B4c B5 C1 C1b C2 C3 C4 D E)
 
 # Validate --from value
 valid=false
@@ -298,22 +298,17 @@ if run_stage A8; then
     --overwrite
 fi
 
-if run_stage A9; then
-  require_nonempty data/openearthmap_relabelled/masks A8
-  echo "[A9] Filtering OEM (post-mapping, settlement-dominant removal)"
-  PYTHONPATH=. python scripts/data_prep/filter_oem_settlement_postmap.py \
-    --in-root  data/openearthmap_relabelled \
-    --out-root data/openearthmap_relabelled_filtered \
-    --overwrite
-fi
-
 if run_stage A10; then
   require_nonempty "$SPLIT_ROOT"/train/images A1
-  require_nonempty data/openearthmap_relabelled_filtered/masks A9
+  require_nonempty data/openearthmap_relabelled/masks A8
   echo "[A10] Creating combined Biodiversity + OEM dataset (Stage 2a pre-training pool)"
+  # Reads A8's output directly. The former A9 stage (filter_oem_settlement_postmap.py) sat between
+  # them and was a measured no-op -- 2,118 tiles in, 2,118 out -- because A3's rural filter had
+  # already removed every settlement-heavy tile its 50% threshold was written to catch. A whole
+  # stage and a full data copy for nothing. The script remains in the tree, in no stage.
   PYTHONPATH=. python scripts/data_prep/create_biodiversity_oem_combined.py \
     --bio-root "$SPLIT_ROOT" \
-    --oem-root data/openearthmap_relabelled_filtered \
+    --oem-root data/openearthmap_relabelled \
     --out-root "$OEM_COMBINED" \
     --overwrite
 fi

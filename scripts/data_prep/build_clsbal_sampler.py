@@ -35,13 +35,17 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "analysis"))
 from utils import load_augmentation_list  # noqa: E402
 
+# The untagged artefacts belong to the withdrawn split and now live under _archive/.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+DEFAULT_AUG_LIST = f"artifacts/train_augmentation_list_{SPLIT_TAG}.json"
+
 MINORITY = (4, 5)
 
 
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--data_root", default="data/biodiversity_split/train")
-    p.add_argument("--out", default="artifacts/sampler_weights_clsbal.tsv")
+    p.add_argument("--out", default=f"artifacts/sampler_weights_clsbal_{SPLIT_TAG}.tsv")
     p.add_argument("--q", type=float, default=1.0, help="inverse-frequency exponent (1.0=class-balanced)")
     p.add_argument("--settlement_target", type=float, default=1.27,
                    help="calibrate scale so realised Settlement uplift ≈ this (A0 level)")
@@ -80,7 +84,7 @@ def main():
     # augmentation-list presence = the set A0's uplift was measured over (a3); use it to calibrate.
     aug_path = args.aug_list or os.environ.get("AUG_LIST")
     aug = load_augmentation_list(REPO / aug_path if aug_path else None)
-    print(f"  calibrating uplift against: {aug_path or 'artifacts/train_augmentation_list.json'}")
+    print(f"  calibrating uplift against: {aug_path or DEFAULT_AUG_LIST}")
     aug_present = {4: set(aug["settlement_images"]), 5: set(aug["seminatural_images"])}
 
     # The untagged legacy list is still on disk and was built on the leaky random split, so naming
@@ -89,7 +93,7 @@ def main():
     stray = (aug_present[4] | aug_present[5]) - set(ids)
     if stray:
         raise SystemExit(
-            f"augmentation list {aug_path or 'artifacts/train_augmentation_list.json'} holds "
+            f"augmentation list {aug_path or DEFAULT_AUG_LIST} holds "
             f"{len(stray)} ids absent from {args.data_root} (e.g. {sorted(stray)[:3]}) — it was "
             f"built on a different split. Point --aug-list or $AUG_LIST at this split's list.")
 

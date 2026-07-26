@@ -7,8 +7,6 @@ import os
 from torch.utils.data import DataLoader
 import torch
 
-# Mosaic augmentation ratio — env-gated for the pre-launch screen (0.0 = off).
-MOSAIC_RATIO = float(os.environ.get("MOSAIC_RATIO", "0.0"))
 # Optional output-name suffix so screen variants don't collide (e.g. "_nomosaic").
 RUN_TAG = os.environ.get("RUN_TAG", "")
 # Fold tag in every output path. Without it f2 resumed from f1's last.ckpt and the
@@ -114,7 +112,6 @@ use_aux_loss = False
 train_dataset = BiodiversityTrainDataset(
     data_root=f"{_BIO_SPLIT}/train",
     transform=train_aug_random,
-    mosaic_ratio=MOSAIC_RATIO,
 )
 
 val_dataset = BiodiversityValDataset(

@@ -30,6 +30,7 @@ Run from repo root:
 from __future__ import annotations
 
 import argparse
+import os
 
 import numpy as np
 import torch
@@ -38,6 +39,9 @@ from torch.utils.data import DataLoader
 from geoseg.datasets.biodiversity_dataset import BiodiversityTrainDataset, val_aug
 from geoseg.models.unet import TeacherUNet
 from geoseg.taxonomy import OEM_NATIVE_CLASSES, STUDENT_CLASSES, OEM_TO_STUDENT_PRETRAIN
+
+# The untagged artefacts belong to the withdrawn split and now live under _archive/.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 TEACHER_CKPT = "pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth"
 NS, NO = len(STUDENT_CLASSES), len(OEM_NATIVE_CLASSES)  # 6, 9
@@ -48,7 +52,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", default="data/biodiversity_split/train",
                     help="training split the confusion is measured over")
-    ap.add_argument("--out", default="artifacts/teacher_oem_gt_confusion.npz")
+    ap.add_argument("--out", default=f"artifacts/teacher_oem_gt_confusion_{SPLIT_TAG}.npz")
     args = ap.parse_args()
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"

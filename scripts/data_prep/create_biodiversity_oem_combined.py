@@ -5,7 +5,6 @@ Create a combined Biodiversity + OEM dataset.
 Splits:
 - train: biodiversity_split/train + OEM relabelled (6-class), prefixed with 'oem_'
 - val:   biodiversity_split/val only
-- test:  biodiversity_split/test images ONLY (no masks)
 
 Expected inputs:
   bio_root/
@@ -13,7 +12,6 @@ Expected inputs:
     train/masks/*.png
     val/images/*.tif
     val/masks/*.png
-    test/images/*.tif
 
   oem_root/
     images/*.tif
@@ -23,7 +21,6 @@ Output:
   out_root/
     train/images, train/masks
     val/images,   val/masks
-    test/images
 """
 
 from __future__ import annotations
@@ -115,7 +112,6 @@ def main() -> None:
         bio_root / "train" / "masks",
         bio_root / "val" / "images",
         bio_root / "val" / "masks",
-        bio_root / "test" / "images",
         oem_root / "images",
         oem_root / "masks",
     ]:
@@ -157,17 +153,10 @@ def main() -> None:
         require_nonempty=True,
     )
 
-    # ------------------------------------------------------------------
-    # Biodiversity: test (images ONLY)
-    # ------------------------------------------------------------------
-    n_test_img = transfer_dir(
-        bio_root / "test" / "images",
-        out_root / "test" / "images",
-        ext=args.img_ext,
-        mode=args.mode,
-        require_nonempty=True,
-    )
-
+    # The held-out test images are NOT copied here. This directory used to be written -- 294 test
+    # images with no masks -- and nothing ever read it: stage 2a trains on {pool}/train and
+    # validates on {split}/val. A directory named `test` inside the pre-training pool, holding the
+    # real test images, is an accident waiting to be made.
     # ------------------------------------------------------------------
     # OEM relabelled → train only (images + masks) with prefix
     # ------------------------------------------------------------------
@@ -197,7 +186,6 @@ def main() -> None:
     print(f"  mode:     {args.mode}")
     print(f"  train:    bio imgs={n_train_img}, bio masks={n_train_msk}, oem imgs={n_oem_img}, oem masks={n_oem_msk}")
     print(f"  val:      imgs={n_val_img}, masks={n_val_msk}")
-    print(f"  test:     imgs={n_test_img} (no masks)")
 
 
 if __name__ == "__main__":

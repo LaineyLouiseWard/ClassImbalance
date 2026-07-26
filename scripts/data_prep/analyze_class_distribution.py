@@ -13,12 +13,16 @@ Conventions:
 from __future__ import annotations
 
 import argparse
+import os
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
 from PIL import Image
+
+# The untagged artefacts belong to the withdrawn split and now live under _archive/.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 
 # Cosmetic labels only
@@ -167,7 +171,7 @@ def main() -> None:
     parser.add_argument(
         "--out",
         type=str,
-        default="artifacts/train_augmentation_list.json",
+        default=f"artifacts/train_augmentation_list_{SPLIT_TAG}.json",
         help="Output JSON file",
     )
     parser.add_argument("--threshold-settlement", type=float, default=5.0)

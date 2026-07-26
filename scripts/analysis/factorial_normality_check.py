@@ -40,6 +40,7 @@ Writes: (with --plot) analysis/seed_aggregate/factorial_normality.png
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import numpy as np
@@ -47,7 +48,8 @@ import pandas as pd
 from scipy import stats
 
 REPO = Path(__file__).resolve().parents[2]
-CSV = REPO / "analysis" / "seed_aggregate" / "per_seed_metrics.csv"
+CSV = Path(os.environ.get("PER_SEED_CSV",
+                          REPO / "analysis" / "seed_aggregate" / "per_seed_metrics.csv"))
 CELLS = ["baseline", "transfer-only", "sampler-only", "full"]
 METRICS = ["mIoU", "mF1", "OA"]  # headline metrics; per-class IoU handled below
 
@@ -62,8 +64,8 @@ def per_seed_contrasts(cell_arrays):
     }
 
 
-def cells_for(df, metric, cls=None):
-    sub = df[(df.split == "val") & (df.metric == metric)]
+def cells_for(df, metric, cls=None, split="val"):
+    sub = df[(df.split == split) & (df.metric == metric)]
     if cls is not None:
         sub = sub[sub["class"] == cls]
     piv = sub.pivot_table(index="seed", columns="cell_label", values="value_pct")[CELLS]
@@ -79,31 +81,53 @@ def shapiro_line(name, x):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--plot", action="store_true", help="also write a diagnostic QQ / residual PNG")
+    ap.add_argument("--splits", nargs="+", default=None,
+                    help="which splits to check. Default: every split present in the CSV. This was "
+                         "hard-coded to val, so the Shapiro-Wilk check that licenses the paired t "
+                         "ran on the checkpoint-selection split and never on the split the reported "
+                         "effects come from.")
     args = ap.parse_args()
 
     df = pd.read_csv(CSV)
+    splits = args.splits or sorted(df.split.unique())
 
-    print("Per-seed effect contrasts (Shapiro-Wilk normality; the paired-t assumption):")
-    for metric in METRICS:
-        cells, _ = cells_for(df, metric)
-        print(f"[{metric}]")
-        for eff, x in per_seed_contrasts(cells).items():
-            shapiro_line(eff, x)
-    classes = sorted(df[(df.metric == "IoU") & df["class"].notna()]["class"].unique())
-    for cls in classes:
-        cells, _ = cells_for(df, "IoU", cls)
-        print(f"[IoU: {cls}]")
-        for eff, x in per_seed_contrasts(cells).items():
-            shapiro_line(eff, x)
+    # The multiplicity family, stated rather than left to be counted by a reader: 4 effects x 3
+    # metrics x len(splits) paired t-tests, plus 5 classes x 4 cells x len(splits) per-class
+    # intervals. Nothing here corrects them; the effects are reported as descriptive.
+    n_tests = 4 * 3 * len(splits)
+    print(f"Splits checked: {splits}")
+    print(f"Multiplicity family: {n_tests} paired t-tests "
+          f"(4 effects x 3 metrics x {len(splits)} splits), uncorrected, plus "
+          f"{5 * 4 * len(splits)} per-class intervals.\n")
 
-    # Blocked (RCBD) residuals on mIoU: analogue of Montgomery Fig 6.2.
-    _, piv = cells_for(df, "mIoU")
-    Y = piv.values
-    fitted = Y.mean(0, keepdims=True) + Y.mean(1, keepdims=True) - Y.mean()
-    resid = (Y - fitted).ravel()
+    resid_by_split = {}
+    for split in splits:
+        print(f"===== {split} =====")
+        print("Per-seed effect contrasts (Shapiro-Wilk normality; the paired-t assumption):")
+        for metric in METRICS:
+            cells, _ = cells_for(df, metric, split=split)
+            print(f"[{metric}]")
+            for eff, x in per_seed_contrasts(cells).items():
+                shapiro_line(eff, x)
+        classes = sorted(df[(df.metric == "IoU") & df["class"].notna()]["class"].unique())
+        for cls in classes:
+            cells, _ = cells_for(df, "IoU", cls, split=split)
+            print(f"[IoU: {cls}]")
+            for eff, x in per_seed_contrasts(cells).items():
+                shapiro_line(eff, x)
+
+        # Blocked (RCBD) residuals on mIoU: analogue of Montgomery Fig 6.2.
+        _, piv = cells_for(df, "mIoU", split=split)
+        Y = piv.values
+        fitted = Y.mean(0, keepdims=True) + Y.mean(1, keepdims=True) - Y.mean()
+        resid = (Y - fitted).ravel()
+        resid_by_split[split] = (resid, fitted)
+        W, p = stats.shapiro(resid)
+        print(f"\nBlocked 2x2 residuals on mIoU ({resid.size} residuals): "
+              f"W={W:.3f}  p={p:.3f}  {'normal' if p > 0.05 else 'REJECT'}\n")
+
+    resid, fitted = resid_by_split[splits[-1]]
     W, p = stats.shapiro(resid)
-    print(f"\nBlocked 2x2 residuals on mIoU ({resid.size} residuals): "
-          f"W={W:.3f}  p={p:.3f}  {'normal' if p > 0.05 else 'REJECT'}")
 
     if args.plot:
         import matplotlib
@@ -118,7 +142,7 @@ def main():
         ax[1].axhline(0, color="grey", lw=0.8)
         ax[1].set(xlabel="Fitted mIoU (pp)", ylabel="Residual (pp)", title="Residuals vs fitted")
         fig.tight_layout()
-        out = CSV.parent / "factorial_normality.png"
+        out = CSV.parent / f"factorial_normality_{splits[-1]}.png"
         fig.savefig(out, dpi=140)
         print(f"wrote {out}")
 

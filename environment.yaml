@@ -148,7 +148,7 @@ dependencies:
       - nbconvert==7.17.0
       - nbformat==5.10.4
       - networkx==3.6.1
-      - numpy==2.2.6
+      - numpy==2.4.0
       - nvidia-cublas-cu12==12.8.4.1
       - nvidia-cuda-cupti-cu12==12.8.90
       - nvidia-cuda-nvrtc-cu12==12.8.93

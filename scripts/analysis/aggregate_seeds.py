@@ -115,6 +115,17 @@ DISPLAY = {
 SCALAR_METRICS = ["mIoU_excluding_bg", "mF1_excluding_bg", "OA"]
 SCALAR_LABELS = {"mIoU_excluding_bg": "mIoU", "mF1_excluding_bg": "mF1", "OA": "OA"}
 
+# The multiplicity family, stated where the p-values are printed rather than left to be counted.
+# Nothing here corrects it: the paper's claim is that the interventions give only modest gains, and
+# non-significance strengthens rather than inflates that. But "transfer dominant, sampler redundant"
+# is a directional claim resting on one of these tests, so the effects are labelled descriptive and
+# the family is named. See scripts/analysis/factorial_normality_check.py for the paired-t assumption
+# checked on every split rather than on validation alone.
+MULTIPLICITY_NOTE = (
+    "_Multiplicity: 4 effects x 3 metrics x 3 splits = 36 paired t-tests, plus 5 classes x 4 cells "
+    "x 3 splits = 60 per-class intervals. **No correction is applied.** These effects are reported "
+    "as descriptive, not as hypothesis tests._")
+
 # Metrics the factorial effects are reported for: headline mIoU + the two minority classes.
 EFFECT_METRICS = [
     ("mIoU", "mIoU_excluding_bg", None),
@@ -400,6 +411,8 @@ def md_effects(effects: dict) -> list[str]:
     lines.append(f"_Paired across {len(effects['seeds'])} seeds {effects['seeds']}; "
                  f"95% paired-t CI; p = two-sided one-sample t (H0: effect=0); "
                  f"Wilcoxon p in summary.json. CI excluding 0 ⇒ effect above seed noise._")
+    lines.append("")
+    lines.append(MULTIPLICITY_NOTE)
     return lines
 
 
