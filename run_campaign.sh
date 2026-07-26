@@ -110,7 +110,7 @@ for SEED in "${SEEDS[@]}"; do
   # The resumable per-seed run: sampler build, full leakage gate, training, evaluation (qualitative
   # are a separate once-off post-campaign step, not run per seed).
   run bash -c "cd '$DIR' && RESUME=1 SEED=$SEED HF_HUB_OFFLINE=1 \
-      bash RUNBOOK.sh --from B4 --to C2"
+      bash RUNBOOK.sh --from B4 --to C5"
 
   run touch "$DONE"
   echo "========================= seed $SEED: complete ========================="

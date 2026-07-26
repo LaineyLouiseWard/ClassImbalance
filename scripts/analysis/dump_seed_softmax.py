@@ -34,6 +34,10 @@ from tqdm import tqdm
 from geoseg.datasets.biodiversity_dataset import BiodiversityValDataset
 from evaluation.compute_metrics import build_model, load_checkpoint_into_model
 
+import os
+# The untagged paths belong to the WITHDRAWN random split.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 
 @torch.no_grad()
 def dump_softmax(
@@ -85,8 +89,9 @@ def main() -> None:
     ap.add_argument(
         "--data-root",
         type=str,
-        default="data/biodiversity_split/val",
-        help="Val split root (contains images/ and masks/). 231 tiles.",
+        default=f"data/split_{SPLIT_TAG}/test",
+        help="split root to dump (contains images/ and masks/). Defaults to Test A of the "
+             "current SPLIT_TAG; the old default was the WITHDRAWN random split's val/.",
     )
     ap.add_argument(
         "--out-dir",

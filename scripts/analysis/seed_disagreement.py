@@ -47,6 +47,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from geoseg.taxonomy import STUDENT_CLASSES  # noqa: E402
 
+import os
+# The untagged paths belong to the WITHDRAWN random split.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 C = len(STUDENT_CLASSES)          # 6
 LOG_C = np.log(C)
 BACKGROUND_INDEX = 0
@@ -354,7 +358,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/test/masks",
+                    help="masks to score against; defaults to Test A, not the withdrawn split")
     ap.add_argument("--cell", action="append", dest="cells",
                     default=None, help="repeatable; default: stage3_clsbal + stage1_baseline")
     ap.add_argument("--seeds", nargs="+", type=int,

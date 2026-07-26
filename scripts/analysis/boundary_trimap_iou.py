@@ -44,6 +44,10 @@ from scripts.analysis.seed_disagreement import (  # noqa: E402
     tile_uncertainty,
 )
 
+import os  # noqa: E402
+# The untagged paths belong to the WITHDRAWN random split.
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
+
 FOREGROUND = list(range(1, C))                 # 1..5
 HARD = {1: "Forest", 4: "Settlement", 5: "Seminatural"}  # narrative-focus classes
 # Boundary-exclusion radii in px. -1 = no exclusion (the true whole-image baseline == compute_metrics).
@@ -312,8 +316,13 @@ def make_figure(results: dict, out_path: Path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--softmax-root", default="sonic/results")
-    ap.add_argument("--mask-dir", default="data/biodiversity_split/val/masks")
+    ap.add_argument("--softmax-root", default="sonic/results",
+                    help="root holding seed<N>/analysis/seed_softmax/<cell>/seed<N>/")
+    ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/test/masks",
+                    help="masks to score against. Defaults to Test A. The withdrawn split's "
+                         "val/ directory was the old default; validation is the split every "
+                         "checkpoint is selected on, so the boundary evidence must not come "
+                         "from it.")
     ap.add_argument("--cell", action="append", dest="cells", default=None)
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--out-dir", default="analysis/label_ceiling")

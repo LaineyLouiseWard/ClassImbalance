@@ -79,7 +79,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ordered list of all stages
-STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A10 B4 B4b B1 B2 B3 B4c B5 C1 C1b C2 C3 C4 D E)
+STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A10 B4 B4b B1 B2 B3 B4c B5 C1 C1b C2 C3 C4 C5 D E)
 
 # Validate --from value
 valid=false
@@ -484,6 +484,26 @@ if run_stage C4; then
   python evaluation/export_final_test_table.py
 fi
 
+# ======================== C5. PER-SEED SOFTMAX DUMPS ==================
+# The input the boundary evidence is computed from. Until 2026-07-26 no stage produced it: the
+# cluster script carried its own copy and a local run produced nothing, so the trimap curve and rho
+# had no runnable path. One definition here, used by both.
+if run_stage C5; then
+  require_nonempty "$SPLIT_ROOT"/test/images A1
+  echo "[C5] Dumping per-seed softmax for the boundary evidence (Test A and Test B, all four cells)"
+  for CELL in "${CELLS[@]}"; do
+    CKPT="$(cell_ckpt "$CELL")"
+    require_file "$CKPT" B5
+    for SPLIT in test external_test; do
+      PYTHONPATH=. python scripts/analysis/dump_seed_softmax.py \
+        --ckpt      "$CKPT" \
+        --data-root "$SPLIT_ROOT/$SPLIT" \
+        --out-dir   "analysis/seed_softmax/${CELL}/seed${SEED:-42}" \
+        --device cuda
+    done
+  done
+fi
+
 # ======================== D. ANALYSES ================================
 
 if run_stage D; then
@@ -496,9 +516,34 @@ if run_stage D; then
   PYTHONPATH=. python scripts/analysis/a4_val_test_gap.py
   PYTHONPATH=. python scripts/analysis/a5_majority_stability.py
   PYTHONPATH=. python scripts/analysis/a6_weight_gini.py
-  echo "[D] Bootstrap confidence intervals (per-tile resampling; prerequisite for Figure 10)"
+  echo "[D] Bootstrap confidence intervals (950 m spatial blocks, all four cells, all three splits)"
   # --force re-runs inference instead of reusing stale analysis/per_tile_cms/*.npz from a prior run.
   PYTHONPATH=. python scripts/analysis/bootstrap_metrics.py --device cuda --force
+
+  # The boundary evidence. Since D18 retired the pre-registered threshold, the trimap exclusion
+  # curve IS the primary evidence for the boundary claim -- and it was in no stage at all, which is
+  # the same defect the statistic it replaced had. Computed on HELD-OUT ground only: validation is
+  # the split every checkpoint is selected on, so evidence drawn from it is optimistic.
+  echo "[D] Registered boundary-band denominators"
+  PYTHONPATH=. python scripts/analysis/register_boundary_denominators.py --split-root "$SPLIT_ROOT"
+  for SPLIT in test external_test; do
+    echo "[D] Trimap exclusion curve — $SPLIT (PRIMARY EVIDENCE)"
+    PYTHONPATH=. python scripts/analysis/boundary_trimap_iou.py \
+      --softmax-root analysis/seed_softmax \
+      --mask-dir "$SPLIT_ROOT/$SPLIT/masks" \
+      --cell stage1_baseline --cell stage2b_oem_finetune \
+      --cell stage_sampler_only --cell stage3_clsbal \
+      --out-dir "analysis/label_ceiling/$SPLIT"
+    echo "[D] Boundary/interior error rates — $SPLIT (rho, reported descriptively; no threshold, D18)"
+    PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py \
+      --split-root "$SPLIT_ROOT" --split "$SPLIT" \
+      --softmax-root analysis/seed_softmax --cell stage3_clsbal --per-site
+  done
+  echo "[D] Accuracy against distance from training ground — BOTH held-out strata on one axis"
+  PYTHONPATH=. python scripts/analysis/accuracy_vs_separation.py \
+    --split-root "$SPLIT_ROOT" \
+    --metrics-dir "evaluation/evaluation_results/test/stage3_clsbal_${SPLIT_TAG}" \
+                  "evaluation/evaluation_results/external_${SPLIT_TAG}/stage3_clsbal_${SPLIT_TAG}"
 fi
 
 # ======================== E. FIGURES =================================

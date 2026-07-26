@@ -168,7 +168,11 @@ def bootstrap_ci(tiles: list, per_tile: dict, n_boot: int, rng, blocks: dict | N
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split-root", required=True, help="a materialised split, e.g. data/split_f1")
-    ap.add_argument("--metrics-dir", required=True, help="directory holding per_tile_iou.json")
+    ap.add_argument("--metrics-dir", required=True, nargs="+",
+                    help="one or more directories holding per_tile_iou.json. Test A and Test B are "
+                         "written to DIFFERENT directories by compute_metrics, so passing one "
+                         "silently drops the other stratum -- which is the whole point of this "
+                         "script. Pass both.")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default=None)
@@ -178,7 +182,22 @@ def main() -> None:
     rng = np.random.default_rng(args.seed)
     bounds = read_bounds(root / args.split_root)
     dist = distance_to_training_m(bounds)
-    per_tile = load_per_tile_iou(root / args.metrics_dir)
+    per_tile = {}
+    for d in args.metrics_dir:
+        got = load_per_tile_iou(root / d)
+        overlap = set(got) & set(per_tile)
+        if overlap:
+            raise SystemExit(f"{d} repeats {len(overlap)} tiles already loaded, e.g. "
+                             f"{sorted(overlap)[:3]} -- two directories for the same split?")
+        per_tile.update(got)
+
+    covered = {s for s, *_ in (bounds[t] for t in per_tile if t in bounds)}
+    missing = [s for s in SPLITS_HELD_OUT if s not in covered]
+    if missing:
+        raise SystemExit(
+            f"no scored tiles for {missing} in {args.metrics_dir}. This script exists to put the "
+            f"inland strip and the upland sites on ONE axis; reporting it over a subset is the "
+            f"defect it was written to expose. Pass the metrics directory for each split.")
     from scripts.analysis.utils import spatial_blocks
     blocks = {}
     for sp in ("test", "external_test"):
@@ -212,7 +231,7 @@ def main() -> None:
     print("The infinite stratum is the upland external test set: its nearest labelled ground is a")
     print("different site, which is why it sits at the far end of the axis.")
 
-    out = Path(args.out) if args.out else (root / args.metrics_dir / "accuracy_vs_separation.json")
+    out = Path(args.out) if args.out else (root / args.metrics_dir[0] / "accuracy_vs_separation.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"split_root": args.split_root, "edges_m": EDGES_M,
                                "n_boot": args.n_boot, "unit_of_analysis": "tile",

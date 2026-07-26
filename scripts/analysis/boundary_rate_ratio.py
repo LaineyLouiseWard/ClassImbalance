@@ -208,6 +208,53 @@ def self_test() -> int:
     print(f"  group CI is {(g_hi-g_lo)/(t_hi-t_lo):.2f}x wider  "
           f"[{'ok, the unit of analysis matters' if widened else 'FAIL: no difference'}]")
 
+    # The counts above are synthetic, so nothing so far exercises the three conventions the
+    # registration actually fixes: the 8 m band, the STRICT `<` membership, the per-site anisotropic
+    # pixel size, and the boundary-free exclusion. Those are the parts most likely to be wrong and
+    # were untested by the test. Plant them in a real raster.
+    print("\nconventions, on synthetic rasters rather than synthetic counts:")
+
+    # (a) a two-class tile split down the middle: the boundary is one column, so at 0.5 m/px the
+    # band of strict distance < 8.0 m is exactly 32 columns (16 either side).
+    m = np.zeros((64, 64), np.uint8); m[:, :32] = 1; m[:, 32:] = 2
+    d = boundary_distance(m, "biodiversity_0001")
+    near = (d < BAND_M).sum(axis=0)[0], int((d < BAND_M).sum() / 64)
+    good = near[1] == 32
+    print(f"  inland 0.500 m/px, one vertical boundary: {near[1]} columns within 8 m "
+          f"(expect 32)  [{'ok' if good else 'FAIL'}]")
+    ok &= good
+
+    # (b) strict membership: a pixel at exactly 8.0 m must be OUTSIDE the band.
+    # Boundary pixels are at distance 0 and here they are columns 31 and 32, so exactly 8.0 m is
+    # 16 px out from column 31, i.e. column 15. Getting this index wrong is what the check is for.
+    at_edge = float(d[0, 15])
+    good = abs(at_edge - 8.0) < 1e-9 and not (at_edge < BAND_M)
+    print(f"  pixel at exactly {at_edge:.3f} m is excluded by strict `<`  "
+          f"[{'ok' if good else 'FAIL'}]")
+    ok &= good
+
+    # (c) anisotropy: the uplands are ~0.641 m/px in x, so the SAME raster must give a NARROWER
+    # band in columns. Omitting the tile id silently rescales every band -- that is the bug this
+    # checks for.
+    d_up = boundary_distance(m, "ireland1_0005")
+    cols_up = int((d_up < BAND_M).sum() / 64)
+    good = cols_up < near[1]
+    print(f"  ireland1 0.641 m/px, same raster: {cols_up} columns within 8 m "
+          f"(must be < {near[1]})  [{'ok' if good else 'FAIL'}]")
+    ok &= good
+
+    # (d) a single-class tile has no boundary anywhere, so it must be EXCLUDED, not scored as zero.
+    import tempfile
+    from PIL import Image as _I
+    with tempfile.TemporaryDirectory() as td:
+        _I.fromarray(np.full((64, 64), 2, np.uint8)).save(Path(td) / "biodiversity_9001.png")
+        _I.fromarray(m).save(Path(td) / "biodiversity_9002.png")
+        got = per_tile_counts(Path(td), lambda tid: np.full((64, 64), 2, np.uint8))
+    good = "biodiversity_9001" not in got and "biodiversity_9002" in got
+    print(f"  boundary-free tile excluded, two-class tile kept: {sorted(got)}  "
+          f"[{'ok' if good else 'FAIL'}]")
+    ok &= good
+
     print("\nSELF-TEST PASSED" if ok else "\nSELF-TEST FAILED")
     return 0 if ok else 1
 

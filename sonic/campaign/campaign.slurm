@@ -74,26 +74,12 @@ python scripts/data_prep/assert_no_split_leakage.py \
   --augmentation-list "$AUG_LIST" \
   --confusion-npz     "$TEACHER_CONFUSION_NPZ"
 
-echo "[train+eval] RUNBOOK stages B4..C2 for seed ${SEED}"
+echo "[train+eval] RUNBOOK stages B4..C5 for seed ${SEED}"
 # The runbook is the single definition of what a seed does, so the cluster cannot drift away from
-# what runs locally. B4..C2 covers the sampler build, the full preflight gate, the five training
-# configs, and evaluation on validation, Test B and Test A.
-SEED="$SEED" bash RUNBOOK.sh --from B4 --to C2
-
-echo "[dump] per-seed softmax for rho"
-# rho is the pre-registered primary statistic and these dumps are its only input. Nothing else in
-# the pipeline produces them, so a campaign that skips this step cannot answer the paper's question.
-# Test A and Test B go to one directory per cell: tile ids are unique across splits, and
-# seed_disagreement.load_seed_stack resolves by id.
-for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
-  for SPLIT in test external_test; do
-    python scripts/analysis/dump_seed_softmax.py \
-      --ckpt    "model_weights/biodiversity/${CELL}_${SPLIT_TAG}/${CELL}_${SPLIT_TAG}.ckpt" \
-      --data-root "${SPLIT_ROOT}/${SPLIT}" \
-      --out-dir "analysis/seed_softmax/${CELL}/seed${SEED}" \
-      --device cuda
-  done
-done
+# what runs locally. B4..C5 covers the sampler build, the full preflight gate, the five training
+# configs, evaluation on validation, Test B and Test A, and the per-seed softmax dumps the boundary
+# evidence is computed from. The dump used to be duplicated here; one definition, in the runbook.
+SEED="$SEED" bash RUNBOOK.sh --from B4 --to C5
 
 echo "[collect] copying this seed's metrics to the shared drop"
 # One flat directory per split, which is what aggregate_seeds.py reads through
