@@ -25,6 +25,21 @@ files, a bootstrap unit that collapsed 294 tiles into 1. Before you add anything
 problem can be solved by deleting something instead. A fix that adds a flag, a threshold and a fallback
 is usually worse than one that removes a branch. State the simpler alternative you rejected and why.
 
+**No invented thresholds.** This is the single most repeated mistake in the rebuild and you are
+expected not to add to it. The pattern: a number gets reported, then a threshold gets invented to
+classify it, then the threshold needs defending, then the defence needs its own machinery. It happened
+with the pre-registration (rho >= 4.0, withdrawn — see D16 and D17), with the class-support verdicts,
+and with four separate split-selection minima.
+
+The rule: **report the number, do not invent a bar for it.** If a reader needs to judge whether 8
+independent blocks is enough, give them 8 and the context; do not give them the word "weak" and a
+threshold you chose. A threshold is only justified when it must *decide* something automatically — a
+gate that stops a bad split reaching training is a legitimate threshold; a label on a results table is
+not.
+
+Where a threshold genuinely is needed, say in one line that it is a design choice and what it is for.
+Do not dress it as derived.
+
 **Narrative.** Several of these fixes change what the paper can claim. See `<narrative>`. Closing
 tickets without tracking that is how a paper gets quietly hollowed out.
 </role>

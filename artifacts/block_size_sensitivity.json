@@ -1,0 +1,135 @@
+{
+  "manifest": "artifacts/spatial_split_manifest_f1.json",
+  "min_class_blocks": 5,
+  "min_test_blocks": 8,
+  "by_block_m": {
+    "650": {
+      "provenance": "ireland1 composition range, and the val|test buffer width",
+      "passes": true,
+      "min_blocks_per_split": {
+        "train": 33,
+        "val": 12,
+        "test": 9
+      },
+      "class_block_support": {
+        "train": {
+          "Forest": 66,
+          "Grassland": 66,
+          "Cropland": 33,
+          "Settlement": 63,
+          "Seminatural": 41
+        },
+        "val": {
+          "Forest": 22,
+          "Grassland": 22,
+          "Cropland": 12,
+          "Settlement": 15,
+          "Seminatural": 15
+        },
+        "test": {
+          "Forest": 22,
+          "Grassland": 22,
+          "Cropland": 9,
+          "Settlement": 20,
+          "Seminatural": 16
+        }
+      }
+    },
+    "750": {
+      "provenance": "INLAND composition range (900 of 1,952 tiles) -- the criterion's own scale",
+      "passes": true,
+      "min_blocks_per_split": {
+        "train": 29,
+        "val": 10,
+        "test": 9
+      },
+      "class_block_support": {
+        "train": {
+          "Forest": 50,
+          "Grassland": 50,
+          "Cropland": 29,
+          "Settlement": 48,
+          "Seminatural": 31
+        },
+        "val": {
+          "Forest": 20,
+          "Grassland": 20,
+          "Cropland": 10,
+          "Settlement": 17,
+          "Seminatural": 13
+        },
+        "test": {
+          "Forest": 20,
+          "Grassland": 20,
+          "Cropland": 9,
+          "Settlement": 18,
+          "Seminatural": 18
+        }
+      }
+    },
+    "950": {
+      "provenance": "shipped SUPPORT_BLOCK_M; measured range at ireland2, not inland",
+      "passes": true,
+      "min_blocks_per_split": {
+        "train": 23,
+        "val": 6,
+        "test": 8
+      },
+      "class_block_support": {
+        "train": {
+          "Forest": 32,
+          "Grassland": 32,
+          "Cropland": 23,
+          "Settlement": 31,
+          "Seminatural": 27
+        },
+        "val": {
+          "Forest": 8,
+          "Grassland": 8,
+          "Cropland": 6,
+          "Settlement": 7,
+          "Seminatural": 6
+        },
+        "test": {
+          "Forest": 16,
+          "Grassland": 16,
+          "Cropland": 8,
+          "Settlement": 13,
+          "Seminatural": 16
+        }
+      }
+    },
+    "1350": {
+      "provenance": "INLAND spectral range -- imagery similarity, a different question",
+      "passes": false,
+      "min_blocks_per_split": {
+        "train": 14,
+        "val": 8,
+        "test": 6
+      },
+      "class_block_support": {
+        "train": {
+          "Forest": 18,
+          "Grassland": 18,
+          "Cropland": 15,
+          "Settlement": 17,
+          "Seminatural": 14
+        },
+        "val": {
+          "Forest": 12,
+          "Grassland": 12,
+          "Cropland": 10,
+          "Settlement": 9,
+          "Seminatural": 8
+        },
+        "test": {
+          "Forest": 11,
+          "Grassland": 11,
+          "Cropland": 6,
+          "Settlement": 10,
+          "Seminatural": 11
+        }
+      }
+    }
+  }
+}

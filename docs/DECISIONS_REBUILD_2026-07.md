@@ -297,3 +297,35 @@ instrument.
 solving problems the threshold created — its landscape-dependence, twice, and then its provenance. The
 underlying evidence never needed it. This is the clearest instance in the rebuild of machinery accreting
 around a decision instead of the decision being questioned.
+
+## D17 — Stop inventing numeric thresholds — 2026-07-26
+
+**The pattern, which is the most repeated mistake of this rebuild.** A number gets reported, then a
+threshold gets invented to classify it, then the threshold needs defending, then the defence needs its
+own machinery. Instances, all mine:
+
+- `rho >= 4.0`, plus a 2.0 dead band and a weak band. Withdrawn (D16) after two rounds of solving
+  problems the threshold itself created.
+- `report_class_support.py`'s ok / weak / UNESTIMABLE labels, against `MIN_BLOCKS = 5`,
+  `MIN_TILES = 8` and a "weak" band at twice those. Three invented numbers.
+- `min_val_tiles = 100`, `min_test_tiles = 150`.
+- `MIN_CLASS_BLOCKS = 5` and `min_test_class_blocks = 8`.
+- `MIN_CLASS_SHARE`, `max_test_overlap = 0.25`. Both already retired.
+
+**The rule from here:** report the number; do not invent a bar for it. A threshold is justified only
+when it must *decide* something automatically. A gate that stops a bad split reaching training is a
+legitimate threshold. A label on a results table is not — it replaces the reader's judgement with a
+number I chose, and then has to be defended as though it were derived.
+
+**Applied now:** the verdict labels are removed from `report_class_support.py`. It reports share,
+pixels, tiles and independent blocks, and stops. Test B cropland is 30 tiles in 4 blocks; that is the
+finding, and it speaks without being called UNESTIMABLE.
+
+**Not reversible:** `MIN_CLASS_BLOCKS` and `min_test_class_blocks` already selected the shipped split.
+They stay, but they are described in the methods as a design constraint — each class had to appear in
+at least N independent locations — and not as a derived criterion.
+
+**Footnote on how easily this goes wrong.** Removing the labels left two references to the deleted
+constants. `py_compile` passed, because Python does not resolve names at compile time, and I reported
+"compile ok" on a file that would have raised at runtime. Caught by actually running it. Compiling is
+not running.

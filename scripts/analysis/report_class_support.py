@@ -5,7 +5,7 @@ Per-class support for every split, in the units that decide whether a number is 
 WHY. A per-class IoU is only as trustworthy as the amount of independent ground it rests on, and the
 three obvious ways to express that disagree badly:
 
-  * SHARE of foreground pixels. What MIN_CLASS_SHARE constrains. It is a proportion, not a support:
+  * SHARE of foreground pixels. A proportion, not a support:
     1.9% of a 307-tile validation set is roughly four times the ground of 1.9% of a 79-tile one, yet
     the floor treats them identically.
   * PIXEL count. Large enough to look reassuring in almost every case, and almost meaningless here.
@@ -18,18 +18,13 @@ three obvious ways to express that disagree badly:
 All three are reported, because the gap between them is the diagnosis. A class with millions of
 pixels in two blocks is not estimable, and saying so requires showing both numbers side by side.
 
-WHERE THE FLOOR CANNOT REACH. MIN_CLASS_SHARE is a rejection criterion on a search over cut
-placements. It works by discarding candidates. external_test is not in that search space: the two
-upland sites are held out whole and are identical across every fold, so there is no candidate to
-reject and no alternative to select. Settlement at 1.47% of upland foreground is a fact about that
-landscape, not a property of a split choice, and no amount of searching produces a different upland.
-The floor is therefore inapplicable there rather than waived -- but its PURPOSE still applies, so it
-is enforced by reporting instead: this script marks classes too thin to interpret, and those are to
-be reported as unestimable with their support stated, never as an estimate.
+WHAT THIS DOES NOT DO. It reports; it does not classify. The reader decides whether 8 independent
+blocks is enough to quote a per-class number. An earlier version applied invented thresholds and
+labelled classes ok / weak / UNESTIMABLE; those labels are gone (D17).
 
 Run:
     PYTHONPATH=. python scripts/analysis/report_class_support.py --split-root data/split_f1
-    PYTHONPATH=. python scripts/analysis/report_class_support.py --all-folds --markdown
+    PYTHONPATH=. python scripts/analysis/report_class_support.py --split-root data/split_f1 --markdown
 """
 from __future__ import annotations
 
@@ -53,9 +48,11 @@ SPLITS = ("train", "val", "test", "external_test")
 # the support.
 BLOCK_M = 950.0
 
-# A class is unestimable in a split below EITHER threshold. Blocks is the binding one in practice.
-MIN_BLOCKS = 5
-MIN_TILES = 8
+# NO VERDICT THRESHOLDS. An earlier version of this script classified each class as ok / weak /
+# UNESTIMABLE against MIN_BLOCKS=5, MIN_TILES=8 and a "weak" band at twice those. All three numbers were
+# invented here, and labelling a result with a self-chosen bar is the same mistake that produced (and
+# then withdrew) the rho pre-registration. The support counts are the useful output; the reader judges
+# them. See D17.
 
 
 def find_repo_root() -> Path:
@@ -111,50 +108,31 @@ def support(split_root: Path, split: str) -> dict:
                 "share": px[k] / fg} for k in FOREGROUND}
 
 
-def verdict(s: dict) -> str:
-    if s["blocks"] < MIN_BLOCKS or s["tiles"] < MIN_TILES:
-        return "UNESTIMABLE"
-    if s["blocks"] < 2 * MIN_BLOCKS:
-        return "weak"
-    return "ok"
 
 
 def report(split_root: Path, root: Path, markdown: bool) -> dict:
     name = split_root.name
-    out = {"split_root": str(split_root.relative_to(root)), "block_m": BLOCK_M,
-           "min_blocks": MIN_BLOCKS, "min_tiles": MIN_TILES, "splits": {}}
+    out = {"split_root": str(split_root.relative_to(root)), "block_m": BLOCK_M, "splits": {}}
     for split in SPLITS:
         if not (split_root / split / "masks").is_dir():
             continue
         sup = support(split_root, split)
-        out["splits"][split] = {FOREGROUND[k]: {**v, "verdict": verdict(v)} for k, v in sup.items()}
+        out["splits"][split] = {FOREGROUND[k]: v for k, v in sup.items()}
 
         if markdown:
             print(f"\n**{name} / {split}**\n")
-            print("| class | share | pixels | tiles | blocks | |")
-            print("|---|---|---|---|---|---|")
+            print("| class | share | pixels | tiles | independent blocks |")
+            print("|---|---|---|---|---|")
             for k, v in sup.items():
                 print(f"| {FOREGROUND[k]} | {100*v['share']:.2f}% | {v['pixels']:,} | "
-                      f"{v['tiles']} | {v['blocks']} | {verdict(v)} |")
+                      f"{v['tiles']} | {v['blocks']} |")
         else:
             print(f"\n{name} / {split}")
             print(f"  {'class':<12} {'share':>7} {'pixels':>12} {'tiles':>6} {'blocks':>7}")
             for k, v in sup.items():
-                flag = verdict(v)
-                mark = "  <-- report as unestimable" if flag == "UNESTIMABLE" else (
-                    "  (weak)" if flag == "weak" else "")
                 print(f"  {FOREGROUND[k]:<12} {100*v['share']:6.2f}% {v['pixels']:12,} "
-                      f"{v['tiles']:6d} {v['blocks']:7d}{mark}")
+                      f"{v['tiles']:6d} {v['blocks']:7d}")
 
-    bad = [(sp, c) for sp, d in out["splits"].items() for c, v in d.items()
-           if v["verdict"] == "UNESTIMABLE"]
-    if bad:
-        print(f"\n  {len(bad)} class x split combinations are UNESTIMABLE and must not be reported "
-              f"as an estimate:")
-        for sp, c in bad:
-            v = out["splits"][sp][c]
-            print(f"    {sp}/{c}: {v['blocks']} independent blocks, {v['tiles']} tiles "
-                  f"({v['pixels']:,} px — pixel count is not support here)")
     return out
 
 
