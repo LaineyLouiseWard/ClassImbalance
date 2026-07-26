@@ -14,7 +14,7 @@ WHAT THIS DOES:
      compared within a site.
   2. Cuts ONE site into train | val | test strips along a single axis, searching cut placements for
      the one with the least composition drift and the closest match to the target proportions, and
-     rejecting any that leaves a foreground class below MIN_CLASS_SHARE. Sites too small to cut are
+     rejecting any that leaves a class with too little independent ground. Sites too small to cut are
      held out whole as external_test.
   3. Applies a buffer band centred on each cut, so the minimum separation between splits is the
      buffer width. Symmetric, so no split is trimmed preferentially.
@@ -65,42 +65,12 @@ EXTERNAL = "external_test"
 TARGET = {"train": 0.80, "val": 0.10, "test": 0.10}
 FOREGROUND = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 
-# A split must hold at least this share of its foreground pixels in each class, or the candidate
-# assignment is REJECTED (train/val/test only -- see the note in build_three_region on why
-# external_test is outside the search space rather than exempted from the floor).
-#
-# History, because the value is a judgement and its cost was measured rather than assumed.
-# 0.002 was far too weak: it admitted an assignment whose validation set held semi-natural at 1.3%
-# of foreground, which then drove checkpoint selection on noise in the priority class. Raised to 0.03
-# on 2026-07-25 -- but only inside score(), on the block-grid path, which the shipped three-region
-# branch returns before reaching. So nothing was enforced, and all three folds shipped in breach
-# (worst 1.55%, f3's validation set at 1.87% semi-natural).
-#
-# Enforcing it by rejection on 2026-07-26 exposed a hard trade-off. Cropland and settlement are
-# spatially clustered inland, so with straight cuts the floor trades directly against the number of
-# DISTINCT held-out regions. Measured over 12,000 cut placements per fold, with the adequacy minima
-# and the drift/proportion ranking all in force (an earlier table taken WITHOUT them was optimistic
-# and is not repeated here -- it suggested three folds at 2%, which do not exist):
-#
-#     floor    distinct folds    test sizes         binding class
-#     2.0%           2           166, 405           test Cropland
-#     1.8%           2           166, 405           test Cropland
-#     1.5%           3           166, 405, 185      test Cropland 1.8%
-#
-# A third fold was confirmed infeasible at 2.0% across five seeds and 60,000 placements, so this is
-# structural, not a search failure.
-#
-# 0.015 is chosen deliberately. It dominates what actually shipped on every axis -- worst share
-# 1.55% -> 1.8%, test sets 103-125 -> 166-405 tiles, validation 79-176 -> 143-327 -- while keeping the
-# three held-out regions that the generalisation claim and the within-fold blocked analysis both
-# depend on. A 2% floor would buy 0.2 pp on the thinnest class at the cost of a whole region.
-#
-# The classes still thin here are not silently accepted. Per-class support (pixels, tiles and
-# distinct ground blocks) is reported beside every per-class IoU, and classes too thin to interpret
-# are marked unestimable rather than given an estimate. That is the same discipline applied to
-# external_test, where the floor is inapplicable rather than waived: the uplands are held out whole
-# and identical across folds, so there is no candidate to reject and no alternative to select.
-MIN_CLASS_SHARE = 0.015
+# Adequacy is enforced on INDEPENDENT BLOCK SUPPORT (MIN_CLASS_BLOCKS below), not on class share.
+# A share floor was tried and retired on 2026-07-26: it does not track estimability in either
+# direction. Measured on the folds it produced, validation semi-natural at 1.91% share had 11
+# independent blocks and was perfectly usable, while validation cropland at 7.00% share and 2.6M
+# pixels had 3 blocks and was not. Keeping both criteria also let them drift apart -- the constant
+# read 0.015 while every shipped manifest recorded 0.01 and one fold sat at 0.01137.
 # Every site must contribute at least this many tiles to every split. One or two tiles satisfies a
 # bare presence test while being far too few to estimate anything from.
 MIN_SITE_TILES = 4
@@ -229,57 +199,6 @@ def split_class_shares(assign: dict, counts: dict) -> dict:
 # Assignment search
 # ---------------------------------------------------------------------------
 
-def assign_by_cuts(pool: dict, site: str, axis: str, fractions: tuple, order: tuple) -> dict:
-    """Cut one site into three strips along `axis` and give each strip a role.
-
-    Two straight cuts, three regions. Preferred over a block grid because each cut costs one
-    buffered boundary, and boundaries are the scarce resource: the inland site is only ~6
-    autocorrelation lengths across, so a 3x3 grid (which needs boundaries on all sides of every
-    block) destroys 49% of the tiles where two cuts destroy 19%.
-
-    `fractions` are quantiles of the tile centroids along the axis, so the strips hold roughly the
-    intended share of tiles regardless of how the site is shaped or where its gaps are.
-    """
-    ids = [t for t in pool if site_of(t) == site]
-    coord = {t: ((pool[t][1] + pool[t][3]) / 2 if axis == "x" else (pool[t][2] + pool[t][4]) / 2)
-             for t in ids}
-    vals = np.array([coord[t] for t in ids])
-    c1, c2 = (float(np.quantile(vals, f)) for f in fractions)
-    out = {}
-    for t in ids:
-        v = coord[t]
-        out[t] = order[0] if v <= c1 else (order[1] if v <= c2 else order[2])
-    return out
-
-
-def apply_cut_buffer(assign: dict, pool: dict, site: str, axis: str,
-                     cuts: tuple, buffer_m: float, geographic: bool, lat: float) -> tuple:
-    """Drop tiles whose footprint intersects a band of width `buffer_m` centred on each cut.
-
-    The guarantee this delivers is the one that matters: **the minimum ground separation between any
-    surviving tile on one side of a cut and any on the other is at least `buffer_m`.**
-
-    Deliberately NOT the pairwise rule used for the block designs (`apply_buffer`), which drops every
-    tile within `buffer_m` of a differently-assigned tile and therefore clears `buffer_m` from BOTH
-    sides -- a 2 x buffer band. With two cuts that removes 2,600 m of a 6,784 m axis and erases any
-    strip narrower than 1,300 m, which is what silently emptied the val and test strips on the first
-    attempt. A centred band of width `buffer_m` achieves the stated separation at half the cost.
-    """
-    half = buffer_m / 2.0
-    if geographic:
-        half_x = half / (111320.0 * math.cos(math.radians(lat)))
-        half_y = half / 111132.0
-    else:
-        half_x = half_y = half
-    pad = half_x if axis == "x" else half_y
-    dropped = set()
-    for t in [k for k in assign if site_of(k) == site]:
-        lo, hi = (pool[t][1], pool[t][3]) if axis == "x" else (pool[t][2], pool[t][4])
-        for c in cuts:
-            if lo < c + pad and hi > c - pad:      # footprint intersects the band
-                dropped.add(t)
-                break
-    return {t: s for t, s in assign.items() if t not in dropped}, dropped
 
 
 def _bounds_from_rasters(ids, root: Path, split_root: Path, orig: dict) -> dict:
@@ -330,11 +249,11 @@ def pairwise_separation_m(kept: dict, pool: dict, site: str,
 
 def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
                        buffer_test_m: float, buffer_val_m: float, seed: int, restarts: int,
-                       priors: list, min_tiles: int, max_test_overlap: float = 0.25,
-                       min_class_share: float = MIN_CLASS_SHARE,
+                       priors: list,
                        min_val_tiles: int | None = None,
                        min_test_tiles: int | None = None,
                        min_class_blocks: int = MIN_CLASS_BLOCKS,
+                       min_test_class_blocks: int | None = None,
                        blocks: dict | None = None) -> dict:
     """THE SHIPPED DESIGN. Cut one site into train | val | test strips; hold other sites out whole.
 
@@ -369,7 +288,6 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
     ids = [t for t in pool if site_of(t) == site]
     rng = np.random.default_rng(seed)
     best = None
-    n_below_floor = 0
     n_below_blocks = 0
     blocks = blocks if blocks is not None else support_blocks(pool)
 
@@ -378,7 +296,6 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
         train_low = rng.random() < 0.5          # wide train strip at the low end of the axis?
         # Strip widths as fractions of the site's extent along the chosen axis. Ranges widened
         # 2026-07-26: with f_val clipped at 0.20 the search space contained NO placement satisfying
-        # MIN_CLASS_SHARE on all three splits, because the inland site's cropland and settlement are
         # spatially clustered and only a wide validation strip captures enough of both. Every
         # placement that clears the floor needs f_val around 0.22, so the old clip excluded the
         # feasible region entirely rather than the floor being unreachable.
@@ -416,7 +333,7 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
         # convergence, and is never reported, so it needs enough tiles for that choice to be stable
         # rather than enough to publish. A single shared minimum at 150 admitted only two distinct
         # folds; separating them admits three without weakening the test sets at all.
-        need = {"train": min_tiles,
+        need = {"train": 500,
                 "val": min_val_tiles if min_val_tiles is not None else min_tiles,
                 "test": min_test_tiles if min_test_tiles is not None else min_tiles}
         if any(got.get(sp, 0) < need[sp] for sp in SPLITS):
@@ -428,37 +345,34 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
         # folds. Two strips on perpendicular axes intersect only in a corner -- for ~16% strips that
         # is ~2.6% of the site -- so a small cap admits four distinct test regions (one per edge)
         # while still bounding how much they share. The realised overlap is recorded in the manifest.
+        # Folds must hold out EXACTLY disjoint test ground. The bounded-overlap allowance was
+        # retired on 2026-07-26 with the third fold: only two fully disjoint test strips exist along
+        # one axis, so a third fold had to cut the perpendicular axis and share corners (13.9% and
+        # 14.7% realised). That allowance was the single hardest item in the design to defend, and it
+        # existed solely to admit that third fold.
         test_tiles = frozenset(t for t, sp in kept.items() if sp == "test")
         overlaps = [len(test_tiles & prior) / max(1, min(len(test_tiles), len(prior)))
                     for prior in priors]
-        if overlaps and max(overlaps) > max_test_overlap:
+        if overlaps and max(overlaps) > 0.0:
             continue
 
         shares = split_class_shares(kept, counts)
         worst = min(shares[sp][c] for sp in SPLITS for c in shares[sp])
 
-        # REJECT below the floor. Until 2026-07-26 this path only *ranked* by worst share and never
-        # rejected, because the floor lived in score(), which the three-region branch returns before
-        # reaching. All three shipped folds breached it: f3's validation set held semi-natural at
-        # 1.87%, in the priority class, in the split that selects checkpoints -- the exact failure the
-        # comment on MIN_CLASS_SHARE says was fixed.
-        #
-        # SPLITS is (train, val, test), so this deliberately does not touch external_test. The floor is
-        # a rejection criterion on a search, and the uplands are not in the search space: they are held
-        # out whole and identical across every fold, so there is no candidate to reject and no
-        # alternative to select. Settlement at 1.47% of upland foreground is a fact about that
-        # landscape, not a property of a split choice. The floor's purpose still applies to Test B, but
-        # it can only be honoured there by reporting per-class support and marking the thin classes
-        # unestimable -- see report_test_b_support.py.
-        if worst < min_class_share:
-            n_below_floor += 1
-            continue
 
         # The binding criterion. A class needs enough INDEPENDENT ground in a split, not enough
         # pixels and not a high enough share: the 50% stride means neighbouring tiles repeat the same
         # ground, so pixel counts and shares both overstate support, and they overstate it unevenly.
+        # The TEST split gets a stricter minimum than train and val, for the same reason it gets the
+        # wider buffer and the higher tile minimum: it is the only split whose per-class numbers are
+        # reported. Without this the search returns a placement whose test cropland sits on 5 blocks
+        # and 20 tiles -- clearing the floor, but marked "weak" by report_class_support.py and so not
+        # really reportable. Requiring 8 finds a placement with 10 blocks and 73 tiles instead.
+        need_blocks = {"train": min_class_blocks, "val": min_class_blocks,
+                       "test": min_test_class_blocks if min_test_class_blocks is not None
+                               else min_class_blocks}
         sup = class_block_support(kept, counts, blocks)
-        if min(sup[sp][c] for sp in SPLITS for c in FOREGROUND) < min_class_blocks:
+        if any(sup[sp][c] < need_blocks[sp] for sp in SPLITS for c in FOREGROUND):
             n_below_blocks += 1
             continue
 
@@ -468,17 +382,14 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
         # set shared. Ranked ahead of worst-share: once the floor is a hard reject, every surviving
         # candidate is adequate, and what remains to optimise is comparability between the splits.
         pooled = split_class_shares({t: "train" for t in kept}, counts)["train"]
-        # Drift is measured on TEST against the whole-site prior, and on train, but NOT on val.
-        # The three splits do different jobs and weighting them equally optimises the wrong thing.
-        # Test carries the reported estimate, so it must look like the landscape the paper claims to
-        # generalise within. Train must too, or the model is fitted to a skewed prior. Validation only
-        # selects checkpoints and confirms convergence: it is never reported as an accuracy, and
-        # whatever optimism or skew it carries is common-mode across all four factorial cells, so it
-        # cannot manufacture a between-cell effect. Its requirements are the class floor (so the
-        # priority class is not selected on noise -- the original 1.3% semi-natural failure) and enough
-        # tiles to be stable, both already hard constraints above. Forcing its composition as well is
-        # what left every candidate either thin in test or 44% short of training data.
-        drift = sum(abs(shares[sp][c] - pooled[c]) for sp in ("train", "test") for c in pooled)
+        # Drift is measured on ALL THREE splits against the whole-site prior.
+        # Exempting validation was wrong. The "optimism is common-mode across all four cells" argument
+        # is sound WITHIN a fold, and is why the headline contrast is safe -- but it does not cover
+        # comparison BETWEEN folds, which is the only thing multiple folds are bought for. Realised
+        # cost of the exemption: validation cropland at 20.70% (f1) and 14.91% (f3) against 4.17% and
+        # 1.59% in those folds' own test sets, i.e. 5x and 9x. That is larger than the 13.84%-vs-2.13%
+        # case the exemption's own docstring cited as the failure it had fixed.
+        drift = sum(abs(shares[sp][c] - pooled[c]) for sp in SPLITS for c in pooled)
 
         # Deviation from the 80/10/10 target. This is the THIRD term that was confined to score() on
         # the dead block-grid path, and omitting it is not cosmetic: ranking on drift alone favours fat
@@ -502,8 +413,7 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
 
     if best is None:
         raise SystemExit(
-            f"no viable cut placement in {restarts} tries ({n_below_floor} rejected on class share, "
-            f"{n_below_blocks} rejected for a class with under {min_class_blocks} independent "
+            f"no viable cut placement in {restarts} tries ({n_below_blocks} rejected for a class with under {min_class_blocks} independent "
             f"{SUPPORT_BLOCK_M:.0f} m blocks in some split; the rest "
             f"left under {min_tiles} tiles in a split or duplicated an earlier fold's test ground). "
             f"Raise --restarts, widen the strip fractions, or lower --min-split-tiles.")
@@ -606,22 +516,13 @@ def main() -> None:
                          "validation selects checkpoints and is never reported.")
     ap.add_argument("--min-test-tiles", type=int, default=150,
                     help="minimum test tiles. This split carries the reported estimate.")
+    ap.add_argument("--min-test-class-blocks", type=int, default=8,
+                    help="stricter block minimum for the TEST split, whose per-class numbers are the "
+                         "ones reported. Defaults above --min-class-blocks deliberately.")
     ap.add_argument("--min-class-blocks", type=int, default=MIN_CLASS_BLOCKS,
                     help=f"reject a candidate if any foreground class has fewer than this many "
                          f"distinct {SUPPORT_BLOCK_M:.0f} m blocks in train, val or test. This is the "
                          f"binding adequacy criterion; the share floor is a weak safety net.")
-    ap.add_argument("--min-class-share", type=float, default=MIN_CLASS_SHARE,
-                    help="reject any candidate holding a foreground class below this share of "
-                         "foreground pixels in train, val or test. Not applied to external_test, "
-                         "which is held out whole and identical across folds, so there is no "
-                         "candidate to reject; its thin classes are handled by reporting support "
-                         "instead (see report_test_b_support.py).")
-    ap.add_argument("--max-test-overlap", type=float, default=0.25,
-                    help="largest share of test tiles a fold may share with any earlier fold. "
-                         "Straight cuts admit only two fully disjoint test strips per axis, so a "
-                         "third fold must cut the other axis and unavoidably shares a corner.")
-    ap.add_argument("--min-split-tiles", type=int, default=60,
-                    help="reject a cut placement leaving fewer than this in any split")
     ap.add_argument("--external-sites", nargs="*", default=None, metavar="SITE",
                     help="hold these sites out WHOLE as a fixed external test set, and block the "
                          "remaining sites three ways. Use when a site's extent is under twice its "
@@ -710,10 +611,11 @@ def main() -> None:
               flush=True)
         out = build_three_region(pool, counts, args.three_region, external,
                                  args.buffer_test_m, args.buffer_val_m, args.seed,
-                                 args.restarts, priors, args.min_split_tiles,
-                                 args.max_test_overlap, args.min_class_share,
-                                 args.min_val_tiles, args.min_test_tiles,
-                                 args.min_class_blocks)
+                                 args.restarts, priors,
+                                 min_val_tiles=args.min_val_tiles,
+                                 min_test_tiles=args.min_test_tiles,
+                                 min_class_blocks=args.min_class_blocks,
+                                 min_test_class_blocks=args.min_test_class_blocks)
         kept, dropped, geom, shares = (out["assignment"], out["dropped"],
                                        out["geometry"], out["class_shares"])
         got = Counter(kept.values())
@@ -758,13 +660,9 @@ def main() -> None:
             "required_separation_m": {f"{a}-{b}": v for (a, b), v in required.items()},
             "pixel_identity_distance_m": 256.0,
             "cut_geometry": geom,
-            "max_test_overlap_allowed": args.max_test_overlap,
-            # Both thresholds the search actually applied. min_class_share is a rejection criterion on
-            # train/val/test only; external_test is outside the search space (held out whole, identical
-            # across folds), so it is neither ranked nor rejected on composition.
-            "min_class_share": args.min_class_share,
-            "min_class_share_applies_to": list(SPLITS),
+
             "min_class_blocks": out["min_class_blocks"],
+            "min_test_class_blocks": args.min_test_class_blocks,
             "support_block_m": out["support_block_m"],
             "class_block_support": out["class_block_support"],
             "composition_drift": geom.get("composition_drift"),
