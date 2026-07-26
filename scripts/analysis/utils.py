@@ -27,6 +27,19 @@ REPO_ROOT = find_repo_root()
 SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 
+def cell_dir(folder: str) -> str:
+    """The evaluation_results/ directory a cell's metrics land in, for the current SPLIT_TAG.
+
+    compute_metrics.py names its output directory after the CHECKPOINT'S PARENT DIRECTORY
+    (`safe_name = ckpt.parent.name`), and every campaign checkpoint lives in a tagged directory,
+    so it writes `<cell>_<tag>/`. A reader that spells the cell untagged does not fail: the
+    withdrawn campaign's untagged directories are still on disk under
+    evaluation/evaluation_results/val/, so it silently resolves to leaked numbers and exits 0.
+    Every reader goes through here so the writer and the readers cannot drift apart again.
+    """
+    return f"{folder}_{SPLIT_TAG}"
+
+
 def resolve_artifact(env_var: str, template: str) -> Path:
     """Resolve a per-fold artefact path: $env_var if set, else the tagged file for $SPLIT_TAG.
 
@@ -73,7 +86,7 @@ MINORITY_INDICES = [IDX_SETTLEMENT, IDX_SEMINATURAL]
 
 def load_confusion_matrix(stage_dir: str) -> list[list[int]]:
     """Load a 6x6 confusion matrix from CSV (raw pixel counts)."""
-    path = VAL_ROOT / stage_dir / "confusion_matrix.csv"
+    path = VAL_ROOT / cell_dir(stage_dir) / "confusion_matrix.csv"
     with open(path, newline="") as f:
         reader = csv.reader(f)
         return [[int(x) for x in row] for row in reader]
@@ -87,7 +100,7 @@ def load_metrics(json_path: Path) -> dict:
 
 def load_val_metrics(stage_dir: str) -> dict:
     """Load val metrics.json for a given stage directory."""
-    return load_metrics(VAL_ROOT / stage_dir / "metrics.json")
+    return load_metrics(VAL_ROOT / cell_dir(stage_dir) / "metrics.json")
 
 
 def load_weights_tsv(path: Path | None = None) -> dict[str, float]:

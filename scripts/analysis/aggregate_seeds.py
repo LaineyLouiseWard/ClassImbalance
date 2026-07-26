@@ -51,7 +51,7 @@ import numpy as np
 
 # ── repo root ────────────────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scripts.analysis.utils import find_repo_root  # noqa: E402
+from scripts.analysis.utils import SPLIT_TAG, cell_dir, find_repo_root  # noqa: E402
 
 REPO = find_repo_root()
 
@@ -97,7 +97,11 @@ def effect_contrasts(cv: dict[str, float]) -> dict[str, float]:
     }
 
 
-SPLITS = ("val", "test")
+# The three reported splits and the evaluation_results/ directory each is written to by
+# RUNBOOK.sh. external_test is Test B, the generalisation number the paper leads on; until
+# 2026-07-26 it was absent from this tuple, so nothing aggregated it.
+SPLIT_DIRS = {"val": "val", "test": "test", "external_test": f"external_{SPLIT_TAG}"}
+SPLITS = tuple(SPLIT_DIRS)
 
 # Foreground classes, keyed exactly as compute_metrics.py writes them.
 FG_CLASSES = ["Forest land", "Grassland", "Cropland", "Settlement", "Seminatural Grassland"]
@@ -129,11 +133,12 @@ def seed_repo(seed: int, root_seed: int) -> Path:
 
 
 def metrics_path(seed: int, root_seed: int, split: str, folder: str) -> Path:
-    return seed_repo(seed, root_seed) / "evaluation" / "evaluation_results" / split / folder / "metrics.json"
+    return (seed_repo(seed, root_seed) / "evaluation" / "evaluation_results"
+            / SPLIT_DIRS[split] / cell_dir(folder) / "metrics.json")
 
 
 def flat_path(results_dir: Path, seed: int, folder: str) -> Path:
-    """Flat Sonic drop written by the campaign slurm: ``seed<N>_<cell>.json`` (val cells)."""
+    """Flat campaign drop: ``seed<N>_<cell>.json``, one directory per split."""
     return results_dir / f"seed{seed}_{folder}.json"
 
 
@@ -407,24 +412,35 @@ def write_report(path: Path, aggregates: dict, all_effects: dict, meta: dict) ->
 
 # ── coverage check ───────────────────────────────────────────────────────────
 
-def check_coverage(seeds: list[int], root_seed: int, results_dir: Path | None) -> tuple[list, list]:
-    """Return (missing_seed_sources, missing_cells) for the four factorial cells (val)."""
+def cell_metrics_path(seed: int, root_seed: int, split: str, folder: str,
+                      flat_for: dict[str, Path | None]) -> Path:
+    """Where one (seed, split, cell) metrics.json lives, flat campaign drop or worktree layout."""
+    drop = flat_for.get(split)
+    return flat_path(drop, seed, folder) if drop is not None else metrics_path(seed, root_seed, split, folder)
+
+
+def check_coverage(seeds: list[int], root_seed: int,
+                   flat_for: dict[str, Path | None]) -> tuple[list, list]:
+    """Return (missing_seed_sources, missing_cells) over ALL THREE splits x four cells.
+
+    This was val-only, which is why `--strict` could not fail on the case that mattered: Test A
+    scoring two of four cells (so the factorial existed on the checkpoint-selection split alone)
+    and Test B being scored by nothing.
+    """
     missing_src = []
     missing_cells = []
     for s in seeds:
-        if results_dir is not None:
-            present = any(flat_path(results_dir, s, fl).exists() for _l, fl, *_ in CELLS)
-            if not present:
-                missing_src.append(s)
-        elif not seed_repo(s, root_seed).is_dir():
+        present = any(cell_metrics_path(s, root_seed, sp, fl, flat_for).exists()
+                      for sp in SPLITS for _l, fl, *_ in CELLS)
+        if not present:
             missing_src.append(s)
-    for _label, folder, *_ in CELLS:
-        for s in seeds:
-            if results_dir is not None:
-                if not flat_path(results_dir, s, folder).exists():
-                    missing_cells.append(("val", folder, s))
-            elif seed_repo(s, root_seed).is_dir() and not metrics_path(s, root_seed, "val", folder).exists():
-                missing_cells.append(("val", folder, s))
+    for split in SPLITS:
+        for _label, folder, *_ in CELLS:
+            for s in seeds:
+                if s in missing_src:
+                    continue          # a wholly absent seed is already reported once
+                if not cell_metrics_path(s, root_seed, split, folder, flat_for).exists():
+                    missing_cells.append((split, folder, s))
     return missing_src, missing_cells
 
 
@@ -443,6 +459,8 @@ def main() -> None:
                     help="Flat campaign drop of seed<N>_<cell>.json (test cells). If set, test is "
                          "read from here instead of the per-seed worktree layout. Use the CURRENT "
                          "final_results_test drop so no stale per-seed eval can be read.")
+    ap.add_argument("--external-results-dir", type=str, default=None,
+                    help="Flat campaign drop of seed<N>_<cell>.json for external_test (Test B).")
     ap.add_argument("--out-dir", type=str, default=str(REPO / "analysis" / "seed_aggregate"))
     ap.add_argument("--strict", action="store_true",
                     help="Fail if any requested seed source or any factorial cell (val) is missing.")
@@ -450,10 +468,14 @@ def main() -> None:
 
     seeds, root_seed = args.seeds, args.root_seed
     out_dir = Path(args.out_dir)
-    results_dir = Path(args.results_dir) if args.results_dir else None
-    test_results_dir = Path(args.test_results_dir) if args.test_results_dir else None
+    # Both splits read from the CURRENT flat campaign drops when given; the per-seed worktree
+    # layout is only the fallback when no flat drop is supplied for that split.
+    flat_for = {"val": Path(args.results_dir) if args.results_dir else None,
+                "test": Path(args.test_results_dir) if args.test_results_dir else None,
+                "external_test": Path(args.external_results_dir) if args.external_results_dir else None}
+    results_dir = flat_for["val"]
 
-    missing_src, missing_cells = check_coverage(seeds, root_seed, results_dir)
+    missing_src, missing_cells = check_coverage(seeds, root_seed, flat_for)
     if missing_src:
         print(f"[warn] seed sources not found: {missing_src}")
     if missing_cells:
@@ -462,19 +484,13 @@ def main() -> None:
     if args.strict and (missing_src or missing_cells):
         raise SystemExit("[strict] incomplete campaign — aborting.")
 
-    # Collect every (split, cell, seed) that exists. Both splits read from the CURRENT flat
-    # campaign drops when given (--results-dir for val, --test-results-dir for test); the
-    # per-seed worktree layout is only a legacy fallback when no flat drop is supplied.
-    flat_for = {"val": results_dir, "test": test_results_dir}
+    # Collect every (split, cell, seed) that exists.
     data = {split: {} for split in SPLITS}
     for split in SPLITS:
         for label, folder in STAGE_VIEW:
             seedmap = {}
             for s in seeds:
-                if flat_for[split] is not None:
-                    p = flat_path(flat_for[split], s, folder)
-                else:
-                    p = metrics_path(s, root_seed, split, folder)
+                p = cell_metrics_path(s, root_seed, split, folder, flat_for)
                 if p.exists():
                     seedmap[s] = load_metrics_file(p)
             if seedmap:
