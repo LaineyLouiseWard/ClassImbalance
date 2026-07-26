@@ -26,10 +26,13 @@ fi
 #
 # Usage:
 #   bash RUNBOOK.sh                          # run everything from A0
-#   bash RUNBOOK.sh --from B1                # resume from Stage 1 training onward
-#   bash RUNBOOK.sh --from B1 --to C2        # run a stage WINDOW (Stage 1 .. test eval)
-#   SEED=1 bash RUNBOOK.sh --from B1         # student lineage at seed 1 (teacher fixed at 42)
-#   RESUME=1 bash RUNBOOK.sh --from B1       # resume training stages from their last.ckpt (no --force)
+#   bash RUNBOOK.sh --from B4                # sampler build, full leakage gate, then all training
+#   bash RUNBOOK.sh --from B4 --to C2        # the CAMPAIGN window (gate .. test eval)
+#   SEED=1 bash RUNBOOK.sh --from B4         # student lineage at seed 1 (teacher fixed at 42)
+#   RESUME=1 bash RUNBOOK.sh --from B4       # resume training stages from their last.ckpt (no --force)
+#
+#   Start at B4, not B1. B4 builds the sampler weights and B4b is the ONLY full leakage gate over
+#   the split AND every derived artefact; --from B1 skips both and begins training immediately.
 #
 # Valid stages: A0 (taxonomy check), A1-A10 (data prep + teacher build),
 #               B1-B5 (student training), C1-C4 (evaluation), D (analyses), E (figures)
@@ -316,27 +319,6 @@ fi
 # ======================== B. STUDENT LINEAGE =========================
 # Seed-varying. Honours $SEED (default 42) in train_supervision.
 
-if run_stage B1; then
-  require_nonempty "$SPLIT_ROOT"/train/images A1
-  echo "[B1] Stage 1: Baseline"
-  PYTHONPATH=. python -m train.train_supervision \
-    -c config/biodiversity/stage1_baseline.py $FORCE_TRAIN
-fi
-
-if run_stage B2; then
-  require_nonempty "$OEM_COMBINED"/train/images A10
-  echo "[B2] Stage 2a: OEM pre-training (combined Bio + OEM)"
-  PYTHONPATH=. python -m train.train_supervision \
-    -c config/biodiversity/stage2a_oem_pretrain.py $FORCE_TRAIN
-fi
-
-if run_stage B3; then
-  require_file model_weights/biodiversity/stage2a_oem_pretrain_${SPLIT_TAG}/stage2a_oem_pretrain_${SPLIT_TAG}.ckpt B2
-  echo "[B3] Stage 2b: OEM-transfer finetune on Biodiversity (init from 2a)"
-  PYTHONPATH=. python -m train.train_supervision \
-    -c config/biodiversity/stage2b_oem_finetune.py $FORCE_TRAIN
-fi
-
 if run_stage B4; then
   require_nonempty "$SPLIT_ROOT"/train/images A1
   echo "[B4] Building class-balanced (clsbal) sampler weights"
@@ -365,6 +347,27 @@ if run_stage B4b; then
     --sampler-tsv   "$SAMPLER_TSV" \
     --augmentation-list "$AUG_LIST" \
     --confusion-npz "$TEACHER_CONFUSION_NPZ"
+fi
+
+if run_stage B1; then
+  require_nonempty "$SPLIT_ROOT"/train/images A1
+  echo "[B1] Stage 1: Baseline"
+  PYTHONPATH=. python -m train.train_supervision \
+    -c config/biodiversity/stage1_baseline.py $FORCE_TRAIN
+fi
+
+if run_stage B2; then
+  require_nonempty "$OEM_COMBINED"/train/images A10
+  echo "[B2] Stage 2a: OEM pre-training (combined Bio + OEM)"
+  PYTHONPATH=. python -m train.train_supervision \
+    -c config/biodiversity/stage2a_oem_pretrain.py $FORCE_TRAIN
+fi
+
+if run_stage B3; then
+  require_file model_weights/biodiversity/stage2a_oem_pretrain_${SPLIT_TAG}/stage2a_oem_pretrain_${SPLIT_TAG}.ckpt B2
+  echo "[B3] Stage 2b: OEM-transfer finetune on Biodiversity (init from 2a)"
+  PYTHONPATH=. python -m train.train_supervision \
+    -c config/biodiversity/stage2b_oem_finetune.py $FORCE_TRAIN
 fi
 
 if run_stage B4c; then
