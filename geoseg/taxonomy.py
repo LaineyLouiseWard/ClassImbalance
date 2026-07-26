@@ -74,17 +74,20 @@ OEM_TO_STUDENT_PRETRAIN = {
     # the generalisation test set. Re-measured on the clean training set the same row reads
     # Grassland 61.2%, Cropland 35.6%, Seminatural 0.01% (hard).
     #
-    # CONSEQUENCE, and it is a scientific result rather than a config detail: no OEM class now maps to
-    # Seminatural, so the transfer arm pre-trains with ZERO semi-natural labels. Any gain it delivers
-    # on the priority class is therefore representation transfer, not label transfer.
-    1: 2,  # Bareland     -> Grassland     (61% GT Grassland; see the regrounding note above)
-    2: 2,  # Rangeland    -> Grassland     (54% GT Grassland)
-    3: 4,  # Developed    -> Settlement    (59% GT Settlement)
-    4: 4,  # Road         -> Settlement    (57% GT Settlement)
-    5: 1,  # Tree         -> Forest        (75% GT Forest)
+    # CONSEQUENCE: no OEM class now maps to Seminatural, so OPENEARTHMAP contributes no semi-natural
+    # labels. State it that way and not as "pre-training sees no semi-natural" -- the earlier wording
+    # here said the latter and it is false, because the stage-2a pool is Biodiversity + OEM and the
+    # Biodiversity half supplies 11.8M semi-natural pixels over 261 tiles. The real effect is a prior
+    # shift, not an absence; see the fuller note below. Any transfer gain on the priority class is
+    # therefore representation transfer rather than label transfer.
+    1: 2,  # Bareland     -> Grassland     (56% soft / 61% hard GT Grassland; see note above)
+    2: 2,  # Rangeland    -> Grassland     (57% GT Grassland)
+    3: 4,  # Developed    -> Settlement    (58% GT Settlement)
+    4: 4,  # Road         -> Settlement    (52% GT Settlement)
+    5: 1,  # Tree         -> Forest        (80% GT Forest)
     6: 0,  # Water        -> ignored        [no counterpart in the target taxonomy; see below]
     7: 2,  # Agriculture  -> Grassland     [CHANGED from Cropland]   (82% GT Grassland; Irish ag = pasture)
-    8: 4,  # Building     -> Settlement    (85% GT Settlement)
+    8: 4,  # Building     -> Settlement    (88% GT Settlement)
 }
 
 
@@ -104,11 +107,29 @@ OEM_TO_STUDENT_PRETRAIN = {
 # it is one rule applied consistently to both, decided a priori from the class definitions rather
 # than from any confidence value. Water is the only OEM class meeting it.
 #
-# NOT applied to Bareland (argmax Seminatural, 0.442) or Rangeland (Grassland, 0.495) despite their
-# similarly weak argmax: both have genuine counterparts, and in the Irish uplands bare-looking
-# ground really is rough semi-natural habitat. Bareland additionally supplies every semi-natural
-# pixel in the relabelled pool, so excluding it would strip the priority class from pre-training.
-# Weak confidence alone is therefore NOT the criterion; absence of a counterpart is.
+# NOT applied to Bareland or Rangeland despite their weaker argmax: both have genuine counterparts.
+# Weak confidence alone is NOT the criterion; absence of a counterpart is.
+#
+# REVISED 2026-07-26. This block previously read "Bareland additionally supplies every semi-natural
+# pixel in the relabelled pool, so excluding it would strip the priority class from pre-training",
+# citing argmax Seminatural 0.442. Both statements described the pre-refit state and are now false:
+# regrounded on the clean training set, Bareland's argmax is Grassland (55.716) and its
+# Seminatural mass is 0.609%. The 0.442 figure came from a training set holding 153 of the
+# 191 upland tiles, which supplied 43.3% of its semi-natural pixel mass and are now entirely
+# external_test -- so the old grounding was partly derived from the generalisation test set.
+#
+# CONSEQUENCE, decided deliberately and kept: after regrounding, no OEM class maps to Cropland or to
+# Seminatural, so OpenEarthMap contributes no labels for either. This is NOT channel suppression --
+# the stage-2a pool is Biodiversity + OEM, and the Biodiversity half supplies 21,279,164 Cropland
+# pixels over 248 tiles and 11,780,653 Seminatural over 261, so both output channels receive positive
+# evidence throughout pre-training. What it is instead is a class-prior shift: those classes sit at
+# 0.91% and 0.51% of pool foreground against 7.70% and 4.30% in the target training set. Correcting a
+# source/target prior shift is precisely what the stage-2b finetune on Biodiversity-only is for.
+#
+# The alternative -- forcing Bareland -> Seminatural a priori -- was rejected: the value it would
+# restore is the leak-derived 0.442, and an a-priori override sitting on the paper's priority class is
+# exactly the thumb on the scale a reviewer should object to. Grounded argmax is applied without
+# exception, and the absent classes are reported as a stated limitation.
 # ---------------------------------------------------------------------------
 OEM_NO_TARGET_COUNTERPART = {
     6: "Water — the target taxonomy has no water class; argmax Grassland (0.553) is teacher "

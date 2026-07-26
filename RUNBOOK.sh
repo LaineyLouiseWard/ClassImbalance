@@ -7,9 +7,9 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # Fail fast (with the fix) if the active 'python' lacks PyTorch — i.e. the conda env is not active.
 if ! python -c "import torch" >/dev/null 2>&1; then
-  echo "ERROR: active 'python' has no PyTorch — the ClassImbalance conda env is not activated."
-  echo "  Fix:  conda activate ClassImbalance   (then re-run bash RUNBOOK.sh)"
-  echo "  Or:   PATH=\"\$HOME/miniconda3/envs/ClassImbalance/bin:\$PATH\" bash RUNBOOK.sh"
+  echo "ERROR: active 'python' has no PyTorch — the label-quality-ceiling conda env is not activated."
+  echo "  Fix:  conda activate label-quality-ceiling   (then re-run bash RUNBOOK.sh)"
+  echo "  Or:   PATH=\"\$HOME/miniconda3/envs/label-quality-ceiling/bin:\$PATH\" bash RUNBOOK.sh"
   exit 1
 fi
 
