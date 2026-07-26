@@ -1,3 +1,24 @@
+# WITHDRAWN 2026-07-26 — before any model was trained on the corrected split
+
+This pre-registration is withdrawn. No model had been trained on the spatially blocked split at the
+time of withdrawal, so no result influenced the decision.
+
+**Reason.** Pre-registration is not standard practice in this field; it was adopted as credibility
+armour after the first campaign was withdrawn for leakage. It proved to cost more than it bought: the
+statistic required a threshold, the threshold required a provenance, and the only calibration data
+available came from the withdrawn campaign. Each layer added a number that could be argued with, on top
+of evidence — the trimap exclusion curve — that already showed the effect directly and is established
+for exactly this purpose (Kohli et al. 2009; Csurka et al. 2013).
+
+**What replaces it.** The boundary claim is supported descriptively: the trimap exclusion curve, and
+boundary-band versus deep-interior error rates per class, with per-class support stated beside every
+number. No threshold, and nothing "fails".
+
+The full history below is retained unchanged, because a timestamped commitment should be superseded in
+the open rather than deleted. See `docs/DECISIONS_REBUILD_2026-07.md`, D16.
+
+---
+
 # Pre-registration §P1 — amendment history and current registered form
 
 **Status: all changes below were made BEFORE any model was trained on the spatially blocked split.**

@@ -19,11 +19,13 @@ Usage (from repo root):
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 
 # ── Paths (relative to repo root) ──────────────────────────────────────────
 
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 TEST_DIR = Path("evaluation/evaluation_results/test")
 OUTPUT_PATH = Path("evaluation/evaluation_results/final_test_table.tex")
 
@@ -41,7 +43,9 @@ DISPLAY_NAMES = ["Forest", "Grassland", "Cropland", "Settlement", "Semi-natural"
 
 
 def load_metrics(stage_dir: str) -> dict:
-    path = TEST_DIR / stage_dir / "metrics.json"
+    # compute_metrics.py names the run directory after the checkpoint's parent, which SPLIT_TAG
+    # tags; spelling the cell untagged here resolved to the withdrawn campaign's directory.
+    path = TEST_DIR / f"{stage_dir}_{SPLIT_TAG}" / "metrics.json"
     if not path.exists():
         raise FileNotFoundError(
             f"Metrics file not found: {path}\n"

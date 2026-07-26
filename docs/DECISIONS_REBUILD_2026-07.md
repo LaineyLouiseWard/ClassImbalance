@@ -246,3 +246,54 @@ model and above that for the baseline, so the baseline is expected to fail it."
 
 **What is NOT claimed:** that 4.0 is derived from theory or from published benchmarks. It is a pilot-
 calibrated bar, stated as such.
+
+## D16 — Drop the pre-registration. Report the curve. — 2026-07-26
+
+**Decision:** no pre-registered threshold. The boundary claim is supported by the evidence the paper
+already computes — the trimap exclusion curve and the boundary-versus-interior error rates — reported
+descriptively. `docs/PREREGISTRATION_P1_AMENDMENT.md` is withdrawn.
+
+**Why.**
+
+A pre-registration is not standard in remote sensing or computer vision; it is standard in clinical
+trials and psychology. It was adopted here as credibility armour after the first campaign was withdrawn
+for leakage, not because the field expects it. That made it optional, and it was not worth its cost.
+
+The cost was compounding. rho required a threshold. The threshold required a provenance. The provenance
+was awkward because the only calibration data came from the withdrawn campaign, so it needed either a
+literature search or a further justification — and every layer added a number that could be argued
+with, on top of a plot that already showed the effect directly. Three layers of machinery over evidence
+that was already legible.
+
+The plot is also the better evidence. The trimap curve shows accuracy as a function of how much of the
+boundary band is excluded; the reader sees the whole shape rather than one number and one arbitrary
+bar. It is what Kohli, Ladicky & Torr (2009) and Csurka, Larlus & Perronnin (2013) established for
+exactly this purpose, it is already implemented in `boundary_trimap_iou.py`, and it is already cited.
+
+**What is kept.**
+
+- The trimap exclusion curve, as the primary evidence.
+- Boundary-band and deep-interior error rates per class, reported as rates, so no area denominator and
+  no landscape-dependence enters.
+- rho may still be quoted as a one-line summary of that table. It is descriptive. There is no threshold
+  and nothing "fails".
+- Per-class support (pixels, tiles, independent blocks) beside every per-class number, with thin classes
+  marked unestimable. That was never part of the pre-registration and stands on its own.
+
+**What is dropped.**
+
+- The rho threshold of 4.0, the 2.0 dead band, and the weak band.
+- The registered second arm. The cross-cell comparison of boundary and interior rates is still worth
+  reporting, as an observation.
+- Items 15, 16 and 17 of the implementation brief, and its `do_this_first` interval-coverage check.
+
+**Legitimacy of withdrawing it.** `docs/PREREGISTRATION_P1_AMENDMENT.md` is committed and timestamped,
+so this withdrawal must be explicit rather than quiet. It is withdrawn **before any model has been
+trained on the corrected split**, so no result has been seen and nothing is being avoided. Withdrawing
+after seeing results would not be legitimate; withdrawing now is simply deciding not to use an optional
+instrument.
+
+**The honest reading of how this arose.** I introduced the threshold, then spent a working session
+solving problems the threshold created — its landscape-dependence, twice, and then its provenance. The
+underlying evidence never needed it. This is the clearest instance in the rebuild of machinery accreting
+around a decision instead of the decision being questioned.

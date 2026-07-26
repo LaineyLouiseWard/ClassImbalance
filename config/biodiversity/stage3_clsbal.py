@@ -117,7 +117,10 @@ test_dataset = BiodiversityTestDataset(data_root=f"{_BIO_SPLIT}/test")
 here = Path(__file__).resolve()
 repo_root = next((p for p in here.parents if (p / "artifacts").exists()), here.parents[2])
 
-weights_path_tsv = Path(os.environ.get("SAMPLER_TSV", str(repo_root / "artifacts" / "sampler_weights_clsbal.tsv")))
+# Required, exactly like BIO_SPLIT above: the untagged artifacts/sampler_weights_clsbal.tsv is the
+# WITHDRAWN split's file and is still on disk (1,706 ids, 533 of them now held out). It was the
+# default here, so a direct `python -m train.train_supervision -c <this>` reached for it.
+weights_path_tsv = Path(os.environ["SAMPLER_TSV"])
 if not weights_path_tsv.exists():
     raise FileNotFoundError(
         f"Missing class-balanced sampler weights: {weights_path_tsv}\n"

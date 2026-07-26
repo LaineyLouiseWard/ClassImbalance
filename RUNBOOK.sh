@@ -210,10 +210,16 @@ if run_stage A1b; then
   PYTHONPATH=. python scripts/data_prep/build_spatial_split.py \
     --from-manifest "$MANIFEST" --materialise --mode symlink --out-root "$SPLIT_ROOT"
   require_nonempty "$SPLIT_ROOT"/train/masks A1b
-  # Split-only at this point: the sampler, augmentation list and teacher confusion do not exist yet.
-  # Stage B4b re-runs the gate over all of them once they do.
+  # Split-only at this point: the sampler, augmentation list and teacher confusion do not exist yet
+  # (A2, B4 and A7 build them). Stage B4b re-runs the gate over all of them once they do.
+  # The two artefact variables are CLEARED for this one call. They are exported at the top of the
+  # script for the training configs, and the gate treats a named-but-missing artefact as a hard
+  # failure -- correctly -- so inheriting them here stopped every from-scratch run dead at A1b.
+  # Clearing them is not a weakening: the gate prints a SKIP line for each check it did not run,
+  # and B4b names all of them explicitly before any weights are trained.
   echo "[A1b] Leakage preflight (split geometry only)"
-  PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py --split-root "$SPLIT_ROOT"
+  env -u AUG_LIST -u TEACHER_CONFUSION_NPZ \
+    PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py --split-root "$SPLIT_ROOT"
 fi
 
 if run_stage A2; then

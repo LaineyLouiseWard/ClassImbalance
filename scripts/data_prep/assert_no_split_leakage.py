@@ -64,9 +64,9 @@ def main() -> int:
                     help="combined Biodiversity+OEM pre-training root (stage2a pool)")
     ap.add_argument("--sampler-tsv", default=None)
     ap.add_argument("--augmentation-list", default=None,
-                    help="minority-rich tile list for this split. Defaults to $AUG_LIST, then the "
-                         "untagged legacy path. The legacy path is shared across splits, so "
-                         "checking it while training on a tagged one would test the wrong file.")
+                    help="minority-rich tile list for this split; defaults to $AUG_LIST. There is "
+                         "deliberately no untagged fallback: that path is shared across splits, so "
+                         "checking it while training on a tagged one tests the wrong file.")
     ap.add_argument("--confusion-npz", default=None,
                     help="teacher->GT confusion for this split. Recorded for provenance: it carries "
                          "no tile ids, so it cannot be checked for held-out bleed directly, but a "
@@ -83,7 +83,7 @@ def main() -> int:
 
     root = find_repo_root()
     split_root = root / args.split_root
-    failures, checks = [], []
+    failures, checks, skipped = [], [], []
 
     splits = list(INTERNAL)
     split_ids = {s: ids_in(split_root / s / "images", "tif") for s in INTERNAL}
@@ -127,6 +127,8 @@ def main() -> int:
             failures.append(f"OEM pool is missing {len(missing)} current training tiles "
                             f"(stale pool from an older split?), e.g. {sorted(missing)[:3]}")
         checks.append(f"OEM pre-training pool: {len(oem_train)} tiles, no held-out bleed")
+    else:
+        skipped.append("OEM pre-training pool (--oem-root not supplied)")
 
     # 3. training-side artefacts
     if args.sampler_tsv:
@@ -146,6 +148,8 @@ def main() -> int:
                 failures.append(f"sampler TSV missing {len(missing)} current training tiles "
                                 f"(stale from an older split), e.g. {sorted(missing)[:3]}")
             checks.append(f"sampler TSV: {len(tsv_ids)} ids, matches training set")
+    else:
+        skipped.append("sampler TSV (--sampler-tsv not supplied)")
 
     # 3b. teacher->GT confusion staleness. It holds no tile ids, so held-out bleed cannot be checked
     # directly -- but its total pixel count is exactly n_train_tiles * 512 * 512, which pins the
@@ -163,10 +167,20 @@ def main() -> int:
                 failures.append(f"{conf_path} was fitted on {tiles:.0f} tiles but this split trains "
                                 f"on {len(split_ids['train'])} — stale mapping")
             checks.append(f"teacher confusion: fitted on {tiles:.0f} tiles, matches training set")
+    else:
+        skipped.append("teacher confusion (--confusion-npz / $TEACHER_CONFUSION_NPZ not supplied)")
 
-    aug = root / (args.augmentation_list or os.environ.get("AUG_LIST")
-                  or "artifacts/train_augmentation_list.json")
-    if aug.exists():
+    # The untagged legacy default was removed on 2026-07-26. It made this check unskippable, which
+    # is why a from-scratch run stopped here: A1b runs BEFORE A2 builds the list, so the exported
+    # $AUG_LIST names a file that does not exist yet. Naming a list that is missing is still a hard
+    # failure; naming no list at all is a skip, printed below so it cannot pass unnoticed.
+    aug_arg = args.augmentation_list or os.environ.get("AUG_LIST")
+    if not aug_arg:
+        skipped.append("augmentation list (--augmentation-list / $AUG_LIST not supplied)")
+    elif not (root / aug_arg).exists():
+        failures.append(f"augmentation list not found: {aug_arg}")
+    else:
+        aug = root / aug_arg
         blob = json.loads(aug.read_text())
         # Keys are settlement_images / seminatural_images; a plain "ids" list is never written.
         aug_ids = (set(blob) if isinstance(blob, list)
@@ -183,9 +197,6 @@ def main() -> int:
             failures.append(f"{len(bleed)} held-out tiles in {aug.name}, "
                             f"e.g. {sorted(bleed)[:3]}")
         checks.append(f"augmentation list ({aug.name}): {len(aug_ids)} ids, no held-out bleed")
-    elif args.augmentation_list or os.environ.get("AUG_LIST"):
-        # Named explicitly but missing. Skipping silently is how a stale-artefact check disappears.
-        failures.append(f"augmentation list not found: {aug.relative_to(root)}")
 
     # 4. geometry, re-read from the rasters. Grouped by CRS because the inland site is in UTM metres
     # and the uplands in WGS84 degrees; comparing footprints across the two would be meaningless. The
@@ -255,6 +266,11 @@ def main() -> int:
 
     for c in checks:
         print(f"  ok   {c}")
+    # A check that did not run is reported, not merely absent. A1b legitimately runs this gate over
+    # the split geometry alone, and the difference between "geometry only" and "everything" was
+    # previously visible only by counting the lines that were not printed.
+    for s in skipped:
+        print(f"  SKIP {s}")
     if failures:
         print("\nLEAKAGE PREFLIGHT FAILED:")
         for f in failures:
