@@ -1,0 +1,470 @@
+[
+  {
+    "split_root": "data/split_f1",
+    "block_m": 950.0,
+    "min_blocks": 5,
+    "min_tiles": 8,
+    "splits": {
+      "train": {
+        "Forest": {
+          "pixels": 46571104,
+          "tiles": 1214,
+          "blocks": 32,
+          "share": 0.15091193072108264,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 226847356,
+          "tiles": 1215,
+          "blocks": 32,
+          "share": 0.7350904215827215,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 5520254,
+          "tiles": 163,
+          "blocks": 23,
+          "share": 0.01788817781109031,
+          "verdict": "ok"
+        },
+        "Settlement": {
+          "pixels": 12460642,
+          "tiles": 799,
+          "blocks": 31,
+          "share": 0.04037824704014344,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 17198538,
+          "tiles": 453,
+          "blocks": 31,
+          "share": 0.055731222844962125,
+          "verdict": "ok"
+        }
+      },
+      "val": {
+        "Forest": {
+          "pixels": 5450705,
+          "tiles": 164,
+          "blocks": 8,
+          "share": 0.12733700343531826,
+          "verdict": "weak"
+        },
+        "Grassland": {
+          "pixels": 26386567,
+          "tiles": 158,
+          "blocks": 8,
+          "share": 0.6164315208262519,
+          "verdict": "weak"
+        },
+        "Cropland": {
+          "pixels": 8860856,
+          "tiles": 90,
+          "blocks": 8,
+          "share": 0.20700347036059744,
+          "verdict": "weak"
+        },
+        "Settlement": {
+          "pixels": 771526,
+          "tiles": 91,
+          "blocks": 8,
+          "share": 0.01802405540428942,
+          "verdict": "weak"
+        },
+        "Seminatural": {
+          "pixels": 1335696,
+          "tiles": 38,
+          "blocks": 5,
+          "share": 0.031203949973543026,
+          "verdict": "weak"
+        }
+      },
+      "test": {
+        "Forest": {
+          "pixels": 5527602,
+          "tiles": 165,
+          "blocks": 16,
+          "share": 0.13471959574971967,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 30896530,
+          "tiles": 164,
+          "blocks": 16,
+          "share": 0.7530151468338506,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 1709150,
+          "tiles": 23,
+          "blocks": 7,
+          "share": 0.04165567583838948,
+          "verdict": "weak"
+        },
+        "Settlement": {
+          "pixels": 1020499,
+          "tiles": 105,
+          "blocks": 13,
+          "share": 0.024871764056636707,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 1876642,
+          "tiles": 30,
+          "blocks": 11,
+          "share": 0.045737817521403566,
+          "verdict": "ok"
+        }
+      },
+      "external_test": {
+        "Forest": {
+          "pixels": 3111636,
+          "tiles": 138,
+          "blocks": 11,
+          "share": 0.10100211531999603,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 7424540,
+          "tiles": 106,
+          "blocks": 7,
+          "share": 0.24099677638320272,
+          "verdict": "weak"
+        },
+        "Cropland": {
+          "pixels": 1232818,
+          "tiles": 30,
+          "blocks": 4,
+          "share": 0.04001664262933289,
+          "verdict": "UNESTIMABLE"
+        },
+        "Settlement": {
+          "pixels": 452688,
+          "tiles": 75,
+          "blocks": 5,
+          "share": 0.014694021273689585,
+          "verdict": "weak"
+        },
+        "Seminatural": {
+          "pixels": 18585950,
+          "tiles": 165,
+          "blocks": 11,
+          "share": 0.6032904443937788,
+          "verdict": "ok"
+        }
+      }
+    }
+  },
+  {
+    "split_root": "data/split_f2",
+    "block_m": 950.0,
+    "min_blocks": 5,
+    "min_tiles": 8,
+    "splits": {
+      "train": {
+        "Forest": {
+          "pixels": 46367027,
+          "tiles": 1244,
+          "blocks": 35,
+          "share": 0.1462018547895532,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 227542598,
+          "tiles": 1241,
+          "blocks": 35,
+          "share": 0.7174742920488234,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 17627986,
+          "tiles": 272,
+          "blocks": 29,
+          "share": 0.055583556163829026,
+          "verdict": "ok"
+        },
+        "Settlement": {
+          "pixels": 10969154,
+          "tiles": 775,
+          "blocks": 33,
+          "share": 0.03458730835324522,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 14637139,
+          "tiles": 355,
+          "blocks": 29,
+          "share": 0.0461529886445492,
+          "verdict": "ok"
+        }
+      },
+      "val": {
+        "Forest": {
+          "pixels": 4732996,
+          "tiles": 143,
+          "blocks": 7,
+          "share": 0.12808980377507737,
+          "verdict": "weak"
+        },
+        "Grassland": {
+          "pixels": 25721361,
+          "tiles": 141,
+          "blocks": 7,
+          "share": 0.696101176362272,
+          "verdict": "weak"
+        },
+        "Cropland": {
+          "pixels": 2584707,
+          "tiles": 30,
+          "blocks": 3,
+          "share": 0.0699503258498568,
+          "verdict": "UNESTIMABLE"
+        },
+        "Settlement": {
+          "pixels": 1548083,
+          "tiles": 110,
+          "blocks": 7,
+          "share": 0.04189600998976823,
+          "verdict": "weak"
+        },
+        "Seminatural": {
+          "pixels": 2363460,
+          "tiles": 50,
+          "blocks": 6,
+          "share": 0.06396268402302566,
+          "verdict": "weak"
+        }
+      },
+      "test": {
+        "Forest": {
+          "pixels": 8354493,
+          "tiles": 185,
+          "blocks": 14,
+          "share": 0.18064633407532202,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 33763064,
+          "tiles": 183,
+          "blocks": 14,
+          "share": 0.7300471421485993,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 819343,
+          "tiles": 20,
+          "blocks": 5,
+          "share": 0.017716372411859888,
+          "verdict": "weak"
+        },
+        "Settlement": {
+          "pixels": 1700522,
+          "tiles": 136,
+          "blocks": 14,
+          "share": 0.03676980342367092,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 1610364,
+          "tiles": 57,
+          "blocks": 13,
+          "share": 0.0348203479405479,
+          "verdict": "ok"
+        }
+      },
+      "external_test": {
+        "Forest": {
+          "pixels": 3111636,
+          "tiles": 138,
+          "blocks": 11,
+          "share": 0.10100211531999603,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 7424540,
+          "tiles": 106,
+          "blocks": 7,
+          "share": 0.24099677638320272,
+          "verdict": "weak"
+        },
+        "Cropland": {
+          "pixels": 1232818,
+          "tiles": 30,
+          "blocks": 4,
+          "share": 0.04001664262933289,
+          "verdict": "UNESTIMABLE"
+        },
+        "Settlement": {
+          "pixels": 452688,
+          "tiles": 75,
+          "blocks": 5,
+          "share": 0.014694021273689585,
+          "verdict": "weak"
+        },
+        "Seminatural": {
+          "pixels": 18585950,
+          "tiles": 165,
+          "blocks": 11,
+          "share": 0.6032904443937788,
+          "verdict": "ok"
+        }
+      }
+    }
+  },
+  {
+    "split_root": "data/split_f3",
+    "block_m": 950.0,
+    "min_blocks": 5,
+    "min_tiles": 8,
+    "splits": {
+      "train": {
+        "Forest": {
+          "pixels": 45025594,
+          "tiles": 1082,
+          "blocks": 35,
+          "share": 0.16151502821281463,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 188226906,
+          "tiles": 1071,
+          "blocks": 35,
+          "share": 0.6752042856558608,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 18876444,
+          "tiles": 251,
+          "blocks": 25,
+          "share": 0.06771325182778523,
+          "verdict": "ok"
+        },
+        "Settlement": {
+          "pixels": 10817573,
+          "tiles": 785,
+          "blocks": 35,
+          "share": 0.038804609846772524,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 15823790,
+          "tiles": 410,
+          "blocks": 35,
+          "share": 0.056762824456766836,
+          "verdict": "ok"
+        }
+      },
+      "val": {
+        "Forest": {
+          "pixels": 11093440,
+          "tiles": 307,
+          "blocks": 14,
+          "share": 0.13943572087853162,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 62943860,
+          "tiles": 307,
+          "blocks": 14,
+          "share": 0.7911542762188619,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 1205742,
+          "tiles": 28,
+          "blocks": 5,
+          "share": 0.015155218305910743,
+          "verdict": "weak"
+        },
+        "Settlement": {
+          "pixels": 2796067,
+          "tiles": 202,
+          "blocks": 12,
+          "share": 0.03514433915626472,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 1520418,
+          "tiles": 73,
+          "blocks": 11,
+          "share": 0.019110445440431036,
+          "verdict": "ok"
+        }
+      },
+      "test": {
+        "Forest": {
+          "pixels": 4333345,
+          "tiles": 176,
+          "blocks": 14,
+          "share": 0.10759055353179649,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 31739568,
+          "tiles": 178,
+          "blocks": 14,
+          "share": 0.7880465760238556,
+          "verdict": "ok"
+        },
+        "Cropland": {
+          "pixels": 2412621,
+          "tiles": 36,
+          "blocks": 6,
+          "share": 0.059901814614907505,
+          "verdict": "weak"
+        },
+        "Settlement": {
+          "pixels": 1060709,
+          "tiles": 69,
+          "blocks": 11,
+          "share": 0.02633583719878254,
+          "verdict": "ok"
+        },
+        "Seminatural": {
+          "pixels": 730016,
+          "tiles": 24,
+          "blocks": 7,
+          "share": 0.018125218630657827,
+          "verdict": "weak"
+        }
+      },
+      "external_test": {
+        "Forest": {
+          "pixels": 3111636,
+          "tiles": 138,
+          "blocks": 11,
+          "share": 0.10100211531999603,
+          "verdict": "ok"
+        },
+        "Grassland": {
+          "pixels": 7424540,
+          "tiles": 106,
+          "blocks": 7,
+          "share": 0.24099677638320272,
+          "verdict": "weak"
+        },
+        "Cropland": {
+          "pixels": 1232818,
+          "tiles": 30,
+          "blocks": 4,
+          "share": 0.04001664262933289,
+          "verdict": "UNESTIMABLE"
+        },
+        "Settlement": {
+          "pixels": 452688,
+          "tiles": 75,
+          "blocks": 5,
+          "share": 0.014694021273689585,
+          "verdict": "weak"
+        },
+        "Seminatural": {
+          "pixels": 18585950,
+          "tiles": 165,
+          "blocks": 11,
+          "share": 0.6032904443937788,
+          "verdict": "ok"
+        }
+      }
+    }
+  }
+]
