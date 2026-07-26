@@ -1,0 +1,72 @@
+{
+  "split_root": "data/split_f1",
+  "splits": {
+    "test": {
+      "band_m": 8.0,
+      "convention": "strict distance < 8.0 m; boundary-free tiles excluded",
+      "n_boundary_free_tiles": 0,
+      "boundary_free_tiles": [],
+      "foreground_px_excluded": 0,
+      "share_of_foreground_excluded": 0.0,
+      "registered_band_area_share": 0.377737396563512,
+      "band_area_share_if_boundary_free_included": 0.377737396563512,
+      "foreground_px": 69558747,
+      "per_site": {
+        "biodiversity": {
+          "fg": 69558747,
+          "band": 26274940,
+          "tiles": 294,
+          "band_area_share": 0.377737396563512,
+          "ceiling_1_over_p": 2.6473418017319927
+        }
+      }
+    },
+    "external_test": {
+      "band_m": 8.0,
+      "convention": "strict distance < 8.0 m; boundary-free tiles excluded",
+      "n_boundary_free_tiles": 19,
+      "boundary_free_tiles": [
+        "ireland2_0060",
+        "ireland2_0068",
+        "ireland2_0069",
+        "ireland2_0077",
+        "ireland2_0078",
+        "ireland2_0086",
+        "ireland2_0087",
+        "ireland2_0095",
+        "ireland2_0096",
+        "ireland2_0104",
+        "ireland2_0105",
+        "ireland2_0114",
+        "ireland2_0115",
+        "ireland2_0116",
+        "ireland2_0123",
+        "ireland2_0124",
+        "ireland2_0125",
+        "ireland2_0132",
+        "ireland2_0133"
+      ],
+      "foreground_px_excluded": 4980736,
+      "share_of_foreground_excluded": 0.16167214669403998,
+      "registered_band_area_share": 0.2647962805905905,
+      "band_area_share_if_boundary_free_included": 0.2219860974709124,
+      "foreground_px": 25826896,
+      "per_site": {
+        "ireland1": {
+          "fg": 8981040,
+          "band": 3493126,
+          "tiles": 64,
+          "band_area_share": 0.3889444874981071,
+          "ceiling_1_over_p": 2.5710609923604246
+        },
+        "ireland2": {
+          "fg": 16845856,
+          "band": 3345740,
+          "tiles": 108,
+          "band_area_share": 0.19860908225738128,
+          "ceiling_1_over_p": 5.0350164687034855
+        }
+      }
+    }
+  }
+}
