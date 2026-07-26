@@ -54,7 +54,7 @@ check(tuple(tax.OEM_NATIVE_CLASSES) ==
 # 6 (Water) maps to 0, not to its argmax 2: the target taxonomy has no water class, so it is
 # excluded from the pre-training loss rather than forced onto the nearest class
 # (geoseg.taxonomy.OEM_NO_TARGET_COUNTERPART). Changed 2026-07-25.
-check(dict(tax.OEM_TO_STUDENT_PRETRAIN) == {0: 0, 1: 5, 2: 2, 3: 4, 4: 4, 5: 1, 6: 0, 7: 2, 8: 4},
+check(dict(tax.OEM_TO_STUDENT_PRETRAIN) == {0: 0, 1: 2, 2: 2, 3: 4, 4: 4, 5: 1, 6: 0, 7: 2, 8: 4},
       "OEM_TO_STUDENT_PRETRAIN changed from the grounded pre-training map (argmax of teacher "
       "confusion, less the declared no-counterpart exclusions)")
 check(tuple(tax.MINORITY_INDICES) == (4, 5) and tax.BACKGROUND_INDEX == 0,

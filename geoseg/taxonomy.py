@@ -66,7 +66,18 @@ OEM_NATIVE_CLASSES = (
 # ---------------------------------------------------------------------------
 OEM_TO_STUDENT_PRETRAIN = {
     0: 0,  # Unknown      -> Background    (99% GT Background)
-    1: 5,  # Bareland     -> Seminatural   [CHANGED from Background] (41% GT Seminatural, plurality)
+    # REGROUNDED 2026-07-26 on the spatially blocked split: Bareland -> Grassland, was Seminatural.
+    # The old grounding (44.2% GT Seminatural, hard) was measured over the leaking split, whose
+    # "training" set held 153 of the 191 upland tiles -- and the uplands are ~60% semi-natural. 43.3%
+    # of that training set's semi-natural pixel mass came from tiles that are now ENTIRELY in
+    # external_test, so the mapping that relabels every OEM pre-training tile was partly grounded on
+    # the generalisation test set. Re-measured on the clean training set the same row reads
+    # Grassland 61.2%, Cropland 35.6%, Seminatural 0.01% (hard).
+    #
+    # CONSEQUENCE, and it is a scientific result rather than a config detail: no OEM class now maps to
+    # Seminatural, so the transfer arm pre-trains with ZERO semi-natural labels. Any gain it delivers
+    # on the priority class is therefore representation transfer, not label transfer.
+    1: 2,  # Bareland     -> Grassland     (61% GT Grassland; see the regrounding note above)
     2: 2,  # Rangeland    -> Grassland     (54% GT Grassland)
     3: 4,  # Developed    -> Settlement    (59% GT Settlement)
     4: 4,  # Road         -> Settlement    (57% GT Settlement)
