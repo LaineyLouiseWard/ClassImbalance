@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ordered list of all stages
-STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B5 N3 C1 C2 C3 C4 D E)
+STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B4b B5 N3 C1 C2 C3 C4 D E)
 
 # Validate --from value
 valid=false
@@ -190,15 +190,26 @@ if run_stage A1b; then
   # split; otherwise derives it. Both paths re-read the GeoTIFF geometry and abort on any
   # cross-split footprint overlap.
   MANIFEST="artifacts/spatial_split_manifest_${SPLIT_TAG}.json"
-  if [ -f "$MANIFEST" ]; then
-    PYTHONPATH=. python scripts/data_prep/build_spatial_split.py \
-      --from-manifest "$MANIFEST" --materialise --mode symlink --out-root "$SPLIT_ROOT"
-  else
-    PYTHONPATH=. python scripts/data_prep/build_spatial_split.py \
-      --out "$MANIFEST" --materialise --mode symlink --out-root "$SPLIT_ROOT"
+  # Replay only. Deriving here would be worse than failing: --three-region defaults to unset, so a
+  # bare run falls through to the older greedy proposer and silently materialises a DIFFERENT design
+  # under the same name. The three shipped manifests are committed; a missing one means the tag is
+  # wrong, not that a new split should be invented.
+  if [ ! -f "$MANIFEST" ]; then
+    echo "[A1b] FATAL: no manifest at $MANIFEST" >&2
+    echo "  SPLIT_TAG=$SPLIT_TAG is not one of the shipped folds. Available:" >&2
+    ls artifacts/spatial_split_manifest_*.json 2>/dev/null | sed 's/^/    /' >&2
+    echo "  To derive a genuinely new fold, name the design explicitly, e.g." >&2
+    echo "    python scripts/data_prep/build_spatial_split.py --three-region biodiversity \\" >&2
+    echo "      --external-sites ireland1 ireland2 --buffer-test-m 650 --buffer-val-m 256 \\" >&2
+    echo "      --distinct-from artifacts/spatial_split_manifest_f*.json --out $MANIFEST" >&2
+    exit 1
   fi
+  PYTHONPATH=. python scripts/data_prep/build_spatial_split.py \
+    --from-manifest "$MANIFEST" --materialise --mode symlink --out-root "$SPLIT_ROOT"
   require_nonempty "$SPLIT_ROOT"/train/masks A1b
-  echo "[A1b] Leakage preflight"
+  # Split-only at this point: the sampler, augmentation list and teacher confusion do not exist yet.
+  # Stage B4b re-runs the gate over all of them once they do.
+  echo "[A1b] Leakage preflight (split geometry only)"
   PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py --split-root "$SPLIT_ROOT"
 fi
 
@@ -331,6 +342,20 @@ if run_stage B4; then
     --aug-list  "$AUG_LIST" \
     --q 1.0 --settlement_target 1.27 \
     --force
+fi
+
+# The last gate before any weights are trained. A1b could only check the split geometry, because
+# every derived artefact is built after it. This is where the split, the OEM pre-training pool, the
+# sampler weights, the augmentation list and the teacher confusion are checked against each other --
+# the combination that actually determines what the model sees.
+if run_stage B4b; then
+  echo "[B4b] Full leakage preflight over the split AND every derived artefact"
+  PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py \
+    --split-root    "$SPLIT_ROOT" \
+    --oem-root      "$OEM_COMBINED" \
+    --sampler-tsv   "$SAMPLER_TSV" \
+    --augmentation-list "$AUG_LIST" \
+    --confusion-npz "$TEACHER_CONFUSION_NPZ"
 fi
 
 if run_stage B5; then
