@@ -244,22 +244,24 @@ and leave the code alone.
 - The combined Biodiversity + OEM pre-training pool (D12).
 </protected>
 
-<do_this_first>
-Before anything else, spend thirty minutes on the one check that can invalidate the paper, because
-there is no point closing twenty items and then discovering it.
+<superseded>
+**The pre-registration was withdrawn on 2026-07-26, before any model was trained.** See D16 in the
+decisions log. This removes several items that earlier versions of this brief treated as critical:
 
-**Item 12 — does a properly-covering interval leave rho able to clear 4.0?** The registered threshold is
-judged on the LOWER bound of a bootstrap CI. The current percentile interval under-covers; a BCa or
-block-jackknife interval will be WIDER. With only 16 independent blocks on Test A and 12 on Test B, the
-lower bound may sit well below the point estimate. You cannot compute rho itself without trained models,
-but you CAN characterise the interval width: simulate from plausible rho values with the real block
-structure (`utils.spatial_blocks` on `data/split_f1`), and report how large rho must be for the lower
-bound to clear 4.0 at n_blocks = 16 and 12.
+- There is no rho threshold, no dead band, no weak band. rho may be quoted as a descriptive summary; it
+  decides nothing.
+- The boundary claim is supported by the **trimap exclusion curve** (`boundary_trimap_iou.py`, already
+  implemented and already cited to Kohli 2009 / Csurka 2013) plus boundary-band versus deep-interior
+  error rates per class.
+- **Do not implement, and delete from your plan:** the interval-coverage check that used to head this
+  brief; item 12's BCa/jackknife work as a decision-critical task (good intervals are still worth
+  having, they just decide nothing); item 14's threshold for the second arm; items 15, 16 and 17
+  entirely.
+- **Item 6 still matters**, but as a stated limitation in the methods rather than as a registration.
 
-If that number is implausibly high, the pre-registration is unpassable as written and must be
-re-declared BEFORE the campaign — which is legitimate, since no results exist — rather than after,
-which is not. Report this as the first item in your report whatever it says.
-</do_this_first>
+The reason this is in the brief rather than silently removed: the repository contains a timestamped
+pre-registration document, now marked withdrawn with its history intact. Do not delete it.
+</superseded>
 
 <tasks>
 Ordered. Items 1–8 block the campaign; 9–20 are needed before submission but not before launching. Do
