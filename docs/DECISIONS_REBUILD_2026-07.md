@@ -346,3 +346,26 @@ Until that comes back, treat the pre-registration as **suspended, not withdrawn*
 decision reverses, the header is removed and the reversal is dated in the open.
 
 Nothing has been trained, so either outcome remains legitimate.
+
+## D18 — No threshold. Settled by the author, not by the brief — 2026-07-26
+
+**Decision:** no pre-registered threshold. D16 stands; D16a's reopening is closed without running
+`docs/BRIEF_RHO_THRESHOLD_PROVENANCE.md`. That brief is superseded, not pending.
+
+**Why, in the author's words:** the number is arbitrary. A bar nobody can source is distracting and
+overpromises what it can adjudicate.
+
+**What the measurement adds, having been done anyway:** a bar of 4.0 judged on a lower bound is not a
+bar of 4.0 — its operating point is ~5.2 on Test A and ~6.3 on Test B at 16 and 12 blocks. Keeping it
+would have required registering that operating characteristic and replacing the percentile interval
+with a block jackknife, since the percentile under-covers and BCa is worse rather than wider. Three
+pieces of apparatus to defend one arbitrary number. The measurement supports the decision; it did not
+drive it.
+
+**What carries the claim instead:** the trimap exclusion curve, boundary-band versus deep-interior
+error rates per class, and per-class support beside every number. rho may be quoted descriptively.
+Nothing "fails".
+
+**Consequence:** the interval-coverage work is no longer decision-critical and its simulation stays in
+session scratch rather than being productionised. Had the threshold been kept it would have needed to
+be in the repository and on Zenodo.

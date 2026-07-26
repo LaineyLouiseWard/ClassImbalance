@@ -1,3 +1,9 @@
+# SUPERSEDED 2026-07-26 — do not run this brief
+
+The threshold decision was settled directly: there is no pre-registered threshold. See D18 in `docs/DECISIONS_REBUILD_2026-07.md`. Retained for the argument on both sides and for the measured interval evidence at the end.
+
+---
+
 # Brief — should this paper pre-register a threshold at all, and if so, where does it come from?
 
 Paste below the rule into a **fresh chat**. This is a decision brief, not an implementation task. It
