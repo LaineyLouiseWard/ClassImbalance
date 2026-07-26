@@ -51,10 +51,12 @@ defensible rather than an excuse.
 173-tile validation split with `save_top_k=1`. Stage 2a selects a best epoch on that split; stage 2b
 then selects again from the model 2a handed over. Baseline and sampler-only select once.
 
-Validation sits 256 m from training, and `report_class_support.py` marks all five of its foreground
-classes weak. The usual defence — that validation optimism is common-mode across the cells — holds
-for a level shift but not for a *selection rule*, and the arm that selects twice is the arm carrying
-the positive result.
+Validation sits 256 m from training, and its per-class support is thin: 8, 8, 6, 7 and 6 independent
+950 m blocks for Forest, Grassland, Cropland, Settlement and Semi-natural. Selection is on foreground
+mIoU, which weights all five equally, so it is partly driven by a Cropland IoU estimated from 6
+blocks. The usual defence — that validation optimism is common-mode across the cells — holds for a
+level shift but not for a *selection rule*, and the arm that selects twice is the arm carrying the
+positive result.
 
 **What must be written:** the selection asymmetry, alongside §1. It is declared, not corrected.
 
@@ -80,3 +82,49 @@ tiles, Semi-natural 11,780,653 px across 261 tiles. What is real is a prior shif
 of pool foreground against 7.703% and 4.265% in the target training set, about an eighth of target
 prevalence. Correcting a source/target prior shift is what the stage-2b Biodiversity-only finetune
 exists to do.
+
+## 4. The 950 m block size, where it comes from, and what the split's admissibility depends on
+
+**Measured 2026-07-26.** `SUPPORT_BLOCK_M = 950.0` is not only the bootstrap unit. It is also the
+block size in `MIN_CLASS_BLOCKS`, the criterion that ADMITTED this split, so the split's
+admissibility is a function of it.
+
+Recomputed against the shipped manifest by `scripts/analysis/block_size_sensitivity.py`. Each cell
+is the smallest number of independent blocks any one foreground class has in that split; the floors
+are 5 for train and val and 8 for test.
+
+| block | train | val | test | verdict | where the number comes from |
+|---|---|---|---|---|---|
+| 650 m | 33 | 12 | 9 | passes | ireland1 composition range; also the val/test buffer width |
+| 750 m | 29 | 10 | 9 | passes | **inland composition range**, 900 of 1,952 tiles |
+| 950 m | 23 | 6 | 8 | passes | shipped value |
+| 1350 m | 14 | 8 | 6 | **fails** | **inland spectral range** |
+
+The 950 m row reproduces the manifest's own declared `class_block_support` exactly, class by class
+and split by split.
+
+**Where 950 m actually comes from, stated plainly.** It is not the inland site's measured
+correlogram range, and three code comments said it was until they were corrected on 2026-07-26.
+The committed measurements (`artifacts/correlogram/`, Mantel correlogram, 100 m increments, 9,999
+permutations) give, for the inland site, a composition range of **750 m** and a spectral range of
+**1,350 m**, both on a 900-of-1,952-tile subsample. **950 m is ireland2's composition range** — one
+of the two upland sites. No artefact reports 950 m for the inland site.
+
+**Why the split is nonetheless admissible, and why this is reasoning rather than re-cutting.** Block
+support is a criterion about *class composition*: it asks how many independent parcels of ground
+carry a class, so that a per-class number is not one place measured repeatedly. The scale that
+applies to it is therefore the composition range, which is 750 m inland. 950 m is above that, so it
+counts *fewer* independent units than the criterion's own scale would and cannot flatter the
+support. The split clears the floors at 650, 750 and 950 m.
+
+At 1,350 m it fails. That is the **spectral** range, and it answers a different question — how far
+apart two tiles must be before their imagery stops looking alike, not before their class composition
+becomes independent evidence. A split admitted on class composition is not obliged to clear a bar
+set by imagery similarity, and the two ranges differ by 1.8× on the same site.
+
+**What must be written:** the table above, the provenance of 950 m including that it is another
+site's number, and the composition-versus-spectral distinction. A reader who finds the 1,350 m
+failure themselves and finds no mention of it in the paper will reasonably conclude it was hidden.
+
+**What must NOT be written:** that 950 m is the inland site's measured range, or that it is a
+full-pool measurement of which 750 m is the subsample. There is no full-pool inland measurement.

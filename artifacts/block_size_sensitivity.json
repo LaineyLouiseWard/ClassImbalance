@@ -1,7 +1,10 @@
 {
   "manifest": "artifacts/spatial_split_manifest_f1.json",
-  "min_class_blocks": 5,
-  "min_test_blocks": 8,
+  "floors": {
+    "train": 5,
+    "val": 5,
+    "test": 8
+  },
   "by_block_m": {
     "650": {
       "provenance": "ireland1 composition range, and the val|test buffer width",

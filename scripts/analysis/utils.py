@@ -140,9 +140,13 @@ def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict
     all 294 tiles collapse into ONE group and the bootstrap becomes degenerate. A grid partitions
     space instead of chaining through it, so the unit count reflects area rather than connectivity.
 
-    block_m defaults to 950 m, the measured correlogram range, matching the scale used for class
-    support. Pass 256.0 (one tile footprint) for the pixel-disjoint count instead — that is the less
-    conservative unit, and the two should be reported together.
+    block_m defaults to 950 m, matching the scale used for class support. That is NOT the inland
+    site's measured range, which this docstring claimed until 2026-07-26. Measured and committed
+    under artifacts/correlogram/: inland composition 750 m (900 of 1,952 tiles), inland spectral
+    1,350 m; 950 m is ireland2's composition range. It sits above the inland composition range, so
+    it counts fewer independent units than that scale would and is conservative for a
+    composition-based criterion. Pass 256.0 (one tile footprint) for the pixel-disjoint count
+    instead — that is the less conservative unit, and the two should be reported together.
     """
     import math
     from collections import defaultdict

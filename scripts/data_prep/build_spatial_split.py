@@ -139,9 +139,18 @@ def class_counts(split_root: Path, pool: dict, cache: Path | None) -> dict:
 
 
 
-# Grid cell for counting INDEPENDENT ground, at the autocorrelation scale (950 m, the correlogram
-# range on the full tile pool). Two tiles in the same cell are within one correlation length and are
-# not independent evidence about a class.
+# Grid cell for counting INDEPENDENT ground. Two tiles in the same cell are within one correlation
+# length and are not independent evidence about a class.
+#
+# WHERE 950 COMES FROM, corrected 2026-07-26. It is NOT the inland site's measured range, which
+# earlier versions of this comment claimed. Measured, committed under artifacts/correlogram/:
+# inland composition range 750 m (on 900 of 1,952 tiles), inland spectral range 1,350 m; 950 m is
+# ireland2's composition range. Block support is a class-COMPOSITION criterion, so the composition
+# scale is the one that applies, and 950 m is CONSERVATIVE against it -- a larger cell counts fewer
+# independent units, so it cannot flatter the support. The shipped split clears the floors at 650,
+# 750 and 950 m and fails at 1,350 m, which is the spectral range and answers a different question
+# (imagery similarity, not class-composition independence).
+# Reproduce the table: PYTHONPATH=. python scripts/analysis/block_size_sensitivity.py
 SUPPORT_BLOCK_M = 950.0
 # Minimum independent blocks a class needs in a split before a per-class number from it means
 # anything. This REPLACES the share floor as the binding criterion, because a share does not track
@@ -507,12 +516,14 @@ def main() -> None:
     ap.add_argument("--buffer-test-m", type=float, default=650.0,
                     help="minimum separation between the validation and test strips, in metres. "
                          "650 m = 2.5x the 256 m tile footprint, so no tile can share a pixel across "
-                         "the boundary. It is NOT above the measured autocorrelation range: that is "
-                         "950 m on the full tile pool (750 m on the shipped subsample), and an earlier "
-                         "version of this help text claimed otherwise. Per the pre-registration the "
-                         "buffer keys on effect size, not range -- peak Mantel r is 0.044 and stable "
-                         "across every subsample, seed and permutation count tried -- and is anchored "
-                         "on the pixel-identity geometry. This is the guarantee the test number rests on.")
+                         "the boundary. It is NOT above the measured autocorrelation range: the "
+                         "inland site measures 750 m for composition and 1,350 m for spectral "
+                         "similarity (artifacts/correlogram/, 900 of 1,952 tiles). The buffer keys "
+                         "on effect size, not range -- peak Mantel r is 0.044 and stable across "
+                         "every subsample, seed and permutation count tried -- and is anchored on "
+                         "the pixel-identity geometry. What reaches the reader is the REALISED "
+                         "separation, 1,664 m train-test, which is the guarantee the test number "
+                         "rests on.")
     ap.add_argument("--buffer-val-m", type=float, default=256.0,
                     help="minimum separation between the train and validation strips, in metres. "
                          "256 m is the exact pixel-identity distance: tiles are 512 px at 0.5 m on a "

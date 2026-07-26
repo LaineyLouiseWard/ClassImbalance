@@ -41,11 +41,15 @@ from PIL import Image
 FOREGROUND = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 SPLITS = ("train", "val", "test", "external_test")
 
-# Grid cell for counting independent ground. 950 m is the correlogram range measured on the full tile
-# pool, so two tiles in the same cell are within one autocorrelation length and are not independent
-# evidence about a class. Deliberately the conservative end of the measured range (750 m shipped
-# subsample, 950 m full pool): a larger cell counts fewer independent units, so it cannot flatter
-# the support.
+# Grid cell for counting independent ground: two tiles in the same cell are within one
+# autocorrelation length and are not independent evidence about a class.
+#
+# 950 m is NOT the inland site's measured range, which this comment claimed until 2026-07-26.
+# Measured and committed under artifacts/correlogram/: inland composition 750 m (on 900 of 1,952
+# tiles), inland spectral 1,350 m; 950 m is ireland2's composition range. It is used here because
+# support is a class-COMPOSITION criterion and 950 m is above the inland composition scale, so it
+# counts fewer independent units and cannot flatter the support.
+# Sensitivity: PYTHONPATH=. python scripts/analysis/block_size_sensitivity.py
 BLOCK_M = 950.0
 
 # NO VERDICT THRESHOLDS. An earlier version of this script classified each class as ok / weak /
