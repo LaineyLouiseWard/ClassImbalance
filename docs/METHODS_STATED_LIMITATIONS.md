@@ -234,28 +234,37 @@ layout even though the assignment itself is discarded.
 **What must be written:** the study is three sites of eleven in the delivered data, and which two
 were excluded and why.
 
-## 9. The ten seeds vary data order and augmentation, not initialisation
+## 9. What the ten seeds actually vary
 
-**Measured 2026-07-26 by importing each cell at seed 42 and seed 43 and comparing every parameter
-tensor. All 432 are byte-identical, in the baseline and in the full cell.** Every cell builds
-`ft_unetformer(pretrained=True)`, which loads the ImageNet-1K → ADE20K Swin-B in full, so nothing is
-randomly initialised. The seeds do differ, and genuinely: the sampler draw order and the augmentation
-RNG both change, and a repeated seed reproduces on the same machine.
+**Corrected 2026-07-26. An earlier version of this section claimed all 432 parameter tensors were
+identical across seeds. That was wrong**: it was measured by building two configurations inside one
+Python process, and `py2cfg` caches the imported module, so the second build reused the first
+network object. Re-measured in separate processes:
 
-`aggregate_seeds.py` described each seed as "an independent draw of the student pipeline (init +
-sampler/aug RNG)". The init half of that was false and is corrected.
+| cell | tensors differing between seed 42 and 43 | why |
+|---|---|---|
+| `stage1_baseline` | **46 of 432** | decoder head randomly initialised; Swin backbone loaded from `stseg_base.pth` |
+| `stage_sampler_only` | **46 of 432** | same |
+| `stage2b_oem_finetune` | **171 of 432** | constructed with `pretrained=False`, then warm-started from stage 2a |
+| `stage3_clsbal` | **171 of 432** | same |
 
-**What must be written:** the ten-seed spread is data-order and augmentation stochasticity at a fixed
-initialisation, not initialisation variance. This is a narrower source of variation than "ten seeds"
-usually implies, and it cuts both ways — it makes the paired contrasts more sensitive because the
-cells share a starting point, and it means the reported spread understates what someone re-running
-from a different pretrained download would see.
+So the seeds are genuine independent draws of the student pipeline: the randomly-initialised decoder
+head, the sampler draw order and the augmentation RNG all vary. A repeated seed reproduces on the
+same machine.
+
+**What must be written:** the ten-seed spread covers decoder initialisation, sampler order and
+augmentation, at a fixed pretrained backbone. The backbone is held constant by design across all
+four cells, which is what makes the paired contrasts interpretable.
 
 **Bitwise reproducibility is not claimed, and is not pursued.** `precision="bf16-mixed"` makes
 reduction order hardware-dependent, so identical numbers across machines are unattainable without
 pinning the GPU, which a shared cluster cannot offer. Forcing
 `torch.use_deterministic_algorithms(True)` would buy a property no reader needs at the cost of
 training speed and of ops that have no deterministic kernel. What is claimed instead is statistical
-reproducibility — the seed set, the spread over it, and the conditions that produced it. Each run now
+reproducibility — the seed set, the spread over it, and the conditions that produced it. Each run
 writes `run_provenance_seed<N>.json` beside its checkpoint: commit, whether the tree was dirty, GPU,
 precision, torch and lightning versions, cuDNN flags and the seed.
+
+**The lesson, which is the same one this repository keeps teaching:** the false version was produced
+by a check run in the same process as the thing it checked. Building both models in one interpreter
+could not have detected a reseeding failure, because the module cache guaranteed the answer.

@@ -10,10 +10,11 @@ The final campaign is a 2x2 factorial over {OEM transfer} x {clsbal sampler}, ru
   sampler-only   stage_sampler_only    (-transfer, +sampler)
   full           stage3_clsbal         (+transfer, +sampler)  -- the final shipped model
 
-Each seed is an independent draw of the sampler and augmentation RNG, run through all four
-cells. NOT of the initialisation: every cell loads a fully pretrained ADE20K Swin-B
-(`pretrained=True`), and all 432 parameter tensors are byte-identical across seeds (measured
-2026-07-26). The reported spread is data-order and augmentation stochasticity only. This script reads every seed's ``metrics.json`` and reports:
+Each seed is an independent draw of the student pipeline (init + sampler/aug RNG) run
+through all four cells. Measured 2026-07-26 in separate processes: 46 of 432 parameter tensors
+differ between seed 42 and 43 in the baseline and sampler-only cells (the decoder head is randomly
+initialised; the Swin backbone is loaded from stseg_base.pth), and 171 differ in the two transfer
+cells, which construct unpretrained before warm-starting from stage 2a. This script reads every seed's ``metrics.json`` and reports:
 
   * Per-cell mean +/- *sample* std (ddof=1) per class -- the reproducibility statistic.
   * The three factorial effects as **within-seed paired contrasts across the seeds**, each

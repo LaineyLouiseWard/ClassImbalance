@@ -299,7 +299,7 @@ def main():
     # so a number is attributable only if the hardware and versions travel with it.
     import json, platform, subprocess
     prov = {
-        "seed": args.seed,
+        "seed": seed,
         "config": str(args.config_path),
         "split_tag": os.environ.get("SPLIT_TAG"),
         "max_epoch": config.max_epoch,
@@ -310,8 +310,8 @@ def main():
         "python": platform.python_version(),
         "cudnn_deterministic": bool(torch.backends.cudnn.deterministic),
         "cudnn_benchmark": bool(torch.backends.cudnn.benchmark),
-        "note": ("initialisation is NOT reseeded: the backbone is fully pretrained, so seeds vary "
-                 "data order and augmentation only"),
+        "note": ("seeds vary the randomly-initialised decoder head, the sampler order and the "
+                 "augmentation RNG; the Swin backbone is loaded from stseg_base.pth"),
     }
     try:
         prov["commit"] = subprocess.check_output(
@@ -323,8 +323,8 @@ def main():
     except Exception:
         prov["commit"] = prov["dirty"] = None
     out = Path(config.weights_path); out.mkdir(parents=True, exist_ok=True)
-    (out / f"run_provenance_seed{args.seed}.json").write_text(json.dumps(prov, indent=2))
-    print(f"[provenance] {out / f'run_provenance_seed{args.seed}.json'}")
+    (out / f"run_provenance_seed{seed}.json").write_text(json.dumps(prov, indent=2))
+    print(f"[provenance] {out / f'run_provenance_seed{seed}.json'}")
 
     trainer.fit(model, config.train_loader, config.val_loader, ckpt_path=resume_from)
 

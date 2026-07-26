@@ -389,10 +389,13 @@ seeding before `py2cfg` are all already in place and were verified to work.
 
 **What was done instead, because both are cheap and both have standing:**
 
-1. **A measured correction.** The seeds do not vary initialisation. All 432 parameter tensors are
-   identical at seed 42 and 43 in every cell, because the backbone is fully pretrained. The claim
-   that each seed is "an independent draw of the student pipeline (init + sampler/aug RNG)" was
-   false and is fixed. Recorded in the methods list, §9.
+1. **Run provenance.** See item 2. (An earlier version of this entry claimed the seeds do not vary
+   initialisation, on a measurement of all 432 parameter tensors being identical. **That claim was
+   withdrawn on 2026-07-26**: it was measured inside a single Python process, and `py2cfg` caches the
+   module, so the second build reused the first network. Re-measured in separate processes, 46 of 432
+   tensors differ in the baseline and sampler-only cells and 171 in the two transfer cells. The seeds
+   are genuine independent draws of the student pipeline, as originally documented. Corrected in the
+   methods list, §9. The decision above is unaffected — it never depended on this.)
 2. **Run provenance.** Nothing anywhere recorded what produced a checkpoint. Each run now writes
    `run_provenance_seed<N>.json` beside its weights: commit and dirty flag, GPU, precision, torch and
    lightning versions, cuDNN flags, split tag and seed. A number is attributable only if the

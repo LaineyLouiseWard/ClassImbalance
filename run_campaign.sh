@@ -26,7 +26,6 @@ set -euo pipefail
 
 SEEDS=(42 43 44 45 46 47 48 49 50 51)   # LOCKED 10-seed campaign set
 ROOT_SEED=42                      # the seed that lives in this repo (others = worktrees)
-TEACHER=pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # this repo = root seed
 STATE="$ROOT/.campaign"
@@ -100,8 +99,12 @@ for SEED in "${SEEDS[@]}"; do
       fi
     fi
     run ln -sfn "$ROOT/data" "$DIR/data"
-    run mkdir -p "$DIR/pretrain_weights"
-    run ln -sfn "$ROOT/$TEACHER" "$DIR/$TEACHER"
+    # The WHOLE weights directory, not one file. pretrain_weights/ is gitignored, so a worktree gets
+    # it empty, and this used to symlink only the teacher -- leaving stseg_base.pth absent. Three of
+    # the four cells call ft_unetformer(pretrained=True, weight_path="pretrain_weights/stseg_base.pth")
+    # at module scope, so they cannot even parse their config without it, and 36 of the 40 runs died.
+    run rm -rf "$DIR/pretrain_weights"
+    run ln -sfn "$ROOT/pretrain_weights" "$DIR/pretrain_weights"
   fi
 
   # The resumable per-seed run: sampler build, full leakage gate, training, evaluation (qualitative
