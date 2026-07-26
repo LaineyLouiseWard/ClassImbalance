@@ -294,6 +294,38 @@ def main():
         f"Checkpoint monitor must be 'val_mIoU' (foreground-only mIoU). Got: '{config.monitor}'"
     )
 
+    # What produced this checkpoint. Recorded because none of it was written down anywhere, and
+    # because bitwise reproducibility is NOT claimed: bf16-mixed makes reduction order GPU-dependent,
+    # so a number is attributable only if the hardware and versions travel with it.
+    import json, platform, subprocess
+    prov = {
+        "seed": args.seed,
+        "config": str(args.config_path),
+        "split_tag": os.environ.get("SPLIT_TAG"),
+        "max_epoch": config.max_epoch,
+        "precision": "bf16-mixed" if torch.cuda.is_available() else "32",
+        "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
+        "torch": torch.__version__,
+        "lightning": pl.__version__,
+        "python": platform.python_version(),
+        "cudnn_deterministic": bool(torch.backends.cudnn.deterministic),
+        "cudnn_benchmark": bool(torch.backends.cudnn.benchmark),
+        "note": ("initialisation is NOT reseeded: the backbone is fully pretrained, so seeds vary "
+                 "data order and augmentation only"),
+    }
+    try:
+        prov["commit"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[1],
+            text=True, stderr=subprocess.DEVNULL).strip()
+        prov["dirty"] = bool(subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=Path(__file__).resolve().parents[1],
+            text=True, stderr=subprocess.DEVNULL).strip())
+    except Exception:
+        prov["commit"] = prov["dirty"] = None
+    out = Path(config.weights_path); out.mkdir(parents=True, exist_ok=True)
+    (out / f"run_provenance_seed{args.seed}.json").write_text(json.dumps(prov, indent=2))
+    print(f"[provenance] {out / f'run_provenance_seed{args.seed}.json'}")
+
     trainer.fit(model, config.train_loader, config.val_loader, ckpt_path=resume_from)
 
 

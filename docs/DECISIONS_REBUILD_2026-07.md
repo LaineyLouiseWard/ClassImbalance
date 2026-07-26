@@ -369,3 +369,36 @@ Nothing "fails".
 **Consequence:** the interval-coverage work is no longer decision-critical and its simulation stays in
 session scratch rather than being productionised. Had the threshold been kept it would have needed to
 be in the repository and on Zenodo.
+
+## D19 — Statistical reproducibility, not bitwise. Decided, not deferred — 2026-07-26
+
+**Decision:** do not pursue bitwise seed reproducibility. Do not set
+`torch.use_deterministic_algorithms(True)` or `Trainer(deterministic=True)`, and keep
+`precision="bf16-mixed"`.
+
+**Why.** Bitwise determinism is unattainable here regardless: bf16 mixed precision makes reduction
+order hardware-dependent, so the same seed on a different card gives different bits, and the campaign
+runs on a shared cluster. Chasing it would mean pinning hardware, losing speed, and hitting ops with
+no deterministic kernel — apparatus bought for a property no reader asks for. The same test that
+retired the rho threshold (D18) applies: machinery with nothing standing behind it.
+
+What the paper claims is a distribution over ten seeds with its spread reported, which is the
+reproducibility standard that actually applies. `cudnn.deterministic=True`, `cudnn.benchmark=False`,
+`seed_everything`, `pl.seed_everything(workers=True)`, seeded `worker_init_fn` and generators, and
+seeding before `py2cfg` are all already in place and were verified to work.
+
+**What was done instead, because both are cheap and both have standing:**
+
+1. **A measured correction.** The seeds do not vary initialisation. All 432 parameter tensors are
+   identical at seed 42 and 43 in every cell, because the backbone is fully pretrained. The claim
+   that each seed is "an independent draw of the student pipeline (init + sampler/aug RNG)" was
+   false and is fixed. Recorded in the methods list, §9.
+2. **Run provenance.** Nothing anywhere recorded what produced a checkpoint. Each run now writes
+   `run_provenance_seed<N>.json` beside its weights: commit and dirty flag, GPU, precision, torch and
+   lightning versions, cuDNN flags, split tag and seed. A number is attributable only if the
+   conditions travel with it.
+
+**Also settled here:** convergence at 1,072 tiles is assumed rather than probed. The 45-epoch budget
+ends at an LR minimum (D8) and a separate convergence study is not worth the GPU time against the
+deadline. If the first run's validation curve is still climbing it will be visible in the logs that
+are kept anyway.

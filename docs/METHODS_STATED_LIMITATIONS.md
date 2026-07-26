@@ -233,3 +233,29 @@ layout even though the assignment itself is discarded.
 
 **What must be written:** the study is three sites of eleven in the delivered data, and which two
 were excluded and why.
+
+## 9. The ten seeds vary data order and augmentation, not initialisation
+
+**Measured 2026-07-26 by importing each cell at seed 42 and seed 43 and comparing every parameter
+tensor. All 432 are byte-identical, in the baseline and in the full cell.** Every cell builds
+`ft_unetformer(pretrained=True)`, which loads the ImageNet-1K → ADE20K Swin-B in full, so nothing is
+randomly initialised. The seeds do differ, and genuinely: the sampler draw order and the augmentation
+RNG both change, and a repeated seed reproduces on the same machine.
+
+`aggregate_seeds.py` described each seed as "an independent draw of the student pipeline (init +
+sampler/aug RNG)". The init half of that was false and is corrected.
+
+**What must be written:** the ten-seed spread is data-order and augmentation stochasticity at a fixed
+initialisation, not initialisation variance. This is a narrower source of variation than "ten seeds"
+usually implies, and it cuts both ways — it makes the paired contrasts more sensitive because the
+cells share a starting point, and it means the reported spread understates what someone re-running
+from a different pretrained download would see.
+
+**Bitwise reproducibility is not claimed, and is not pursued.** `precision="bf16-mixed"` makes
+reduction order hardware-dependent, so identical numbers across machines are unattainable without
+pinning the GPU, which a shared cluster cannot offer. Forcing
+`torch.use_deterministic_algorithms(True)` would buy a property no reader needs at the cost of
+training speed and of ops that have no deterministic kernel. What is claimed instead is statistical
+reproducibility — the seed set, the spread over it, and the conditions that produced it. Each run now
+writes `run_provenance_seed<N>.json` beside its checkpoint: commit, whether the tree was dirty, GPU,
+precision, torch and lightning versions, cuDNN flags and the seed.
