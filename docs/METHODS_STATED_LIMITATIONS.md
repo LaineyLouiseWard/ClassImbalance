@@ -337,3 +337,57 @@ load-bearing for the band-width discussion. It must be added before submission.
 **Not established by any of the three:** an *exclusion* curve. All three compute accuracy inside a
 band that grows; none plots error outside an expanding band. Ours is the complement of Kohli's and
 should be defined from first principles rather than cited to anyone.
+
+## 11. What remote sensing does with boundaries, and why this paper fills a gap
+
+**Established 2026-07-26 by a second independent literature pass**, searching Scopus (key in
+`~/.env`), OpenAlex and the ISPRS benchmark documentation. It reached the same conclusions as the
+first pass on the three computer-vision papers, and added the domain evidence.
+
+**In aerial imagery the published convention is to DELETE the boundary band, not to report it.** The
+ISPRS 2D Semantic Labeling benchmark — Vaihingen at 9 cm, Potsdam at 5 cm — states: *"we also
+prepared references where the boundaries of objects are eroded by a circular disc of 3 pixel
+radius... Those eroded areas are then ignored during evaluation."* The stated motivation is *"to
+reduce the impact of uncertain border definitions on the evaluation"* — that is, label quality at
+boundaries, named as the reason, with no measurement offered for the choice of 3 px.
+
+**So this paper is not following a practice; it is filling a gap, and that is the stronger framing.**
+No published land-cover segmentation paper found reports accuracy as a function of distance to a
+class boundary as a curve. The nearest published work uses proxies rather than distance: van Oort et
+al. (2004, IJGIS) regress per-pixel correctness on 3x3 neighbourhood heterogeneity and patch size;
+Smith et al. (2002, PE&RS) find *"accuracy decreases as land-cover heterogeneity increases and as
+patch size decreases"*. Liu et al. (2016, Sci. China Earth Sci.) do stratify edge against interior,
+but to reduce the sample size needed to estimate overall accuracy, not to characterise where error
+concentrates — and the full text is paywalled, so **no number from it may be cited unverified**.
+
+**Two rate ratios exist in the literature, both derived from published tables rather than stated by
+their authors. Label them as derived, and name their denominators.**
+
+| source | domain | comparison | derived ratio |
+|---|---|---|---|
+| Csurka et al. 2013, Table 2 | natural images, PASCAL VOC | error in the r=5 px band vs error over the **whole image** | **1.71–1.86** |
+| Volpi & Tuia 2017, TGRS | aerial 9 cm / 5 cm land cover | all-pixel error vs error after 3 px boundary **erosion** (interior only) | Vaihingen **1.24–1.33**, Potsdam **1.14–1.19** |
+
+Neither is a boundary-to-interior rate ratio. Csurka's is band-against-whole-image, and the band's
+area fraction is unpublished, so the true ratio is larger and unrecoverable. Volpi & Tuia's is
+all-pixels-against-interior, and the eroded band's area fraction is likewise unpublished. **A
+boundary-to-interior error rate ratio, stated as such, appears in none of the papers opened.**
+
+Volpi & Tuia's own reading is worth quoting because it is the same phenomenon in the same kind of
+imagery: *"By evaluating on eroded boundary ground truths, we observe a similar behavior, but with
+significantly higher accuracies. This indicates that in all situations the boundaries are often
+blurred within the 3 pixel erosion radius."*
+
+**What must be written about the split, now settled by two independent passes.** The source papers do
+not address validation versus test. Csurka says why theirs is validation — *"the test set ... would
+require many evaluations on the PASCAL server"* — a logistics constraint. Cheng et al. never discuss
+it; every table is a val set. Kohli never states which images the curve covers. So computing the
+boundary evidence on held-out test sets is **stricter than any of the three**, cannot be claimed as
+"standard practice", and cannot be attacked as a departure either. State the silence, cite Csurka's
+footnote for what the default actually is, and justify the choice from this project's own history:
+the campaign was withdrawn because held-out ground had been contaminated.
+
+**Still unverified, and must not be cited until it is:** Liu et al. 2016 full text (paywalled — no
+width, no number, no split). Kohli's 27 hand-labelled images cannot be placed in train or test; the
+paper does not say. Cheng et al. was read via the arXiv version, so any quotation must be checked
+against the CVPR proceedings before submission.
