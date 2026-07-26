@@ -379,7 +379,10 @@ if run_stage B4c; then
 fi
 
 if run_stage B5; then
-  require_file model_weights/biodiversity/stage2b_oem_finetune_${SPLIT_TAG}/stage2b_oem_finetune_${SPLIT_TAG}.ckpt B3
+  # stage3_clsbal warm-starts from stage 2a, NOT 2b -- that symmetry is what makes the sampler
+  # contrast a single 45-epoch finetune on both levels of the transfer factor. This gated on 2b,
+  # the file it does not read.
+  require_file model_weights/biodiversity/stage2a_oem_pretrain_${SPLIT_TAG}/stage2a_oem_pretrain_${SPLIT_TAG}.ckpt B2
   require_file "$SAMPLER_TSV" B4
   echo "[B5] Stage 3: Class-balanced (clsbal) sampling — FINAL shipped model"
   PYTHONPATH=. python -m train.train_supervision \

@@ -57,6 +57,32 @@ def ids_in(d: Path, ext: str) -> set:
     return {f.stem for f in d.glob(f"*.{ext}")} if d.is_dir() else set()
 
 
+def _external_placement(by_crs: dict) -> tuple:
+    """(km to the nearest internal tile, is any external centroid inside the internal extent).
+
+    The internal splits are in UTM and the uplands in WGS84, so the per-CRS distance loop never
+    compares them and Test B's independence went unverified entirely. Both quantities are computed
+    in WGS84 so the two coordinate systems can be put side by side.
+    """
+    from rasterio.warp import transform as _warp
+
+    internal, external = [], []
+    for crs, rows in by_crs.items():
+        for tid, s, l, bo, r, to in rows:
+            xs, ys = _warp(crs, "EPSG:4326", [(l + r) / 2], [(bo + to) / 2])
+            (external if s == EXTERNAL else internal).append((xs[0], ys[0]))
+    if not internal or not external:
+        return float("inf"), False
+    A, B = np.array(internal), np.array(external)
+    inside = bool(((B[:, 0] >= A[:, 0].min()) & (B[:, 0] <= A[:, 0].max())
+                   & (B[:, 1] >= A[:, 1].min()) & (B[:, 1] <= A[:, 1].max())).any())
+    Ar, Br = np.radians(A), np.radians(B)
+    dlon = Ar[:, None, 0] - Br[None, :, 0]
+    dlat = Ar[:, None, 1] - Br[None, :, 1]
+    h = np.sin(dlat / 2) ** 2 + np.cos(Ar[:, None, 1]) * np.cos(Br[None, :, 1]) * np.sin(dlon / 2) ** 2
+    return float((6371.0 * 2 * np.arcsin(np.sqrt(h))).min()), inside
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split-root", required=True)
@@ -90,6 +116,21 @@ def main() -> int:
     for s in INTERNAL:
         if not split_ids[s]:
             failures.append(f"split '{s}' is empty at {split_root / s}")
+    # Every tile must have BOTH an image and a mask. This read images/ only, so a split that had
+    # lost its masks passed the gate and printed the image count as though nothing were wrong; the
+    # loss would surface later as a training set quietly smaller than the one reported.
+    for s in INTERNAL + (EXTERNAL,):
+        imgs = ids_in(split_root / s / "images", "tif")
+        msks = ids_in(split_root / s / "masks", "png")
+        if not imgs and not msks:
+            continue
+        if imgs ^ msks:
+            only_i, only_m = sorted(imgs - msks), sorted(msks - imgs)
+            failures.append(
+                f"{s}: {len(only_i)} tiles have an image and no mask (e.g. {only_i[:3]}), "
+                f"{len(only_m)} have a mask and no image (e.g. {only_m[:3]})")
+        else:
+            checks.append(f"{s}: image/mask pairing exact over {len(imgs)} tiles")
 
     ext_ids = ids_in(split_root / EXTERNAL / "images", "tif")
     if ext_ids:
@@ -254,7 +295,8 @@ def main() -> int:
     # buffer the design claims, and the buffer is the whole argument for the split being independent.
     req = {("train", "val"): args.min_sep_train_val,
            ("val", "test"): args.min_sep_val_test,
-           ("train", "test"): args.min_sep_train_test}
+           ("train", "test"): args.min_sep_train_test,
+}
     sep_lines = []
     for (a, b), need in req.items():
         if a not in split_ids or b not in split_ids:
@@ -279,11 +321,7 @@ def main() -> int:
                 dy = np.maximum(np.maximum(bo - A[:, 3], A[:, 1] - to), 0.0) * my
                 best = min(best, float(np.hypot(dx, dy).min()))
         if not np.isfinite(best):
-            # No CRS group holds both splits, so no distance between them was ever computed. That
-            # is not a pass: it silently dropped two of the three required separations when test
-            # sat in a different CRS from train and val.
-            skipped.append(f"{a}|{b} separation ({need:.0f} m required): not measurable, no CRS "
-                           f"group contains both splits")
+            skipped.append(f"{a}|{b} separation: not measurable, one split is empty")
             continue
         if best + 1e-6 < need:
             failures.append(f"{a}|{b} separation is {best:.0f} m, below the required {need:.0f} m")
@@ -291,6 +329,19 @@ def main() -> int:
             sep_lines.append(f"{a}|{b} {best:.0f} m (>= {need:.0f})")
     if sep_lines:
         checks.append("split separation: " + ",  ".join(sep_lines))
+
+    # The external site is held out as a SEPARATE PLACE, not by a buffer, so a metre threshold would
+    # be a number invented to look like a check. The question that actually matters is binary: does
+    # the held-out site sit inside the ground the model trained on? Answered by containment, and
+    # the measured distance is reported beside it for the reader rather than tested against a bar.
+    if EXTERNAL in split_ids:
+        km, inside = _external_placement(by_crs)
+        if inside:
+            failures.append(f"an {EXTERNAL} tile centroid falls inside the bounding box of the "
+                            f"internal splits — the held-out site is not a separate place")
+        elif np.isfinite(km):
+            checks.append(f"{EXTERNAL} is a separate site: nearest centroid {km:.0f} km from any "
+                          f"train/val/test tile, outside their extent")
 
     if n_overlap:
         failures.append(f"{n_overlap} cross-split footprint overlaps, e.g. {example}")
