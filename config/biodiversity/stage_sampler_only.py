@@ -37,7 +37,7 @@ ignore_index = 0
 #   b4 = batch 4, lr 6e-4 / backbone_lr 6e-5  (deployed-lineage setting; LR scaled x2 with batch)
 # --- Data split (env-gated): BIO_SPLIT selects which spatially blocked assignment to use.
 #   Default is the legacy random-by-tile split, which LEAKS (see
-#   notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
+#   notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
 _BIO_SPLIT = os.environ["BIO_SPLIT"]  # required: the old default was the LEAKY split
 _BIO_OEM = os.environ.get("BIO_OEM_COMBINED", "data/biodiversity_oem_combined")
 

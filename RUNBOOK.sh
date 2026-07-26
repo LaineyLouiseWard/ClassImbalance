@@ -43,7 +43,7 @@ fi
 # ---- Canonical paths ----
 # --- Split selection -------------------------------------------------------
 # The original random-by-tile split LEAKS: tiles are chipped on a 50% stride, so ~93% of each
-# held-out tile's ground area also sat inside a training tile (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md).
+# held-out tile's ground area also sat inside a training tile (notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md).
 # The campaign runs on spatially blocked splits built by scripts/data_prep/build_spatial_split.py.
 # Three folds, f1 to f3, each cutting a different strip of the inland site. Select one with
 #   SPLIT_TAG=f2 bash RUNBOOK.sh --from A2
@@ -179,7 +179,7 @@ if run_stage A1; then
   # the legacy three-directory layout, which downstream tooling reads as a flat POOL of all 2,143
   # tiles; the train/val/test assignment it writes is discarded and never trained on. The real
   # split is built in A1b. Splitting these overlap-chipped tiles at random is what leaked
-  # (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md), so nothing may consume this assignment.
+  # (notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md), so nothing may consume this assignment.
   echo "[A1] Unpacking Biodiversity tiles into the pool layout (assignment discarded; see A1b)"
   PYTHONPATH=. python scripts/data_prep/split_biodiversity_dataset.py \
     --in-root  "$BIO_RAW" \

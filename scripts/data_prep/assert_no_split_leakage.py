@@ -3,7 +3,7 @@
 Preflight gate: refuse to train if any held-out tile has reached the training side.
 
 The original campaign leaked because the tiles are chipped on a 50% stride and the split was
-random by tile (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md). The split is now spatially blocked, but
+random by tile (notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md). The split is now spatially blocked, but
 several artefacts are DERIVED from the training set and silently outlive a re-split:
 
   - data/biodiversity_oem_combined/train  (the stage2a pre-training pool -- if stale, the transfer

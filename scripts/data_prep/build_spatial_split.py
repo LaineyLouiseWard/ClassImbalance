@@ -6,7 +6,7 @@ WHY: the Biodiversity tiles are chipped on a 50% stride (256 x 256 m footprints 
 so every tile overlaps its eight neighbours. The original split
 (`scripts/data_prep/split_biodiversity_dataset.py`) assigns tiles at random, which puts ~93% of each
 held-out tile's ground area inside a training tile -- identical pixels and identical labels. See
-notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md.
+notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md.
 
 WHAT THIS DOES:
   1. Repools every tile from the existing split directories and reads its footprint from the

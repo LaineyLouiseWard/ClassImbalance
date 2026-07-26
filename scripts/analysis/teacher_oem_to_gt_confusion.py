@@ -13,7 +13,7 @@ From it, the grounded mappings are derived: the pre-train target is the argmax o
 This depends on the frozen teacher + the TRAINING masks, so it must be recomputed whenever the
 split changes. The committed matrix was measured on the pre-2026-07-25 random split, whose training
 set contained tiles that are now held out -- so information from now-test tiles fed a preprocessing
-decision (notes/TILE_OVERLAP_LEAKAGE_2026-07-25.md). Recompute per split and compare the derived
+decision (notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md). Recompute per split and compare the derived
 argmax mapping across splits: if it is identical everywhere, the harmonisation is not a source of
 split-dependent variation and the relabelled OEM pool stays valid, which is worth stating in the
 manuscript. If it moves, the OEM relabel (A8) and the combined pool (A10) must be rebuilt per split.
