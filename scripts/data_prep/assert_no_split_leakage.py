@@ -71,6 +71,10 @@ def main() -> int:
                     help="teacher->GT confusion for this split. Recorded for provenance: it carries "
                          "no tile ids, so it cannot be checked for held-out bleed directly, but a "
                          "matrix whose pixel count disagrees with the training set is stale.")
+    # Defaults are the shipped three-region design: train | 256 m | val | 650 m | test.
+    ap.add_argument("--min-sep-train-val", type=float, default=256.0)
+    ap.add_argument("--min-sep-val-test", type=float, default=650.0)
+    ap.add_argument("--min-sep-train-test", type=float, default=650.0)
     ap.add_argument("--no-external-test", action="store_true",
                     help="declare that this split intentionally has no held-out external site. "
                          "Without it, a missing external_test/ is a failure rather than a silent "
@@ -167,11 +171,21 @@ def main() -> int:
         # Keys are settlement_images / seminatural_images; a plain "ids" list is never written.
         aug_ids = (set(blob) if isinstance(blob, list)
                    else set(blob.get("settlement_images", [])) | set(blob.get("seminatural_images", [])))
+        # An empty id set means the keys were renamed, not that the list is clean. Without this the
+        # check printed "ok" over a file it had failed to read -- the same shape as the 2026-07-25 B2
+        # defect one layer up.
+        if not aug_ids:
+            failures.append(f"{aug.name} yielded zero ids: expected a list, or the keys "
+                            f"settlement_images / seminatural_images. Keys present: "
+                            f"{sorted(blob)[:6] if isinstance(blob, dict) else type(blob).__name__}")
         bleed = aug_ids & held_out
         if bleed:
             failures.append(f"{len(bleed)} held-out tiles in {aug.name}, "
                             f"e.g. {sorted(bleed)[:3]}")
         checks.append(f"augmentation list ({aug.name}): {len(aug_ids)} ids, no held-out bleed")
+    elif args.augmentation_list or os.environ.get("AUG_LIST"):
+        # Named explicitly but missing. Skipping silently is how a stale-artefact check disappears.
+        failures.append(f"augmentation list not found: {aug.relative_to(root)}")
 
     # 4. geometry, re-read from the rasters. Grouped by CRS because the inland site is in UTM metres
     # and the uplands in WGS84 degrees; comparing footprints across the two would be meaningless. The
@@ -197,6 +211,43 @@ def main() -> int:
                 if rows[j][1] != si:
                     n_overlap += 1
                     example = example or (ti, si, rows[j][0], rows[j][1])
+    # 4b. Minimum separation between splits, from the SAME independently re-read bounds. Until
+    # 2026-07-26 nothing anywhere enforced the buffer on the shipped path: splits 1 m apart, and
+    # splits exactly abutting, both returned PASSED. Zero overlap is a much weaker property than the
+    # buffer the design claims, and the buffer is the whole argument for the split being independent.
+    req = {("train", "val"): args.min_sep_train_val,
+           ("val", "test"): args.min_sep_val_test,
+           ("train", "test"): args.min_sep_train_test}
+    sep_lines = []
+    for (a, b), need in req.items():
+        if a not in split_ids or b not in split_ids:
+            continue
+        best = float("inf")
+        for crs, rows in by_crs.items():
+            ra = [r for r in rows if r[1] == a]
+            rb = [r for r in rows if r[1] == b]
+            if not ra or not rb:
+                continue
+            # Degrees -> metres at the group's own latitude; the inland site is already in metres.
+            lat = np.mean([(r[3] + r[5]) / 2 for r in rows])
+            geo = abs(lat) <= 90 and max(abs(r[2]) for r in rows) <= 180
+            mx = 111320.0 * np.cos(np.radians(lat)) if geo else 1.0
+            my = 111132.0 if geo else 1.0
+            A = np.array([r[2:] for r in ra], float)
+            for r in rb:
+                _, _, l, bo, rt, to = r
+                dx = np.maximum(np.maximum(l - A[:, 2], A[:, 0] - rt), 0.0) * mx
+                dy = np.maximum(np.maximum(bo - A[:, 3], A[:, 1] - to), 0.0) * my
+                best = min(best, float(np.hypot(dx, dy).min()))
+        if not np.isfinite(best):
+            continue
+        if best + 1e-6 < need:
+            failures.append(f"{a}|{b} separation is {best:.0f} m, below the required {need:.0f} m")
+        else:
+            sep_lines.append(f"{a}|{b} {best:.0f} m (>= {need:.0f})")
+    if sep_lines:
+        checks.append("split separation: " + ",  ".join(sep_lines))
+
     if n_overlap:
         failures.append(f"{n_overlap} cross-split footprint overlaps, e.g. {example}")
     checks.append(f"geometry: {sum(len(v) for v in by_crs.values())} tiles across "

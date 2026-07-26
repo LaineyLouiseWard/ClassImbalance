@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
-    list_val_tiles, load_mask, load_seed_stack, boundary_distance, GSD_M,
+    list_val_tiles, load_mask, load_seed_stack, boundary_distance,
 )
 
 N_BINS = 15
@@ -106,7 +106,9 @@ def run_cell(root, softmax_root, mask_dir, cell, seeds, stratify=False):
         correct = (pred == mask)
         overall.add(conf[fg], correct[fg])
         if stratify:
-            dist = boundary_distance(mask) * GSD_M                # metres
+            # Already metres, and per-site. Multiplying by GSD_M again halved every distance, so the
+            # 1.5 m band was applied at 0.75 m and the 8 m interior at 4 m (fixed 2026-07-26).
+            dist = boundary_distance(mask, iid)                   # metres
             nb = fg & (dist <= NEAR_M)
             fr = fg & (dist > FAR_M)
             near.add(conf[nb], correct[nb])

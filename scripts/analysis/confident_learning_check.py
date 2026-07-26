@@ -36,8 +36,11 @@ from geoseg.taxonomy import STUDENT_CLASSES  # noqa: E402
 
 C = len(STUDENT_CLASSES)                 # 6 (0 = background, 1..5 = foreground)
 FOREGROUND = np.arange(1, C)
-BND_PX = 3.0                             # boundary band <= 1.5 m
-INT_PX = 16.0                            # deep interior  >  8 m
+# Metres. These were BND_M/INT_M = 3.0/16.0 applied to distances that boundary_distance
+# already returns in metres, so the comments said 1.5 m and 8 m while the code did 3 m and
+# 16 m, and the output keys named _within_8m held within-16 m shares (fixed 2026-07-26).
+BND_M = 1.5                              # boundary band
+INT_M = 8.0                              # deep interior
 
 
 def build_arrays(softmax_root, mask_dir, cell, seeds):
@@ -59,7 +62,7 @@ def build_arrays(softmax_root, mask_dir, cell, seeds):
         labels[i] = m
         pred[i] = mean_p
         ent[i] = total
-        dist[i] = boundary_distance(m)
+        dist[i] = boundary_distance(m, iid)
         if (i + 1) % 50 == 0:
             print(f"[data] loaded {i + 1}/{n}")
     return ids, labels, pred, ent, dist
@@ -67,8 +70,8 @@ def build_arrays(softmax_root, mask_dir, cell, seeds):
 
 def enrichment(flag, dist, fg):
     """P(flag | boundary band) vs P(flag | deep interior), foreground pixels only."""
-    bnd = fg & (dist <= BND_PX)
-    inter = fg & (dist > INT_PX)
+    bnd = fg & (dist <= BND_M)
+    inter = fg & (dist > INT_M)
     p_bnd = flag[bnd].mean() if bnd.any() else np.nan
     p_int = flag[inter].mean() if inter.any() else np.nan
     return {
@@ -142,8 +145,8 @@ def main():
     boundary = {
         "cleanlab_flags": enrichment(issues, dist, fg),
         "model_error (reference)": enrichment(err, dist, fg),
-        "share_of_cleanlab_flags_within_8m": within_band_share(issues, dist, fg, INT_PX),
-        "share_of_model_error_within_8m": within_band_share(err, dist, fg, INT_PX),
+        "share_of_cleanlab_flags_within_8m": within_band_share(issues, dist, fg, INT_M),
+        "share_of_model_error_within_8m": within_band_share(err, dist, fg, INT_M),
         "share_of_cleanlab_flags_within_2m": within_band_share(issues, dist, fg, 4.0),
     }
 

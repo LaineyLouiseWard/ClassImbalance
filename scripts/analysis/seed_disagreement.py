@@ -158,7 +158,10 @@ class Accumulator:
     def add(self, total, expected, mi, dist, mask):
         fg = mask != BACKGROUND_INDEX
         # --- distance stratification ---
-        bidx = np.digitize(dist, DIST_BIN_EDGES_PX[1:-1])  # 0..nb-1
+        # Metres against metres. This binned against DIST_BIN_EDGES_PX until 2026-07-26, two lines
+        # below the comment saying it must not, which halved every band and read 48.8% of inland
+        # foreground within 8 m where the truth is 31.9%.
+        bidx = np.digitize(dist, DIST_BIN_EDGES_M[1:-1])  # 0..nb-1
         # all-pixel
         for b in range(len(self.d_n_all)):
             sel = bidx == b
