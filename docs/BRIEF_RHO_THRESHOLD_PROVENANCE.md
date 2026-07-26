@@ -176,7 +176,10 @@ implementations sharing no code — one using `utils.spatial_blocks`, one writte
 the rasters — agree on the geometry to seven digits.
 
 **The block structure.** Test A: 294 tiles, 16 blocks at 950 m, Kish n_eff **9.85**. Test B: 172
-scorable tiles after the registered boundary-free exclusion, 12 blocks, n_eff **7.36**. Test A's band
+scorable tiles after the registered boundary-free exclusion, 12 blocks, n_eff **7.36** — *corrected
+2026-07-26 to 14 blocks and n_eff 7.27; the 12 came from a block function that scaled 950 m by one
+mean latitude across two sites 50 km apart. See METHODS §6. The simulation below used 12, so it is
+very slightly pessimistic; the conclusion is unchanged and the brief is superseded anyway.* Test A's band
 area share 0.377737, Test B's 0.264796 — both reproduce the committed denominators exactly. Six of
 Test A's sixteen blocks hold 74% of its tiles; Test B's per-block band share spans 0.055 to 0.539.
 

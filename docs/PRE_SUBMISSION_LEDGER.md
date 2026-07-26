@@ -42,7 +42,7 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | E5 | `stage3_clsbal.py`: "num_samples = len(train set) = 1846 ... the same 1846 Bio tiles" — it is 1072 | E | DONE |
 | E6 | `taxonomy.py`: OEM Water "argmax Grassland (0.553)" — the shipped matrix says 0.7525 soft / 0.7485 hard | E | DONE |
 | E7 | shipped factorial configs carry stale comments and a copy-pasted docstring misdescribing the cells | E | DONE |
-| E8 | METHODS §6 changes what "block" means mid-paragraph; the boundary-free exclusion costs zero blocks | E | OPEN |
+| E8 | METHODS §6: the exclusion costs zero blocks — and the 12-vs-14 gap was **two block functions disagreeing**, `spatial_blocks` scaling 950 m by one mean latitude across two sites 50 km apart. Fixed; both now give 14 | E | DONE |
 | E9 | METHODS §7's interval numbers have no committed code, contradicting the file's own opening rule | E | OPEN |
 | E10 | `artifacts/replication_exposure_report.json` is a month stale, matches no split, referenced by nothing | E | OPEN |
 

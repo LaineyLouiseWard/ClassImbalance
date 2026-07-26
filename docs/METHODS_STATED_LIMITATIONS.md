@@ -166,8 +166,19 @@ exchangeable draws claims more independence than there is.
 | test (Test A) | 294 | 16 | **9.85** | 9.77 | 43, 36, 36, 35, 34, 33, 18, 17, 8, 7, 7, 6, 5, 4, 3, 2 |
 | external_test (Test B) | 191 | 14 | **7.15** | 5.78 | 42, 37, 34, 15, 14, 14, 9, 6, 6, 4, 4, 2, 2, 2 |
 
-Restricted to the 172 Test B tiles that carry a ground-truth boundary, the count is 12 blocks and
-n_eff **7.36** by tiles — independently reproduced twice from the raw rasters.
+Restricted to the 172 Test B tiles that carry a ground-truth boundary: **still 14 blocks**, n_eff
+**7.27**. The registered exclusion removes 19 tiles from one crowded block and costs **no blocks at
+all**; it raises n_eff slightly because it evens the distribution out.
+
+**Corrected 2026-07-26.** Earlier versions of this section reported Test B as 12 blocks with n_eff
+7.36 after the exclusion, against 14 and 7.15 before it — as though the exclusion cost two blocks. It
+does not. The 12 came from a second, disagreeing implementation: `utils.spatial_blocks` grouped tiles
+by coordinate system alone, and ireland1 and ireland2 share EPSG:4326 while sitting ~50 km apart at
+51.54 and 52.03 degrees. It converted 950 m into degrees of longitude using **one mean latitude
+across both sites**, putting the cell edges somewhere neither site's own scaling would. So the
+bootstrap unit for Test B and the class-support unit for Test B were different partitions of the same
+ground, both described as "independent 950 m blocks". `spatial_blocks` now groups by site as well as
+CRS, and the two agree at 14.
 
 **What must be written:** n_eff beside n_blocks wherever a block bootstrap is reported. Six of Test
 A's sixteen blocks hold 74% of its tiles.

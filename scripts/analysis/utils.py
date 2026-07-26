@@ -162,8 +162,15 @@ def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict
     out = {}
     by_crs = defaultdict(list)
     for r in rows:
-        by_crs[r[4]].append(r)
-    for crs, rs in by_crs.items():
+        # Group by (CRS, SITE), not CRS alone. ireland1 and ireland2 share EPSG:4326 but sit ~50 km
+        # apart at 51.54 and 52.03 degrees, and this took ONE mean latitude across both to convert
+        # 950 m into degrees of longitude. That put the cell edges in a different place from
+        # build_spatial_split.support_blocks, which scales per site, so the two functions disagreed
+        # on how many independent blocks Test B has -- 12 against 14 -- while both claimed to be
+        # counting the same thing. Per-site scaling is the correct one: a cell is 950 m at the
+        # latitude where it actually lies.
+        by_crs[(r[4], r[0].split("_")[0])].append(r)
+    for (crs, _site), rs in by_crs.items():
         lat = float(np.mean([r[2] for r in rs]))
         if rs[0][3]:
             sx = block_m / (111320.0 * math.cos(math.radians(lat)))
@@ -171,7 +178,7 @@ def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict
         else:
             sx = sy = block_m
         for tid, cx, cy, _, _ in rs:
-            out[tid] = (crs, int(math.floor(cx / sx)), int(math.floor(cy / sy)))
+            out[tid] = (crs, _site, int(math.floor(cx / sx)), int(math.floor(cy / sy)))
     return out
 
 
