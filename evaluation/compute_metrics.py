@@ -173,7 +173,7 @@ def evaluate_checkpoint(
     tta_scales: tuple = (1.0,),
     tta_flips: str = "",
     in_chans: int = 3,
-) -> Tuple[dict, np.ndarray]:
+) -> Tuple[dict, np.ndarray, dict]:
     model = build_model(num_classes=6, in_chans=in_chans).to(device)
     model = load_checkpoint_into_model(model, ckpt_path, device)
     model.eval()
@@ -195,12 +195,19 @@ def evaluate_checkpoint(
 
     evaluator = Evaluator(num_class=6, ignore_index=ignore_index)
     cm = np.zeros((6, 6), dtype=np.int64)
+    # Per-tile intersections and unions, so accuracy can be re-stratified afterwards (by distance to
+    # the nearest training tile, by site, by exposure) without re-running inference. Stored as raw
+    # counts rather than per-tile IoU ratios: pooling counts and then dividing is the convention used
+    # for every reported metric, and averaging per-tile ratios would weight a tile holding twelve
+    # pixels of cropland the same as one holding half a million.
+    per_tile: dict = {}
 
     softmax = nn.Softmax(dim=1)
 
     for batch in tqdm(loader, desc=f"Evaluating {ckpt_path.name}", leave=False):
         images = batch["img"].to(device)
         masks = batch["gt_semantic_seg"].cpu().numpy()  # (B,H,W)
+        tile_ids = batch["img_id"]
 
         if tta:
             preds = tta_predict(model, images, tta_scales, tta_flips, softmax)  # (B,H,W)
@@ -208,10 +215,19 @@ def evaluate_checkpoint(
             outputs = model(images)
             preds = softmax(outputs).argmax(dim=1).cpu().numpy()  # (B,H,W)
 
-        for true, pred in zip(masks, preds):
+        for tile_id, true, pred in zip(tile_ids, masks, preds):
             t_flat, p_flat = _apply_ignore_mask(true, pred, ignore_index)
-            cm += confusion_matrix(t_flat, p_flat, labels=list(range(6)))
+            tile_cm = confusion_matrix(t_flat, p_flat, labels=list(range(6)))
+            cm += tile_cm
             evaluator.add_batch(t_flat, p_flat)
+            # _apply_ignore_mask drops pixels whose TRUTH is the ignore class, but the model can
+            # still predict that class elsewhere, so its column stays populated and it would be
+            # recorded with intersection 0 and a non-zero union. That is a meaningless IoU of 0
+            # rather than an absent class, so drop it outright and leave only scorable classes.
+            tp = np.diag(tile_cm)
+            union = tile_cm.sum(axis=1) + tile_cm.sum(axis=0) - tp
+            per_tile[tile_id] = {int(k): [int(tp[k]), int(union[k])] for k in range(6)
+                                 if union[k] > 0 and k != ignore_index}
 
     iou_all = evaluator.Intersection_over_Union()
     f1_all = evaluator.F1()
@@ -238,7 +254,7 @@ def evaluate_checkpoint(
         "per_class_iou": {CLASS_NAMES_6[i]: float(iou_all[i]) for i in range(6)},
         "per_class_f1": {CLASS_NAMES_6[i]: float(f1_all[i]) for i in range(6)},
     }
-    return metrics, cm
+    return metrics, cm, per_tile
 
 
 def plot_confusion_matrix(cm: np.ndarray, out_dir: Path) -> None:
@@ -359,7 +375,7 @@ def main() -> None:
 
         logging.info(f"Evaluating: {ckpt}")
 
-        metrics, cm = evaluate_checkpoint(
+        metrics, cm, per_tile = evaluate_checkpoint(
             ckpt_path=ckpt,
             data_root=data_root,
             split=args.split,
@@ -375,6 +391,10 @@ def main() -> None:
 
         with open(run_dir / "metrics.json", "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)
+
+        # Consumed by scripts/analysis/accuracy_vs_separation.py.
+        with open(run_dir / "per_tile_iou.json", "w", encoding="utf-8") as f:
+            json.dump(per_tile, f, separators=(",", ":"))
 
         plot_confusion_matrix(cm, run_dir)
         np.save(run_dir / "confusion_matrix.npy", cm)
