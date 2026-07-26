@@ -173,3 +173,50 @@ limitations that weakened the generalisation claim. They do not.
 **What DOES remain a limitation, narrower than before:** the test strip sits at the far edge of the
 site, so it is not a random sample of the surveyed landscape. State that in §2 with the buffer-drop
 comparison.
+
+## D14 — My own tiering of the final audit, where it differs from the auditor's — 2026-07-26
+
+The auditor recalibrated its report into three tiers. I checked each call rather than accepting it.
+Three of its judgements do not survive, and one of mine did not either.
+
+**Agreed, with a better reason than the one given.** The NaN downgrade is right, but not because the
+pixels are off-mosaic fill rather than corruption. Measured: no-data pixels carry a foreground label in
+0.00% of train, 0.00% of test and 0.13% of external_test pixels. They are labelled background, and
+background is the ignore class, so they never enter the loss or any metric. The residual effect is
+contextual only — the encoder sees dark regions through its receptive field in 80% of Test B tiles
+against 8% of training tiles. One sentence in the methods. Same conclusion for the train/test background
+asymmetry.
+
+**Disagreed 1 — the class mapping is not "the only serious finding".** Its stated mechanism was measured
+false (D11). The auditor's restatement, that "the transfer factor isn't what the paper says it is", is a
+disclosure obligation about what OEM contributes, not a reason to rebuild the pool. No pool rebuild
+follows, so no run is wasted. There is therefore no tier-1 *scientific* blocker at all — only plumbing
+and two documentation acts.
+
+**Disagreed 2 — the step confound was dropped from every tier, and should not have been.** Verified from
+the imported configs, not from the audit: baseline 536 steps/epoch × 45 = 24,120 Biodiversity gradient
+steps; stage 2a 1,595 steps/epoch × 45 × (1,072/3,190 Bio share) = 24,120 more. Transfer arm 48,240
+against baseline 24,120, a ratio of exactly **2.00×**, and exact by construction since the Bio tiles are
+seen once per epoch either way. This is a confound on main effect A, the paper's headline factor. It is
+neither plumbing nor a write-up decision. Per D12 it is handled by registration rather than redesign —
+but registration must happen BEFORE results exist, which makes it tier 1 by timing even though it
+changes no code.
+
+**Disagreed 3 — 950 m is not just an analysis choice to revisit after the runs.** It is also the block
+size in `MIN_CLASS_BLOCKS`, the criterion that admitted this split. Measured on the shipped split:
+
+    650 m   train 33  val 12  test  9   PASSES
+    750 m   train 29  val 10  test  9   PASSES
+    950 m   train 23  val  6  test  8   PASSES
+    1350 m  train 14  val  8  test  6   FAILS
+
+So the split's admissibility depends on which correlogram number is used, and it fails under the
+spectral one. **Resolution, which is reasoning rather than re-cutting:** block support is a
+class-composition criterion, so the composition range is the right denominator — 750 m on the shipped
+subsample, 950 m on the full pool — and the split passes at both. The 1350 m figure is the *spectral*
+range and answers a different question (imagery similarity, not class-composition independence). This
+argument must be written into the methods now. No re-cut is needed, but it cannot be left to be
+discovered under review.
+
+**My tier 1, therefore:** the factorial wiring, the A1b/A2 ordering, registering the step confound, and
+writing the block-size justification. Two code bugs and two documentation acts.

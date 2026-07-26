@@ -126,6 +126,15 @@ the task list — it changes what is urgent, and it withdraws two findings.
 - **Noise, worth one line each and no more:** A9's no-op, the `N3` stage entry, the numpy pin drift,
   `data/oem_combined_f1/test/`, the uncommitted RUNBOOK message.
 
+**Three of the auditor's calls were checked and do not survive — see D14 in the decisions log.** In
+short: (a) the class mapping is not a blocker and no pool is rebuilt, so no run is wasted; (b) the 2.00x
+transfer step confound was dropped from every tier and belongs in tier 1 by timing, because registering
+it after results exist makes it worthless; (c) 950 m is not merely a post-hoc analysis choice — it is
+the block size that admitted this split, and the split FAILS its own adequacy floor at 1350 m, so the
+choice of correlogram needs a written justification before launch. Its NaN and background downgrades
+are correct, though for a different reason than it gave: those pixels carry background labels and
+background is the ignore class, so they never score.
+
 **The auditor's own headline:** *"the split and the leakage gate are solid — I attacked them six ways
 and they held, and the annotation-pass and denominator numbers reproduce exactly. What's left is one
 substantive problem (the class mapping) and a handful of plumbing bugs between training and
