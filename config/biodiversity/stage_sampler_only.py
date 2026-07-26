@@ -25,7 +25,9 @@ from geoseg.utils.optim import Lookahead, process_model_params
 # -----------------------
 # Training hyperparams
 # -----------------------
-max_epoch = 50  # raised from 45: the folds train on ~1.1k tiles, not 1706
+max_epoch = 45  # two complete CosineAnnealingWarmRestarts cycles (T_0=15, T_mult=2),
+                # so training ends at an LR minimum. 50 would end mid-cycle and break the
+                # save_last/checkpoint rationale. The next valid stop is 105.
 
 # Loss/metric ignore label (you confirmed: background=0 should be ignored)
 ignore_index = 0

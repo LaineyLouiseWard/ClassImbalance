@@ -149,6 +149,9 @@ SUPPORT_BLOCK_M = 950.0
 # blocks and was fine, while validation cropland at 7.00% share and 2.6M pixels had 3 blocks and was
 # not. The share floor passes the second and rejects the first, i.e. exactly backwards.
 MIN_CLASS_BLOCKS = 5
+# Floor on the training strip. Not tight -- the 80/10/10 ranking term controls the size in
+# practice; this only rejects degenerate placements.
+MIN_TRAIN_TILES = 500
 
 
 def support_blocks(pool: dict, block_m: float = SUPPORT_BLOCK_M) -> dict:
@@ -337,9 +340,9 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
         # convergence, and is never reported, so it needs enough tiles for that choice to be stable
         # rather than enough to publish. A single shared minimum at 150 admitted only two distinct
         # folds; separating them admits three without weakening the test sets at all.
-        need = {"train": 500,
-                "val": min_val_tiles if min_val_tiles is not None else min_tiles,
-                "test": min_test_tiles if min_test_tiles is not None else min_tiles}
+        need = {"train": MIN_TRAIN_TILES,
+                "val": min_val_tiles if min_val_tiles is not None else MIN_TRAIN_TILES,
+                "test": min_test_tiles if min_test_tiles is not None else MIN_TRAIN_TILES}
         if any(got.get(sp, 0) < need[sp] for sp in SPLITS):
             continue
         # Each fold must hold out substantially different ground from every earlier fold. Bounded
@@ -419,7 +422,7 @@ def build_three_region(pool: dict, counts: dict, site: str, external: tuple,
         raise SystemExit(
             f"no viable cut placement in {restarts} tries ({n_below_blocks} rejected for a class with under {min_class_blocks} independent "
             f"{SUPPORT_BLOCK_M:.0f} m blocks in some split; the rest "
-            f"left under {min_tiles} tiles in a split or duplicated an earlier fold's test ground). "
+            f"left under {MIN_TRAIN_TILES} tiles in a split or duplicated an earlier fold's test ground). "
             f"Raise --restarts, widen the strip fractions, or lower --min-split-tiles.")
     _, geom, kept, dropped, worst, shares = best
     return {"assignment": kept, "dropped": dropped, "geometry": geom,

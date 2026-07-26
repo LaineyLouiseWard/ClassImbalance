@@ -317,6 +317,15 @@ def main() -> None:
         default="evaluation/evaluation_results",
         help="Where to write evaluation outputs.",
     )
+    ap.add_argument(
+        "--checkpoints",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Explicit checkpoint paths to score, bypassing the recursive --base-dir search. Prefer "
+             "this: rglob over model_weights/ picks up every stale checkpoint in the tree, including "
+             "superseded ones from withdrawn campaigns, and scores them silently.",
+    )
     ap.add_argument("--pattern", type=str, default="*.ckpt", help="Checkpoint filename pattern.")
     ap.add_argument("--num-workers", type=int, default=0, help="Dataloader workers.")
     ap.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
@@ -351,9 +360,16 @@ def main() -> None:
 
     device = torch.device(args.device if (args.device == "cpu" or torch.cuda.is_available()) else "cpu")
 
-    ckpts = sorted(base_dir.rglob(args.pattern))
-    if not ckpts:
-        raise FileNotFoundError(f"No checkpoints found under {base_dir} with pattern {args.pattern}")
+    if args.checkpoints:
+        ckpts = [Path(c).resolve() for c in args.checkpoints]
+        missing = [str(c) for c in ckpts if not c.is_file()]
+        if missing:
+            raise FileNotFoundError(f"checkpoints not found: {missing}")
+    else:
+        ckpts = sorted(base_dir.rglob(args.pattern))
+        if not ckpts:
+            raise FileNotFoundError(
+                f"No checkpoints found under {base_dir} with pattern {args.pattern}")
 
     logging.basicConfig(level=logging.INFO)
     logging.info(f"Found {len(ckpts)} checkpoints under {base_dir}")

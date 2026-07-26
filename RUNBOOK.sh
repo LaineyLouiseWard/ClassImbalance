@@ -330,7 +330,7 @@ if run_stage B2; then
 fi
 
 if run_stage B3; then
-  require_file model_weights/biodiversity/stage2a_oem_pretrain/stage2a_oem_pretrain.ckpt B2
+  require_file model_weights/biodiversity/stage2a_oem_pretrain_${SPLIT_TAG}/stage2a_oem_pretrain_${SPLIT_TAG}.ckpt B2
   echo "[B3] Stage 2b: OEM-transfer finetune on Biodiversity (init from 2a)"
   PYTHONPATH=. python -m train.train_supervision \
     -c config/biodiversity/stage2b_oem_finetune.py $FORCE_TRAIN
@@ -370,7 +370,7 @@ if run_stage B4c; then
 fi
 
 if run_stage B5; then
-  require_file model_weights/biodiversity/stage2b_oem_finetune/stage2b_oem_finetune.ckpt B3
+  require_file model_weights/biodiversity/stage2b_oem_finetune_${SPLIT_TAG}/stage2b_oem_finetune_${SPLIT_TAG}.ckpt B3
   require_file "$SAMPLER_TSV" B4
   echo "[B5] Stage 3: Class-balanced (clsbal) sampling — FINAL shipped model"
   PYTHONPATH=. python -m train.train_supervision \
@@ -416,20 +416,20 @@ if run_stage C1b; then
 fi
 
 if run_stage C2; then
-  require_file model_weights/biodiversity/stage1_baseline/stage1_baseline.ckpt B1
-  require_file model_weights/biodiversity/stage3_clsbal/stage3_clsbal.ckpt B5
+  require_file model_weights/biodiversity/stage1_baseline_${SPLIT_TAG}/stage1_baseline_${SPLIT_TAG}.ckpt B1
+  require_file model_weights/biodiversity/stage3_clsbal_${SPLIT_TAG}/stage3_clsbal_${SPLIT_TAG}.ckpt B5
   require_nonempty "$SPLIT_ROOT"/test/images A1
   echo "[C2] Evaluating held-out test set (Stage 1 baseline + Stage 3 final; intermediate stages not on test)"
   # Baseline AND final on the test split, WITHOUT TTA — C4 (export_final_test_table) needs both metrics.json files.
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split test \
-    --base-dir model_weights/biodiversity/stage1_baseline \
+    --base-dir model_weights/biodiversity/stage1_baseline_${SPLIT_TAG} \
     --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test \
     --force
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split test \
-    --base-dir model_weights/biodiversity/stage3_clsbal \
+    --base-dir model_weights/biodiversity/stage3_clsbal_${SPLIT_TAG} \
     --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test \
     --force
@@ -441,7 +441,7 @@ if run_stage C2; then
   # and must not be silently turned on there.
   PYTHONPATH=. python evaluation/compute_metrics.py \
     --split test \
-    --base-dir model_weights/biodiversity/stage3_clsbal \
+    --base-dir model_weights/biodiversity/stage3_clsbal_${SPLIT_TAG} \
     --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test_tta \
     --tta --tta-flips hv --tta-scales 0.75,1.0,1.25 \

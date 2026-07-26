@@ -40,7 +40,9 @@ from geoseg.utils.optim import Lookahead, process_model_params
 # -------------------
 # Training hyperparams (match Stage 1 / Stage 2a)
 # -------------------
-max_epoch = 50  # raised from 45: the folds train on ~1.1k tiles, not 1706
+max_epoch = 45  # two complete CosineAnnealingWarmRestarts cycles (T_0=15, T_mult=2),
+                # so training ends at an LR minimum. 50 would end mid-cycle and break the
+                # save_last/checkpoint rationale. The next valid stop is 105.
 ignore_index = 0
 
 # --- Batch/LR variant (env-gated): BATCH_VARIANT=b2 (default) | b4 — MUST match across all 5 cells ---
@@ -92,9 +94,7 @@ check_val_every_n_epoch = 1
 
 # init from the Stage 2a OEM pretrain checkpoint
 pretrained_ckpt_path = (
-    "model_weights/biodiversity/"
-    "stage2a_oem_pretrain/"
-    "stage2a_oem_pretrain.ckpt"
+    f"model_weights/biodiversity/stage2a_oem_pretrain{_SUF}/stage2a_oem_pretrain{_SUF}.ckpt"
 )
 
 resume_ckpt_path = None
