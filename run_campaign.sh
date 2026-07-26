@@ -5,8 +5,8 @@
 #   bash run_campaign.sh            # run / resume the full 10-seed campaign
 #   DRYRUN=1 bash run_campaign.sh   # print the exact plan, run nothing
 #
-# This is the LOCAL driver. The definitive 10-seed run is the Sonic array
-# (sonic/10_submit_final_campaign.slurm); use this for local dev / single seeds.
+# This is the LOCAL driver. The definitive 10-seed run is sonic/campaign/submit_campaign.sh;
+# use this for local dev / single seeds.
 #
 # You do NOT need to remember which seed or stage you were on. Re-run this after
 # ANY interruption (Ctrl-C, reboot, CUDA crash) and it picks up automatically:
@@ -54,9 +54,13 @@ if ! python -c "import torch" >/dev/null 2>&1; then
   exit 1
 fi
 
-run() {   # echo the command; execute it unless DRYRUN=1
+# Anything but empty or "0" is a dry run: DRYRUN=true used to submit for real.
+DRY=0
+case "${DRYRUN:-0}" in ""|0|no|false) DRY=0 ;; *) DRY=1 ;; esac
+
+run() {   # echo the command; execute it unless DRYRUN is set
   echo "+ $*"
-  [ "${DRYRUN:-0}" = "1" ] || "$@"
+  [ "$DRY" = "1" ] || "$@"
 }
 
 for SEED in "${SEEDS[@]}"; do
@@ -78,15 +82,32 @@ for SEED in "${SEEDS[@]}"; do
     DIR="$(dirname "$ROOT")/$(basename "$ROOT")_seed$SEED"
     # Create the worktree + shared symlinks on first touch (all idempotent).
     [ -d "$DIR" ] || run git -C "$ROOT" worktree add --detach "$DIR" "$CAMPAIGN_COMMIT"
+    # An EXISTING worktree is the hole the root-tree check does not cover: it was created at some
+    # earlier commit and is never moved, so a resumed campaign can run seed 43 on different code
+    # from seed 42 with nothing recording it. Check the commit and the cleanliness of each one.
+    if [ -d "$DIR" ] && [ "$DRY" != "1" ]; then
+      WT_COMMIT="$(git -C "$DIR" rev-parse HEAD)"
+      WT_DIRT="$(git -C "$DIR" status --porcelain)"
+      if [ "$WT_COMMIT" != "$CAMPAIGN_COMMIT" ]; then
+        echo "ERROR: seed $SEED worktree $DIR is at $WT_COMMIT, campaign is at $CAMPAIGN_COMMIT." >&2
+        echo "  Move it with: git -C '$DIR' checkout --detach $CAMPAIGN_COMMIT" >&2
+        exit 1
+      fi
+      if [ -n "$WT_DIRT" ]; then
+        echo "ERROR: seed $SEED worktree $DIR is dirty:" >&2
+        while IFS= read -r line; do echo "    $line" >&2; done <<<"$WT_DIRT"
+        exit 1
+      fi
+    fi
     run ln -sfn "$ROOT/data" "$DIR/data"
     run mkdir -p "$DIR/pretrain_weights"
     run ln -sfn "$ROOT/$TEACHER" "$DIR/$TEACHER"
   fi
 
-  # The resumable per-seed run: Stage 1 .. test eval (qualitative figures/analyses
+  # The resumable per-seed run: sampler build, full leakage gate, training, evaluation (qualitative
   # are a separate once-off post-campaign step, not run per seed).
   run bash -c "cd '$DIR' && RESUME=1 SEED=$SEED HF_HUB_OFFLINE=1 \
-      bash RUNBOOK.sh --from B1 --to C2"
+      bash RUNBOOK.sh --from B4 --to C2"
 
   run touch "$DONE"
   echo "========================= seed $SEED: complete ========================="

@@ -28,7 +28,8 @@ SONIC_SCRATCH="${SONIC_SCRATCH:-/home/people/${SONIC_USER}/scratch/lqc}"
 SONIC_ACCOUNT="${SONIC_ACCOUNT:-shared_acc}"
 SPLIT_TAG="${SPLIT_TAG:-f1}"
 BATCH_VARIANT="${BATCH_VARIANT:-b2}"
-DRYRUN="${DRYRUN:-0}"
+# Anything but empty or "0" is a dry run: DRYRUN=true used to submit for real.
+case "${DRYRUN:-0}" in ""|0|no|false) DRYRUN=0 ;; *) DRYRUN=1 ;; esac
 
 # ---- refuse a dirty tree ---------------------------------------------------
 if ! git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
@@ -43,6 +44,22 @@ if [ -n "$DIRT" ]; then
   exit 1
 fi
 COMMIT="$(git -C "$REPO" rev-parse HEAD)"
+
+# ---- refuse to queue jobs that cannot start --------------------------------
+# The array task does `cd $SONIC_SCRATCH/seed<N>` and activates $SONIC_SCRATCH/env. Nothing in this
+# repository creates either, so without this check all ten tasks queue, wait, start, and die on cd.
+SEEDS_LIST=(42 43 44 45 46 47 48 49 50 51)
+MISSING=()
+[ -d "${SONIC_SCRATCH}/env" ] || MISSING+=("${SONIC_SCRATCH}/env  (conda prefix)")
+for S in "${SEEDS_LIST[@]}"; do
+  [ -d "${SONIC_SCRATCH}/seed${S}" ] || MISSING+=("${SONIC_SCRATCH}/seed${S}  (seed worktree)")
+done
+if [ ${#MISSING[@]} -gt 0 ]; then
+  echo "ERROR: the array tasks would start and immediately die. Missing on scratch:" >&2
+  printf '    %s\n' "${MISSING[@]}" >&2
+  echo "  Stage the environment and the ten seed checkouts first, then re-run." >&2
+  exit 1
+fi
 
 # ---- plan ------------------------------------------------------------------
 LOGDIR="${SONIC_SCRATCH}/logs"

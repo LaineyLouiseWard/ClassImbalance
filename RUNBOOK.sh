@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ordered list of all stages
-STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B2 B3 B4 B4b B4c B5 N3 C1 C1b C2 C3 C4 D E)
+STAGES=(A0 A1 A1b A2 A3 A4 A5 A6 A7 A8 A9 A10 B4 B4b B1 B2 B3 B4c B5 C1 C1b C2 C3 C4 D E)
 
 # Validate --from value
 valid=false
@@ -353,10 +353,15 @@ if run_stage B4; then
     --force
 fi
 
-# The last gate before any weights are trained. A1b could only check the split geometry, because
-# every derived artefact is built after it. This is where the split, the OEM pre-training pool, the
-# sampler weights, the augmentation list and the teacher confusion are checked against each other --
-# the combination that actually determines what the model sees.
+# The last gate before any weights are trained -- and, since 2026-07-26, actually so. B4b used to sit
+# after B1..B3, which meant the baseline, the OEM pre-training and the transfer finetune had all
+# trained before the only full gate ran; a stale pre-training pool would have been caught after it
+# had already contaminated the transfer arm. B4 needs nothing but the split and the augmentation
+# list, so both moved ahead of B1.
+# A1b could only check the split geometry, because every derived artefact is built after it. This is
+# where the split, the OEM pre-training pool, the sampler weights, the augmentation list and the
+# teacher confusion are checked against each other -- the combination that determines what the model
+# sees.
 if run_stage B4b; then
   echo "[B4b] Full leakage preflight over the split AND every derived artefact"
   PYTHONPATH=. python scripts/data_prep/assert_no_split_leakage.py \

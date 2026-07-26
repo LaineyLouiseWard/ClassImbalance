@@ -99,6 +99,9 @@ def main() -> int:
         failures.append(f"no tiles at {split_root / EXTERNAL} — the held-out external site is the "
                         f"only test ground fully independent of the training site. Pass "
                         f"--no-external-test if this split is deliberately without one.")
+    else:
+        skipped.append("external test site (--no-external-test declared): every bleed and "
+                       "separation check below covers three splits, not four")
 
     # Every held-out split, so the artefact bleed checks below cover the external site too.
     held_out = set().union(*(split_ids[s] for s in splits if s != "train"))
@@ -126,7 +129,8 @@ def main() -> int:
         if missing:
             failures.append(f"OEM pool is missing {len(missing)} current training tiles "
                             f"(stale pool from an older split?), e.g. {sorted(missing)[:3]}")
-        checks.append(f"OEM pre-training pool: {len(oem_train)} tiles, no held-out bleed")
+        if oem_train and not bleed and not missing:
+            checks.append(f"OEM pre-training pool: {len(oem_train)} tiles, no held-out bleed")
     else:
         skipped.append("OEM pre-training pool (--oem-root not supplied)")
 
@@ -147,7 +151,14 @@ def main() -> int:
             if missing:
                 failures.append(f"sampler TSV missing {len(missing)} current training tiles "
                                 f"(stale from an older split), e.g. {sorted(missing)[:3]}")
-            checks.append(f"sampler TSV: {len(tsv_ids)} ids, matches training set")
+            # Symmetric: extra ids are as wrong as missing ones. A TSV carrying the 413
+            # buffer-dropped tiles printed "matches training set" over 1,485 ids.
+            extra = tsv_ids - split_ids["train"]
+            if extra:
+                failures.append(f"sampler TSV has {len(extra)} ids that are not current training "
+                                f"tiles, e.g. {sorted(extra)[:3]}")
+            if not bleed and not missing and not extra:
+                checks.append(f"sampler TSV: {len(tsv_ids)} ids, exactly the training set")
     else:
         skipped.append("sampler TSV (--sampler-tsv not supplied)")
 
@@ -166,7 +177,9 @@ def main() -> int:
             if abs(tiles - len(split_ids["train"])) > 0.5:
                 failures.append(f"{conf_path} was fitted on {tiles:.0f} tiles but this split trains "
                                 f"on {len(split_ids['train'])} — stale mapping")
-            checks.append(f"teacher confusion: fitted on {tiles:.0f} tiles, matches training set")
+            else:
+                checks.append(f"teacher confusion: fitted on {tiles:.0f} tiles, "
+                              f"matches training set")
     else:
         skipped.append("teacher confusion (--confusion-npz / $TEACHER_CONFUSION_NPZ not supplied)")
 
@@ -189,14 +202,27 @@ def main() -> int:
         # check printed "ok" over a file it had failed to read -- the same shape as the 2026-07-25 B2
         # defect one layer up.
         if not aug_ids:
-            failures.append(f"{aug.name} yielded zero ids: expected a list, or the keys "
+            failures.append(f"{aug_arg} yielded zero ids: expected a list, or the keys "
                             f"settlement_images / seminatural_images. Keys present: "
                             f"{sorted(blob)[:6] if isinstance(blob, dict) else type(blob).__name__}")
         bleed = aug_ids & held_out
         if bleed:
-            failures.append(f"{len(bleed)} held-out tiles in {aug.name}, "
+            failures.append(f"{len(bleed)} held-out tiles in {aug_arg}, "
                             f"e.g. {sorted(bleed)[:3]}")
-        checks.append(f"augmentation list ({aug.name}): {len(aug_ids)} ids, no held-out bleed")
+        # Every id must BE a current training tile. Intersecting against held_out alone is not
+        # enough: an adversarial pass got a list of 302 ids past this check -- 40 of them held out --
+        # simply by writing the ids with a `.tif` suffix, because a set of strings that matches
+        # nothing intersects held_out in nothing and reads as clean. Anything unrecognised is a
+        # failure, which covers suffix drift, whitespace padding, and the 413 buffer-dropped tiles
+        # that belong to no split at all.
+        stray = aug_ids - split_ids["train"]
+        if stray:
+            failures.append(f"{len(stray)} ids in {aug_arg} are not current training tiles "
+                            f"(held-out, buffer-dropped, or a different id format), "
+                            f"e.g. {sorted(stray)[:3]}")
+        if not bleed and not stray and aug_ids:
+            checks.append(f"augmentation list ({aug_arg}): {len(aug_ids)} ids, all current "
+                          f"training tiles")
 
     # 4. geometry, re-read from the rasters. Grouped by CRS because the inland site is in UTM metres
     # and the uplands in WGS84 degrees; comparing footprints across the two would be meaningless. The
@@ -234,11 +260,13 @@ def main() -> int:
         if a not in split_ids or b not in split_ids:
             continue
         best = float("inf")
+        comparable = False
         for crs, rows in by_crs.items():
             ra = [r for r in rows if r[1] == a]
             rb = [r for r in rows if r[1] == b]
             if not ra or not rb:
                 continue
+            comparable = True
             # Degrees -> metres at the group's own latitude; the inland site is already in metres.
             lat = np.mean([(r[3] + r[5]) / 2 for r in rows])
             geo = abs(lat) <= 90 and max(abs(r[2]) for r in rows) <= 180
@@ -251,6 +279,11 @@ def main() -> int:
                 dy = np.maximum(np.maximum(bo - A[:, 3], A[:, 1] - to), 0.0) * my
                 best = min(best, float(np.hypot(dx, dy).min()))
         if not np.isfinite(best):
+            # No CRS group holds both splits, so no distance between them was ever computed. That
+            # is not a pass: it silently dropped two of the three required separations when test
+            # sat in a different CRS from train and val.
+            skipped.append(f"{a}|{b} separation ({need:.0f} m required): not measurable, no CRS "
+                           f"group contains both splits")
             continue
         if best + 1e-6 < need:
             failures.append(f"{a}|{b} separation is {best:.0f} m, below the required {need:.0f} m")

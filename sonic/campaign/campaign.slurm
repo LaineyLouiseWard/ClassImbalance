@@ -65,8 +65,8 @@ export AUG_LIST="artifacts/train_augmentation_list_${SPLIT_TAG}.json"
 
 echo "[preflight] full leakage gate over the split AND every derived artefact"
 # Up front, before twenty hours of GPU time: the split, the pre-training pool, the sampler weights,
-# the augmentation list and the teacher confusion checked against each other. RUNBOOK stage B4b
-# runs the same gate, but only after the first three cells have already trained.
+# the augmentation list and the teacher confusion checked against each other. RUNBOOK stage B4b runs
+# the same gate at the start of the window below; this one fails before the sampler is even rebuilt.
 python scripts/data_prep/assert_no_split_leakage.py \
   --split-root        "$SPLIT_ROOT" \
   --oem-root          "$BIO_OEM_COMBINED" \
@@ -74,11 +74,11 @@ python scripts/data_prep/assert_no_split_leakage.py \
   --augmentation-list "$AUG_LIST" \
   --confusion-npz     "$TEACHER_CONFUSION_NPZ"
 
-echo "[train+eval] RUNBOOK stages B1..C2 for seed ${SEED}"
+echo "[train+eval] RUNBOOK stages B4..C2 for seed ${SEED}"
 # The runbook is the single definition of what a seed does, so the cluster cannot drift away from
-# what runs locally. B1..C2 covers the five training configs, the sampler build, the full preflight
-# gate again, and evaluation on validation, Test B and Test A.
-SEED="$SEED" bash RUNBOOK.sh --from B1 --to C2
+# what runs locally. B4..C2 covers the sampler build, the full preflight gate, the five training
+# configs, and evaluation on validation, Test B and Test A.
+SEED="$SEED" bash RUNBOOK.sh --from B4 --to C2
 
 echo "[dump] per-seed softmax for rho"
 # rho is the pre-registered primary statistic and these dumps are its only input. Nothing else in
