@@ -14,10 +14,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from utils import load_metrics, REPO_ROOT
+from utils import cell_dir, load_metrics, REPO_ROOT
 
-VAL_METRICS = REPO_ROOT / "evaluation/evaluation_results/val/stage3_clsbal/metrics.json"
-TEST_METRICS = REPO_ROOT / "evaluation/evaluation_results/test/stage3_clsbal/metrics.json"
+_RESULTS = REPO_ROOT / "evaluation/evaluation_results"
+VAL_METRICS = _RESULTS / "val" / cell_dir("stage3_clsbal") / "metrics.json"
+TEST_METRICS = _RESULTS / "test" / cell_dir("stage3_clsbal") / "metrics.json"
 
 # Foreground classes only (skip Background)
 FOREGROUND_CLASSES = [

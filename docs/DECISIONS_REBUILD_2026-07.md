@@ -220,3 +220,29 @@ discovered under review.
 
 **My tier 1, therefore:** the factorial wiring, the A1b/A2 ordering, registering the step confound, and
 writing the block-size justification. Two code bugs and two documentation acts.
+
+## D15 — rho threshold stays at 4.0, justified from our own pilot estimates — 2026-07-26
+
+**Decision:** keep rho >= 4.0. Justify it from this project's own preliminary estimates. Do NOT search
+the literature for a reference value; do not commission further work on this.
+
+**Why.** A threshold cannot be set from the campaign it will judge — that is circular and is what a
+pre-registration exists to prevent. But it can be set from other data, and we have some: rho measured on
+held-out ground from an earlier run, on pixels no training tile covered, giving 3.25 (baseline model),
+4.77 (full model, validation) and 12.02 (full model, test). Setting the bar at 4.0 puts it below the
+weakest full-model estimate and above the baseline's, so the baseline fails and the full model is at
+genuine risk. That is what makes the registration binding rather than decorative, and it is the only
+property the threshold really has to have.
+
+Calibrating a pre-registered threshold on pilot data is standard practice. I briefly proposed searching
+the literature for an externally-derived value instead, and withdrew it: no such benchmark is known to
+exist for this quantity, reaching for new citations at this stage signals unsettled scope when the scope
+is in fact settled, and it would have cost time against a deadline for a wording problem rather than a
+methodological one.
+
+**The methods sentence:** "We pre-registered a threshold of rho >= 4 from preliminary estimates on
+held-out ground, which ranged from 3.3 to 12.0. The bar sits below the weakest estimate for the full
+model and above that for the baseline, so the baseline is expected to fail it."
+
+**What is NOT claimed:** that 4.0 is derived from theory or from published benchmarks. It is a pilot-
+calibrated bar, stated as such.

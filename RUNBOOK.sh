@@ -383,32 +383,48 @@ fi
 #  config/biodiversity/_archive/stage3null_nosampler.py.)
 
 # ======================== C. EVALUATION ==============================
+# The four factorial cells, in the order the paper reports them. Every evaluation stage names its
+# checkpoints from this list rather than rglobbing a directory: `--base-dir` picks up `last.ckpt`
+# alongside `<cell>_<tag>.ckpt` and evaluates BOTH into the same output directory, so which one
+# survives in metrics.json is decided by filename sort order rather than by design.
+CELLS=(stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal)
+
+# Path of one cell's selected checkpoint. Every checkpoint path is tagged; an untagged one is the
+# withdrawn campaign's, still on disk under _archive/stale_checkpoints_pre_rebuild/.
+cell_ckpt() { echo "model_weights/biodiversity/${1}_${SPLIT_TAG}/${1}_${SPLIT_TAG}.ckpt"; }
 
 if run_stage C1; then
-  require_nonempty model_weights/biodiversity B1
   require_nonempty "$SPLIT_ROOT"/val/images A1
-  echo "[C1] Evaluating validation set (all stage checkpoints)"
-  PYTHONPATH=. python evaluation/compute_metrics.py \
-    --split val \
-    --base-dir model_weights/biodiversity \
-    --data-root "$SPLIT_ROOT"/val \
-    --out-dir evaluation/evaluation_results/val \
-    --force
+  echo "[C1] Evaluating validation set (four factorial cells; checkpoint selection split)"
+  for CELL in "${CELLS[@]}"; do
+    CKPT="$(cell_ckpt "$CELL")"
+    require_file "$CKPT" B5
+    PYTHONPATH=. python evaluation/compute_metrics.py \
+      --checkpoints "$CKPT" \
+      --split val \
+      --data-root "$SPLIT_ROOT"/val \
+      --out-dir evaluation/evaluation_results/val \
+      --force
+  done
 fi
 
 if run_stage C1b; then
   echo "[C1b] Test B — the held-out upland sites. This is the generalisation number the paper leads on,"
   echo "      and until 2026-07-26 no runnable path scored it at all."
-  for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
-    CKPT="model_weights/biodiversity/${CELL}_${SPLIT_TAG}/${CELL}_${SPLIT_TAG}.ckpt"
+  for CELL in "${CELLS[@]}"; do
+    CKPT="$(cell_ckpt "$CELL")"
     # A hard failure, not a skip. This stage silently succeeded over four missing checkpoints.
     require_file "$CKPT" B5
+    # NO per-cell subdirectory: compute_metrics.py already names the run directory after the
+    # checkpoint's parent, so adding ${CELL} here nested the metrics one level deeper than every
+    # reader looks (external_f1/<cell>/<cell>_f1/metrics.json), and Test B aggregated to nothing.
     PYTHONPATH=. python evaluation/compute_metrics.py \
       --checkpoints "$CKPT" \
       --data-root  "$SPLIT_ROOT"/external_test \
       --split test \
-      --out-dir    evaluation/evaluation_results/external_${SPLIT_TAG}/${CELL} \
-      --ignore-index 0
+      --out-dir    evaluation/evaluation_results/external_${SPLIT_TAG} \
+      --ignore-index 0 \
+      --force
   done
   echo "[C1b] Per-class support for Test B (a share is not a support; classes under 5 independent"
   echo "      950 m blocks are reported as unestimable, never as an estimate)"
@@ -416,23 +432,20 @@ if run_stage C1b; then
 fi
 
 if run_stage C2; then
-  require_file model_weights/biodiversity/stage1_baseline_${SPLIT_TAG}/stage1_baseline_${SPLIT_TAG}.ckpt B1
-  require_file model_weights/biodiversity/stage3_clsbal_${SPLIT_TAG}/stage3_clsbal_${SPLIT_TAG}.ckpt B5
   require_nonempty "$SPLIT_ROOT"/test/images A1
-  echo "[C2] Evaluating held-out test set (Stage 1 baseline + Stage 3 final; intermediate stages not on test)"
-  # Baseline AND final on the test split, WITHOUT TTA — C4 (export_final_test_table) needs both metrics.json files.
-  PYTHONPATH=. python evaluation/compute_metrics.py \
-    --split test \
-    --base-dir model_weights/biodiversity/stage1_baseline_${SPLIT_TAG} \
-    --data-root "$SPLIT_ROOT"/test \
-    --out-dir evaluation/evaluation_results/test \
-    --force
-  PYTHONPATH=. python evaluation/compute_metrics.py \
-    --split test \
-    --base-dir model_weights/biodiversity/stage3_clsbal_${SPLIT_TAG} \
-    --data-root "$SPLIT_ROOT"/test \
-    --out-dir evaluation/evaluation_results/test \
-    --force
+  echo "[C2] Evaluating held-out Test A — ALL FOUR factorial cells"
+  # Two of four were scored here until 2026-07-26, so the transfer, sampler and interaction
+  # contrasts could only be formed on validation: the split every checkpoint is selected on.
+  for CELL in "${CELLS[@]}"; do
+    CKPT="$(cell_ckpt "$CELL")"
+    require_file "$CKPT" B5
+    PYTHONPATH=. python evaluation/compute_metrics.py \
+      --checkpoints "$CKPT" \
+      --split test \
+      --data-root "$SPLIT_ROOT"/test \
+      --out-dir evaluation/evaluation_results/test \
+      --force
+  done
   # Final shipped model (Stage 3 clsbal): ALSO evaluate the test split WITH TTA so the paper
   # can report both. TTA = multi-scale + H+V flip, softmax-averaged (GeoSeg 'd4' minus 1.5 scale;
   # bilinear interp here vs GeoSeg bicubic — harmless, worth a one-line methods note). Written to
@@ -440,8 +453,8 @@ if run_stage C2; then
   # NB: the val/ablation eval (C1) deliberately stays WITHOUT TTA — TTA lifts all stages ~equally
   # and must not be silently turned on there.
   PYTHONPATH=. python evaluation/compute_metrics.py \
+    --checkpoints "$(cell_ckpt stage3_clsbal)" \
     --split test \
-    --base-dir model_weights/biodiversity/stage3_clsbal_${SPLIT_TAG} \
     --data-root "$SPLIT_ROOT"/test \
     --out-dir evaluation/evaluation_results/test_tta \
     --tta --tta-flips hv --tta-scales 0.75,1.0,1.25 \
