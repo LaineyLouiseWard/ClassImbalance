@@ -153,3 +153,23 @@ training and declared, with the counts given.
 
 **Reversal condition:** if the transfer effect turns out to be the paper's headline rather than setup,
 this is not good enough and a step-matched arm must be run.
+
+## D13 — Test B's NaN and background fractions are survey-edge geometry, not data defects — 2026-07-26
+
+**Decision:** report them as methods content, not as limitations weakening Test B.
+
+**Why:** the auditor recalibrated its own finding. The NaN mask is identical across all four bands and
+always touches a tile border, averaging 42% of a Test B tile — that is off-mosaic fill. Tiles are
+chipped on a regular grid over an irregular survey footprint, so tiles at the edge of the flown area
+are partly empty. Both upland sites are small, so a higher share of their tiles are edge tiles, which
+is the whole explanation for Test B's 61.5% labelled area. Nothing is corrupt.
+
+The same effect explains the 9.75% vs 1.70% train/test background gap. Background is the ignore class,
+so those pixels never score.
+
+**Supersedes** the framing in `00_STATE.md` and in my earlier reporting, which treated both as
+limitations that weakened the generalisation claim. They do not.
+
+**What DOES remain a limitation, narrower than before:** the test strip sits at the far edge of the
+site, so it is not a random sample of the surveyed landscape. State that in §2 with the buffer-drop
+comparison.

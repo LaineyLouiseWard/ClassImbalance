@@ -91,8 +91,11 @@ Several items are not neutral bug fixes:
 - **Item 14** — if the second arm is demoted from a registered arm to an observation, the paper loses
   its only means of separating "label-limited" from "well-trained model". The claim then has to be
   scoped accordingly.
-- **Item 20** — Test B is 61.5% labelled area with 80% of tiles containing NaN. Stating that honestly
-  weakens the generalisation claim, which is the paper's second estimand.
+- **Item 20** — REVISED after the auditor's recalibration. Test B's 61.5% labelled area and its NaN
+  pixels are off-mosaic fill at survey edges, not data quality problems. Explaining that *strengthens*
+  the reporting rather than weakening the generalisation claim. Report it as methods, and correct any
+  earlier note of mine that framed it as a limitation. The genuine limitation in this area is narrower:
+  the test strip sits at the site's far edge, so it is not a random sample of the surveyed landscape.
 - **Item 10** — if the split passes its own adequacy gate at only 5 of 10 grid phases, that is a
   limitation of the split, not of the analysis, and it belongs in the methods.
 
@@ -104,6 +107,42 @@ publishable in its own right.
 
 Do not soften a fix to protect a claim. Report the weakened claim instead.
 </narrative>
+
+<auditor_recalibration>
+The auditor revisited its own report after submitting it and re-tiered the findings. Read this before
+the task list — it changes what is urgent, and it withdraws two findings.
+
+**Withdrawn or downgraded by the auditor itself:**
+
+- **The NaN pixels are explained and are not a defect.** Same mask in all four bands, always touching a
+  tile border, averaging 42% of a Test B tile. That is off-mosaic fill: tiles are chipped on a regular
+  grid over an irregular survey footprint, so tiles at the edge of the flown area are partly empty.
+  Nothing is corrupt. Test B has more of it because both upland sites are small, so a higher share of
+  their tiles are edge tiles. **This is methods content, not a limitation that weakens Test B** — it
+  explains the 61.5% labelled-area figure rather than casting doubt on it.
+- **The train/test background asymmetry (9.75% vs 1.70%) is not a defect.** Background is the ignore
+  class, so those pixels do not score. Same edge effect: the test strip is the far end of the site, so
+  its tiles are partly outside the survey. One line in §2, not a headline limitation.
+- **Noise, worth one line each and no more:** A9's no-op, the `N3` stage entry, the numpy pin drift,
+  `data/oem_combined_f1/test/`, the uncommitted RUNBOOK message.
+
+**The auditor's own headline:** *"the split and the leakage gate are solid — I attacked them six ways
+and they held, and the annotation-pass and denominator numbers reproduce exactly. What's left is one
+substantive problem (the class mapping) and a handful of plumbing bugs between training and
+aggregation."*
+
+**On that one substantive problem — read carefully, because the audit text and the decisions log
+disagree and the decisions log wins.** The auditor calls the OEM class mapping a launch blocker on the
+grounds that *"fixing it rebuilds the pool, so any run started now is wasted."* That reasoning is
+conditional on fixing it. **It is not being fixed** — see D11, which records the measurement showing the
+audit's stated mechanism (channel suppression) is false, and the reasons for keeping grounded argmax.
+No pool rebuild follows, so no run is wasted.
+
+What the auditor and this project DO agree on, and what you must therefore ensure is registered: OEM
+contributes no Cropland and no Semi-natural labels, so for those two classes the transfer factor is not
+cross-dataset *label* transfer. That is a real statement about what the factor is, and the paper must
+say it. That is item 6's job, not a code change.
+</auditor_recalibration>
 
 <context>
 **The project.** `label-quality-ceiling`, a paper for MDPI *Remote Sensing*. A 2×2 factorial on a fixed
@@ -202,6 +241,10 @@ counts. Do NOT change the pool — see D12 for why the obvious fix is worse.
 *Verify:* dirty the tree, show it refuses.
 
 **8. Re-run the full preflight gate and record the output.**
+Note: with the auditor's recalibration, the true launch-blocking set is small — items 1, 2 and 3 are
+the code bugs that stop the campaign being assembled; 4, 5, 7 and 8 are hygiene; 6 is a documentation
+act that must nonetheless happen before results exist. Do not let the length of the list below suggest
+otherwise, and do not manufacture work to fill it.
 It must pass with every artefact argument supplied, not just `--split-root`.
 
 ## Before submitting
