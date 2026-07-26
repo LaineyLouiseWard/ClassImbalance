@@ -45,6 +45,11 @@ def parse_args():
     p.add_argument("--q", type=float, default=1.0, help="inverse-frequency exponent (1.0=class-balanced)")
     p.add_argument("--settlement_target", type=float, default=1.27,
                    help="calibrate scale so realised Settlement uplift ≈ this (A0 level)")
+    p.add_argument("--aug-list", default=None,
+                   help="minority-rich tile list to calibrate the settlement uplift against. "
+                        "MUST match this split: it is derived from the training set, and a "
+                        "stale list biases the global scale (2026-07-25 audit, B2). "
+                        "Defaults to $AUG_LIST, then the untagged legacy path.")
     p.add_argument("--force", action="store_true")
     return p.parse_args()
 
@@ -73,7 +78,9 @@ def main():
         f"class{c} {len(present[c])} (f={f[c]:.3f}, f^-{args.q:g}={inv[c]:.3f})" for c in MINORITY))
 
     # augmentation-list presence = the set A0's uplift was measured over (a3); use it to calibrate.
-    aug = load_augmentation_list()
+    aug_path = args.aug_list or os.environ.get("AUG_LIST")
+    aug = load_augmentation_list(REPO / aug_path if aug_path else None)
+    print(f"  calibrating uplift against: {aug_path or 'artifacts/train_augmentation_list.json'}")
     aug_present = {4: set(aug["settlement_images"]), 5: set(aug["seminatural_images"])}
 
     def weights(scale):

@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -57,7 +58,14 @@ def main() -> int:
     ap.add_argument("--oem-root", default=None,
                     help="combined Biodiversity+OEM pre-training root (stage2a pool)")
     ap.add_argument("--sampler-tsv", default=None)
-    ap.add_argument("--augmentation-list", default="artifacts/train_augmentation_list.json")
+    ap.add_argument("--augmentation-list", default=None,
+                    help="minority-rich tile list for this split. Defaults to $AUG_LIST, then the "
+                         "untagged legacy path. The legacy path is shared across splits, so "
+                         "checking it while training on a tagged one would test the wrong file.")
+    ap.add_argument("--confusion-npz", default=None,
+                    help="teacher->GT confusion for this split. Recorded for provenance: it carries "
+                         "no tile ids, so it cannot be checked for held-out bleed directly, but a "
+                         "matrix whose pixel count disagrees with the training set is stale.")
     args = ap.parse_args()
 
     root = find_repo_root()
@@ -112,15 +120,35 @@ def main() -> int:
                                 f"(stale from an older split), e.g. {sorted(missing)[:3]}")
             checks.append(f"sampler TSV: {len(tsv_ids)} ids, matches training set")
 
-    aug = root / args.augmentation_list
+    # 3b. teacher->GT confusion staleness. It holds no tile ids, so held-out bleed cannot be checked
+    # directly -- but its total pixel count is exactly n_train_tiles * 512 * 512, which pins the
+    # training set it was fitted on. This is how the stale 1,846-tile matrix was caught.
+    conf_path = args.confusion_npz or os.environ.get("TEACHER_CONFUSION_NPZ")
+    if conf_path:
+        p = root / conf_path
+        if not p.exists():
+            failures.append(f"teacher confusion not found: {conf_path} — A7 has not run for this "
+                            f"split, so the OEM relabel rests on another split's mapping")
+        else:
+            total = int(np.load(p, allow_pickle=True)["hard"].sum())
+            tiles = total / (512 * 512)
+            if abs(tiles - len(split_ids["train"])) > 0.5:
+                failures.append(f"{conf_path} was fitted on {tiles:.0f} tiles but this split trains "
+                                f"on {len(split_ids['train'])} — stale mapping")
+            checks.append(f"teacher confusion: fitted on {tiles:.0f} tiles, matches training set")
+
+    aug = root / (args.augmentation_list or os.environ.get("AUG_LIST")
+                  or "artifacts/train_augmentation_list.json")
     if aug.exists():
         blob = json.loads(aug.read_text())
-        aug_ids = set(blob if isinstance(blob, list) else blob.get("ids", []))
+        # Keys are settlement_images / seminatural_images; a plain "ids" list is never written.
+        aug_ids = (set(blob) if isinstance(blob, list)
+                   else set(blob.get("settlement_images", [])) | set(blob.get("seminatural_images", [])))
         bleed = aug_ids & held_out
         if bleed:
-            failures.append(f"{len(bleed)} held-out tiles in {args.augmentation_list}, "
+            failures.append(f"{len(bleed)} held-out tiles in {aug.name}, "
                             f"e.g. {sorted(bleed)[:3]}")
-        checks.append(f"augmentation list: {len(aug_ids)} ids, no held-out bleed")
+        checks.append(f"augmentation list ({aug.name}): {len(aug_ids)} ids, no held-out bleed")
 
     # 4. geometry, re-read from the rasters
     by_crs = defaultdict(list)

@@ -52,8 +52,9 @@ SPLIT_ROOT="${SPLIT_ROOT:-data/biodiversity_split_spatial_${SPLIT_TAG}}"
 OEM_COMBINED="${OEM_COMBINED:-"$OEM_COMBINED"_${SPLIT_TAG}}"
 SAMPLER_TSV="${SAMPLER_TSV:-artifacts/sampler_weights_clsbal_${SPLIT_TAG}.tsv}"
 TEACHER_CONFUSION_NPZ="${TEACHER_CONFUSION_NPZ:-artifacts/teacher_oem_gt_confusion_${SPLIT_TAG}.npz}"
+AUG_LIST="${AUG_LIST:-artifacts/train_augmentation_list_${SPLIT_TAG}.json}"
 # Exported so the cell configs and the taxonomy guard pick the same split up.
-export BIO_SPLIT="$SPLIT_ROOT" BIO_OEM_COMBINED="$OEM_COMBINED" SAMPLER_TSV TEACHER_CONFUSION_NPZ
+export BIO_SPLIT="$SPLIT_ROOT" BIO_OEM_COMBINED="$OEM_COMBINED" SAMPLER_TSV TEACHER_CONFUSION_NPZ AUG_LIST
 
 BIO_RAW=data/biodiversity_raw
 OEM_RAW=data/openearthmap_raw/OpenEarthMap/OpenEarthMap_wo_xBD
@@ -205,7 +206,7 @@ if run_stage A2; then
   echo "[A2] Identifying minority-rich tiles (for the D-stage sampler-uplift analysis)"
   PYTHONPATH=. python scripts/data_prep/analyze_class_distribution.py \
     --data-root "$SPLIT_ROOT"/train \
-    --out       artifacts/train_augmentation_list.json \
+    --out       "$AUG_LIST" \
     --overwrite
 fi
 
@@ -326,6 +327,7 @@ if run_stage B4; then
   PYTHONPATH=. python scripts/data_prep/build_clsbal_sampler.py \
     --data_root "$SPLIT_ROOT"/train \
     --out       "$SAMPLER_TSV" \
+    --aug-list  "$AUG_LIST" \
     --q 1.0 --settlement_target 1.27 \
     --force
 fi
