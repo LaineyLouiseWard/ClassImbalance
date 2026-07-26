@@ -20,8 +20,8 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | C2 | stage E syncs five of those figures into `manuscript/Figures/` | C | DONE |
 | C3 | `ablation_qualitative` figure built from the withdrawn campaign, exit 0 | C | DONE |
 | C4 | `oem_mapping.tex` (main.tex:181) embeds the withdrawn confusion matrix; its generator crashes so drift is invisible | C | DONE |
-| C5 | C3/C4 runbook stages accept a metrics.json of withdrawn provenance; only `aggregate_seeds` validates | C | OPEN |
-| C6 | withdrawn deliverables sit at the exact output paths the pipeline writes, unmarked | C | OPEN |
+| C5 | C3/C4 runbook stages accept a metrics.json of withdrawn provenance; only `aggregate_seeds` validates | C | DONE |
+| C6 | withdrawn deliverables sit at the exact output paths the pipeline writes, unmarked | C | DONE |
 | C7 | **the trimap exclusion curve — the primary evidence since D18 — is in no RUNBOOK stage**, and one input is produced by nothing | C | DONE |
 | C8 | `accuracy_vs_separation.py` silently drops the entire external_test stratum | C | DONE |
 | C9 | campaign dumps softmax for test/external only; three stage-E consumers read *val* dumps against the withdrawn 219-tile mask dir | C | DONE |
@@ -43,8 +43,8 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | E6 | `taxonomy.py`: OEM Water "argmax Grassland (0.553)" — the shipped matrix says 0.7525 soft / 0.7485 hard | E | DONE |
 | E7 | shipped factorial configs carry stale comments and a copy-pasted docstring misdescribing the cells | E | DONE |
 | E8 | METHODS §6: the exclusion costs zero blocks — and the 12-vs-14 gap was **two block functions disagreeing**, `spatial_blocks` scaling 950 m by one mean latitude across two sites 50 km apart. Fixed; both now give 14 | E | DONE |
-| E9 | METHODS §7's interval numbers have no committed code, contradicting the file's own opening rule | E | OPEN |
-| E10 | `artifacts/replication_exposure_report.json` is a month stale, matches no split, referenced by nothing | E | OPEN |
+| E9 | METHODS §7's interval numbers have no committed code, contradicting the file's own opening rule | E | DONE |
+| E10 | `artifacts/replication_exposure_report.json` is a month stale, matches no split, referenced by nothing | E | DONE |
 
 ## Not defects — declared decisions, recorded with evidence
 

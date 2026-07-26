@@ -55,7 +55,19 @@ def load_metrics(stage_dir: str) -> dict:
             "Run evaluation/compute_metrics.py --split test first."
         )
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        m = json.load(f)
+    # Resolving by tag is not enough on its own: a metrics.json can be copied, restored from a
+    # fetch, or left behind by an earlier campaign at a path that now looks current. Every one
+    # records the checkpoint that produced it, so check it rather than trust the directory name.
+    got = Path(m.get("checkpoint", "")).name
+    want = f"{stage_dir}_{SPLIT_TAG}.ckpt"
+    if got != want:
+        raise SystemExit(
+            f"{path}\n  was produced by '{got or '(none recorded)'}', not '{want}'. This is a "
+            f"metrics file from another cell, another split tag, or the withdrawn campaign.")
+    if m.get("tta") is not False:
+        raise SystemExit(f"{path}\n  has tta={m.get('tta')}; the reported table is the no-TTA run.")
+    return m
 
 
 def main() -> None:

@@ -53,6 +53,15 @@ def main() -> None:
     for mf in metrics_files:
         with open(mf, "r", encoding="utf-8") as f:
             m = json.load(f)
+        # The directory name is the campaign's own convention, so it can be reproduced by a copy.
+        # The recorded checkpoint cannot. Require them to agree.
+        _want = f"{mf.parent.name}.ckpt"
+        _got = Path(m.get("checkpoint", "")).name
+        if _got != _want:
+            raise SystemExit(
+                f"{mf}\n  was produced by '{_got or '(none recorded)'}', but sits in "
+                f"'{mf.parent.name}/'. A metrics file from elsewhere has been placed at a path "
+                f"this stage reads.")
         rows.append(
             {
                 "run_dir": str(mf.parent),

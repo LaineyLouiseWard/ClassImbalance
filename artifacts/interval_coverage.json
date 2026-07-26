@@ -1,0 +1,60 @@
+{
+  "nominal": 0.95,
+  "rho": 5.0,
+  "interior_rate": 0.05,
+  "s_int": 0.35,
+  "n_rep": 200,
+  "n_boot": 800,
+  "splits": {
+    "test": {
+      "n_blocks": 16,
+      "coverage_by_s_rho": {
+        "0.0": {
+          "percentile": 0.955,
+          "BCa": 0.87,
+          "jackknife-t": 0.98
+        },
+        "0.2": {
+          "percentile": 0.9,
+          "BCa": 0.835,
+          "jackknife-t": 0.945
+        },
+        "0.35": {
+          "percentile": 0.86,
+          "BCa": 0.805,
+          "jackknife-t": 0.895
+        },
+        "0.5": {
+          "percentile": 0.85,
+          "BCa": 0.835,
+          "jackknife-t": 0.91
+        }
+      }
+    },
+    "external_test": {
+      "n_blocks": 14,
+      "coverage_by_s_rho": {
+        "0.0": {
+          "percentile": 0.925,
+          "BCa": 0.865,
+          "jackknife-t": 0.995
+        },
+        "0.2": {
+          "percentile": 0.925,
+          "BCa": 0.835,
+          "jackknife-t": 0.95
+        },
+        "0.35": {
+          "percentile": 0.92,
+          "BCa": 0.84,
+          "jackknife-t": 0.925
+        },
+        "0.5": {
+          "percentile": 0.905,
+          "BCa": 0.82,
+          "jackknife-t": 0.915
+        }
+      }
+    }
+  }
+}

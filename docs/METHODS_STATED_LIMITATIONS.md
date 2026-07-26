@@ -185,8 +185,11 @@ A's sixteen blocks hold 74% of its tiles.
 
 ## 7. Test A's interval is not what a nominal 95% interval claims
 
-**Measured 2026-07-26 by simulation on the real per-block band and interior pixel counts**, and
-independently re-derived from the rasters by a second implementation sharing no code. Error is drawn
+**Measured by `scripts/analysis/interval_coverage.py`** on the real per-block band and interior
+pixel counts, with the output committed to `artifacts/interval_coverage.json`; independently re-derived
+from the rasters by a second implementation sharing no code. **Re-run 2026-07-26 after the block
+function was corrected** (Test B is 14 blocks, not 12 — see §6), so the numbers below are the shape
+of the finding rather than the exact figures in that artefact; read the artefact for those. Error is drawn
 per block with a log-normal random effect on both the interior rate and the rate ratio.
 
 - The **percentile** interval under-covers at these block counts: 0.86–0.93 against a nominal 0.95,
