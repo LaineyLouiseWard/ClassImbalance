@@ -48,6 +48,25 @@ set -u
 
 cd "$DIR"
 
+# What is this task actually running? The submitter checks ITS OWN checkout is clean, but every
+# array task runs from a scratch copy staged separately, so forty runs could be attributed to a
+# commit none of them contain. If the staged copy is a git checkout, it must match; if it is not
+# (rsync, tarball), say so rather than implying a provenance that was never verified.
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  HERE="$(git rev-parse HEAD)"
+  if [ -n "${CAMPAIGN_COMMIT:-}" ] && [ "$HERE" != "$CAMPAIGN_COMMIT" ]; then
+    echo "ABORT seed ${SEED}: $DIR is at $HERE, the campaign was submitted from $CAMPAIGN_COMMIT" >&2
+    exit 1
+  fi
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "ABORT seed ${SEED}: $DIR has uncommitted changes; this run would not match the others" >&2
+    exit 1
+  fi
+  echo "[provenance] seed ${SEED} running ${HERE} (clean)"
+else
+  echo "[provenance] seed ${SEED}: $DIR is not a git checkout, commit not verifiable"
+fi
+
 # Every path the pipeline touches is tagged. SPLIT_TAG must be exported, not merely set: the cell
 # configs build each checkpoint path from it, and an unexported tag makes training write untagged
 # checkpoints while evaluation looks for tagged ones -- which is how Test B was once scored by

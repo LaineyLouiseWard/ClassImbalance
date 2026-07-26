@@ -87,7 +87,7 @@ SBATCH_ARGS=(
   --account="$SONIC_ACCOUNT"
   --output="${LOGDIR}/%x_seed%a_%A.out"
   --error="${LOGDIR}/%x_seed%a_%A.err"
-  --export="ALL,SONIC_SCRATCH=${SONIC_SCRATCH},SPLIT_TAG=${SPLIT_TAG},BATCH_VARIANT=${BATCH_VARIANT}"
+  --export="ALL,SONIC_SCRATCH=${SONIC_SCRATCH},SPLIT_TAG=${SPLIT_TAG},BATCH_VARIANT=${BATCH_VARIANT},CAMPAIGN_COMMIT=${COMMIT}"
 )
 # A bare `[ ... ] && ...` here would return 1 when the test fails, which under `set -e` exits
 # the script before it ever submits.

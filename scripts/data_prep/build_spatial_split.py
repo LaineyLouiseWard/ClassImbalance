@@ -615,7 +615,26 @@ def main() -> None:
             print(f"  VERIFIED block support recomputed from masks: min "
                   f"{min(actual[sp][c] for sp in SPLITS for c in FOREGROUND)} blocks")
         else:
-            print("  WARNING: manifest declares no class_block_support; replay cannot check adequacy")
+            # Recompute rather than warn. A manifest that omits the key used to waive the very
+            # criterion that admitted the split -- a val set collapsed to one block replayed clean,
+            # materialised, and then passed the leakage gate too. Adequacy is now enforced on the
+            # shipped replay path, which is the only path anyone runs.
+            print("  manifest declares no class_block_support; recomputing it from the masks")
+            rcounts = class_counts(split_root, pool, cache_dir / "tile_class_counts.json")
+            rblocks = support_blocks(pool, src.get("support_block_m", SUPPORT_BLOCK_M))
+            actual = class_block_support(kept, rcounts, rblocks)
+            need_b = {"train": src.get("min_class_blocks", MIN_CLASS_BLOCKS),
+                      "val": src.get("min_class_blocks", MIN_CLASS_BLOCKS),
+                      "test": src.get("min_test_class_blocks",
+                                      src.get("min_class_blocks", MIN_CLASS_BLOCKS))}
+            bad = [f"{s}/{FOREGROUND[c]}={n}<{need_b[s]}" for s in need_b
+                   for c, n in actual.get(s, {}).items() if n < need_b[s]]
+            if bad:
+                raise SystemExit(
+                    "  FAIL recomputed class_block_support is below the criterion this design "
+                    f"requires: {', '.join(bad)}")
+            print(f"  VERIFIED recomputed block support: min "
+                  f"{min(n for s in need_b for n in actual.get(s, {}).values())} blocks")
 
         need_m = {tuple(k.split("-")): v for k, v in (src.get("required_separation_m") or {}).items()}
         if need_m:

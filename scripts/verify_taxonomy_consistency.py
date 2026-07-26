@@ -96,7 +96,10 @@ if _os.path.exists(_CONF):
     # Classes declared to have no counterpart in the target taxonomy are excluded from pre-training
     # (mapped to the ignore_index) rather than forced onto their argmax. Assert that exclusion
     # explicitly, so the departure stays deliberate and cannot drift back silently.
-    _excluded = getattr(tax, "OEM_NO_TARGET_COUNTERPART", {})
+    # Deliberately NOT getattr with a default. With one, deleting OEM_NO_TARGET_COUNTERPART and
+    # editing OEM_TO_STUDENT_PRETRAIN to match its argmax would pass every check and the declared
+    # exclusion would be gone without a trace. Deleting the name must be an error, not a default.
+    _excluded = tax.OEM_NO_TARGET_COUNTERPART
     for o in range(9):
         if o in _excluded:
             check(tax.OEM_TO_STUDENT_PRETRAIN[o] == 0,

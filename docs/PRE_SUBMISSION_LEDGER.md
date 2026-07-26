@@ -30,10 +30,10 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | **D. Gate and launcher hardening** ||||
 | D1 | `external_test` is in no separation pair — Test B independence is asserted, never verified | D | DONE |
 | D2 | the gate never reads `masks/`, so a split that has lost masks passes with wrong counts printed | D | DONE |
-| D3 | a manifest waives its own adequacy check by omitting the keys; nothing downstream restores it | D | OPEN |
-| D4 | the A0 taxonomy gate prints PASS and exits 0 when the name it guards is deleted | D | OPEN |
+| D3 | a manifest waives its own adequacy check by omitting the keys; nothing downstream restores it | D | DONE |
+| D4 | ~~the A0 taxonomy gate prints PASS when the name it guards is deleted~~ **DID NOT REPRODUCE** — the gate fails, exit 1, 2 of 31 checks. The `getattr` default was removed anyway, since a deletion plus a matching dict edit would have passed | D | DONE |
 | D5 | B5's `require_file` gates on stage2b, but `stage3_clsbal` initialises from stage2a | D | DONE |
-| D6 | the clean-tree check runs on the submitting checkout; array tasks run from unverified `$SONIC_SCRATCH/seed<N>` | D | OPEN |
+| D6 | the clean-tree check runs on the submitting checkout; array tasks run from unverified `$SONIC_SCRATCH/seed<N>` | D | DONE |
 | **E. False statements in tracked text** ||||
 | E1 | D2's "18% of tiles lost to buffers" — measured 19.3% of the pool, 21.2% of the cut site | E | DONE |
 | E2 | D14 asserts "950 m on the full pool", which METHODS §4 explicitly forbids and no artefact supports | E | DONE |
