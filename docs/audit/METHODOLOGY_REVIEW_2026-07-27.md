@@ -324,9 +324,10 @@ Do not state it against the contrast; that would concede something untrue.
 **6. A2/A3 — what evidence for the label premise beyond ~88%? Almost none, and the paper does not
 need any.** The ~88% justifies a *constraint* (re-annotation is infeasible), not the *claim*. It has
 no recorded protocol — no inspector count, no tile count, no error criterion — it appears nowhere in
-the manuscript, and the same number appears in `notes/NARRATIVE_STATE_2026-06-26.md:119` as Ortiz et
-al.'s unrelated inter-annotator bound on OpenContrails. Two different 88%s in one notes directory is
-a conflation waiting to happen. Keep it out. The other candidates are not independent: confident
+the manuscript, and the same number appears throughout `notes/` as an "inter-annotator bound"
+attributed to "Ortiz et al. 2025 (TGRS)", **a source `docs/DO_NOT_ADD.md` records as fabricated**.
+Two different 88%s in one notes directory, one of them with no real source behind it, is a conflation
+waiting to happen — and per `CLAUDE.md` one external reviewer has already made it. Keep it out. The other candidates are not independent: confident
 learning scores against the same labels and flags boundary pixels for the same geometric reason, and
 Kohli's 2009 statement of the same premise on MSRC is a precedent, not evidence about this dataset.
 The correct response is not to find more evidence — it is to narrow the claim, per §1.

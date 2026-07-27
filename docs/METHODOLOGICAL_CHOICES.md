@@ -134,10 +134,23 @@ them would drag the number down for a reason unrelated to the claim.
 Accuracy as a function of how much boundary you exclude. The single-number summary (rho) is reported
 descriptively alongside it.
 
-**E5. The strongest form of the argument is a comparison, not a level.**
+**E5. The strongest form of the argument is a comparison, not a level — and it is a necessary
+condition, not a diagnosis.**
 If error is limited by labels, the near-boundary error rate should stay roughly flat across all four
 cells while the interior rate falls. All four cells are scored on identical pixels, so the landscape
 cancels out of that comparison entirely.
+
+**Two qualifiers that must travel with the claim.** The comparison is *in relative terms*: the
+near-boundary rate must vary by less than the interior rate does. And the falsifier: if both fall
+proportionally, the concentration is a property of model quality and the label-ceiling reading is
+not supported.
+
+**What it cannot do.** Observing the pattern does not establish the premise. Every rival cause that
+is constant across the four cells predicts the same thing — encoder/decoder edge blur, mixed pixels
+at 0.5 m, image-to-vector registration offset — and since the architecture is fixed in every
+contrast, none can be excluded here. `main.tex:459` already says this correctly and that sentence
+should survive: *"such models blur edges even on clean labels, so no single measurement separates
+the two. We read this as convergent evidence rather than proof."*
 
 ## F. Data handling
 
