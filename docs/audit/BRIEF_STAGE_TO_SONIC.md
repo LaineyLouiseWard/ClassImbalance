@@ -161,7 +161,11 @@ and it has already happened once — see the warning at the end of this section.
 The campaign's data is a two-level chain of RELATIVE symlinks, not three independent copies:
 
     data/biodiversity_split/       8.4 GB   REAL FILES — the 2,143-tile pool      [already on scratch]
-    data/openearthmap_relabelled/   69 MB   REAL FILES — the relabelled OEM tiles [UPLOAD]
+    data/openearthmap_relabelled/   69 MB   masks are REAL FILES; images are SYMLINKS
+                                            -> ../../openearthmap_filtered/images/...             [UPLOAD]
+    data/openearthmap_filtered/     17 MB   SYMLINKS -> ../../openearthmap_raw/OpenEarthMap/...   [UPLOAD]
+    data/openearthmap_raw/          25 GB   REAL FILES — only the 2,118 filtered images
+                                            are needed, 6.5 GB                                    [UPLOAD SUBSET]
     data/split_f1/                  12 MB   SYMLINKS -> ../../../biodiversity_split/<split>/...   [UPLOAD]
     data/oem_combined_f1/           17 MB   SYMLINKS -> ../../../split_f1/...  and
                                                      -> ../../../openearthmap_relabelled/...      [UPLOAD]
@@ -169,10 +173,28 @@ The campaign's data is a two-level chain of RELATIVE symlinks, not three indepen
 
 So `data/oem_combined_f1` points at `data/split_f1`, which points at `data/biodiversity_split`.
 
+**The OEM side is FOUR levels deep, not two, and the previous version of this brief got it wrong.**
+Corrected 2026-07-27 after it produced 2,118 dangling symlinks on a real staging run:
+
+    oem_combined_f1 -> openearthmap_relabelled -> openearthmap_filtered -> openearthmap_raw
+
+Only the relabelled **masks** are real files (stage A8 wrote them). Every OEM **image** resolves all
+the way down to `openearthmap_raw`. Send the resolved subset — 2,118 files, 6.5 GB — with paths
+preserved, not the whole 25 GB and not dereferenced. Build the list by resolving every symlink under
+`data/oem_combined_f1` and keeping the targets under `openearthmap_raw`. On a home connection at
+~650 kB/s this is about **three hours**, so start it before anything else.
+
+`openearthmap_filtered/masks` will still show 2,118 dangling links afterwards. That is correct and
+expected: they point at the original 9-class OEM masks, which nothing in B4..C5 reads, because
+`oem_combined_f1`'s mask links go to the relabelled masks instead. The check that must be zero is
+`find split_f1 oem_combined_f1 -xtype l`.
+
 Four consequences:
 
-1. **You are uploading ~98 MB, not 9 GB** — `openearthmap_relabelled`, `split_f1`, `oem_combined_f1`.
-   The 8.4 GB pool and the 542 MB of weights are already there and verified.
+1. **You are uploading ~6.6 GB, not 9 GB and not 98 MB** — `openearthmap_relabelled`, `split_f1`,
+   `oem_combined_f1` and `openearthmap_filtered` (~98 MB together), **plus the 6.5 GB of resolved
+   OpenEarthMap images** the chain bottoms out in. The 8.4 GB Biodiversity pool and the 542 MB of
+   weights are already there and verified.
 2. **Preserve the symlinks. Do NOT use `rsync -L`.** Dereferencing turns 28 MB of links into ~13 GB of
    duplicated pixels and breaks the guarantee that the pre-training pool and the training split are
    literally the same bytes — a property the leakage gate checks.
@@ -187,9 +209,9 @@ Four consequences:
 > Both were deleted on 2026-07-27. The `find -xtype l | wc -l` check in step 1 exists because of it —
 > run it, and if it is non-zero, fix the layout rather than dereferencing again.
 
-`data/biodiversity_raw` (9 GB) and `data/openearthmap_raw` (25 GB) are **not** needed: they are
-A-stage inputs and the A stages have already run. Do not send them. `data/dem` (76 MB) is used only by
-a Discussion-side analysis, not by B4..C5.
+`data/biodiversity_raw` (9 GB) is **not** needed: it is an A-stage input and the A stages have already
+run. `data/dem` (76 MB) is used only by a Discussion-side analysis, not by B4..C5. **`openearthmap_raw`
+IS needed** — see above; send the 2,118-file, 6.5 GB subset, not the whole 25 GB.
 
 **Every artefact the campaign needs is committed** and arrives with the clone: the split manifest, the
 sampler weights, the augmentation list, the teacher confusion, the boundary denominators, the
@@ -241,10 +263,29 @@ Then, from the laptop:
 
     # -a preserves symlinks as symlinks. NEVER add -L here.
     rsync -avh --partial --progress \
-      data/openearthmap_relabelled data/split_f1 data/oem_combined_f1 \
+      data/openearthmap_relabelled data/openearthmap_filtered data/split_f1 data/oem_combined_f1 \
       "$SONIC_USER@$HOST:$STAGE/data/"
 
-`rsync` is resumable — if it drops, re-run the same command.
+Then the 6.5 GB the OEM chain resolves to. Build the list first, so you send the 2,118 files the pool
+actually needs rather than all 25 GB of `openearthmap_raw`:
+
+    python - <<'EOF'
+    import os, glob
+    need = set()
+    for f in glob.glob('data/oem_combined_f1/**/*', recursive=True):
+        if os.path.islink(f):
+            t = os.path.realpath(f)
+            if '/openearthmap_raw/' in t and os.path.exists(t):
+                need.add(os.path.relpath(t, os.getcwd()))
+    open('/tmp/oem_raw.lst', 'w').write('\n'.join(sorted(need)) + '\n')
+    print(len(need), 'files', round(sum(os.path.getsize(f) for f in need) / 1e9, 2), 'GB')
+    EOF
+    # expect  2118 files 6.5 GB
+    rsync -ah --partial --info=progress2 --files-from=/tmp/oem_raw.lst . \
+      "$SONIC_USER@$HOST:$STAGE/"
+
+`rsync` is resumable — if it drops, re-run the same command. Start the 6.5 GB before step 2; the seed
+trees clone from GitHub and do not need the data, so the two overlap.
 
 **Verify before moving on.** On Sonic:
 
@@ -401,7 +442,8 @@ them. Until 2026-07-27 they were not collected at all and would have died with t
 - Do NOT modify the repository. The commit that runs must be the commit that was audited.
 - Do NOT use any script under `sonic/` except `sonic/campaign/`.
 - Do NOT use `rsync -L` on the data.
-- Do NOT transfer `notes/`, `data/biodiversity_raw` or `data/openearthmap_raw`.
+- Do NOT transfer `notes/` or `data/biodiversity_raw`. Send only the resolved 6.5 GB subset of
+  `data/openearthmap_raw`, never the full 25 GB.
 - Do NOT resubmit or resize the array to work around six PENDING tasks. That is the QOS cap.
 - Do NOT delete anything under `$SONIC_SCRATCH` without inspecting it first. The 2026-07-27 prune kept
   17 GB out of 420 GB precisely because two of the survivors were expensive to recreate.

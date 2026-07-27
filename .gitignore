@@ -1,8 +1,12 @@
 # --------------------
 # Data (ALL derived + raw)
 # --------------------
-data/
-pretrain_weights/
+# No trailing slash on these two: a trailing slash matches directories ONLY, and the Sonic
+# staging in docs/audit/BRIEF_STAGE_TO_SONIC.md creates both as SYMLINKS into scratch. Git sees
+# a symlink as a file, so "data/" missed it, every seed tree read as dirty, and the campaign
+# launcher refused to submit. Do not re-add the slashes.
+data
+pretrain_weights
 model_weights/
 bin/
 # Cluster working directory: 19 GB of fetched results, and the older campaign scripts
@@ -104,3 +108,6 @@ references_md/
 
 # Split-builder caches (regenerable; keyed to source mtimes)
 artifacts/_cache/
+
+# Pre-rewrite manuscript snapshots (2026-07-27), kept out of the repo like _archive/
+_archived_new/
