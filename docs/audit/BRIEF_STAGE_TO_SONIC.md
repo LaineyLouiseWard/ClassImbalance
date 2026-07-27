@@ -215,7 +215,13 @@ IS needed** — see above; send the 2,118-file, 6.5 GB subset, not the whole 25 
 
 **Every artefact the campaign needs is committed** and arrives with the clone: the split manifest, the
 sampler weights, the augmentation list, the teacher confusion, the boundary denominators, the
-correlogram. You do not need to transfer anything from `artifacts/`.
+correlogram, and — added 2026-07-27 — `normalisation_stats_<tag>.json`. You do not need to transfer
+anything from `artifacts/`.
+
+> **Check this holds before every launch, don't assume it.** The normalisation stats were briefly
+> untracked, and because the image reader hard-fails without them and each seed 43-51 is a
+> `git worktree add` (tracked files only), all forty runs would have died at their first batch after
+> queueing. `campaign.slurm` now asserts the file up front, and RUNBOOK stage B4 builds it if absent.
 </the_data_layout_that_matters>
 
 <procedure>

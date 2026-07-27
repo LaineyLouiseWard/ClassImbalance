@@ -63,28 +63,14 @@ PALETTE = np.array(
 )
 
 
-def normalize_percentile(img: np.ndarray) -> np.ndarray:
-    """Per-band 2-98 percentile stretch, matching biodiversity_dataset._normalize_percentile."""
-    out = np.zeros_like(img, dtype=np.float32)
-    for c in range(img.shape[2]):
-        band = img[:, :, c].astype(np.float32)
-        valid = band[(band != 0) & ~np.isnan(band)]
-        if valid.size > 0:
-            p2, p98 = np.percentile(valid, (2, 98))
-            if p98 > p2:
-                band = np.clip(band, p2, p98)
-                band = (band - p2) / (p98 - p2)
-        out[:, :, c] = band
-    return out
-
-
 def read_rgb(tif_path: Path) -> np.ndarray:
-    with rasterio.open(tif_path) as src:
-        data = np.transpose(src.read(), (1, 2, 0)).astype(np.float32)
-    data = np.where(np.isnan(data), 0, data)
-    data = normalize_percentile(data)
-    data = (data * 255).clip(0, 255).astype(np.uint8)
-    return data[:, :, :3] if data.shape[2] >= 3 else np.repeat(data, 3, axis=2)
+    """The RGB the MODEL saw. Imports the one reader rather than reimplementing it.
+
+    Was a local per-tile 2-98 percentile stretch, which stopped matching the dataset on 2026-07-27
+    when the reader moved to cached per-site percentiles (docs/CORRECTIONS_PAPER_PT2.md).
+    """
+    from geoseg.datasets.biodiversity_dataset import _read_tif_as_rgb_uint8
+    return np.asarray(_read_tif_as_rgb_uint8(str(tif_path)))
 
 
 def boundary_band(gt: np.ndarray, width: int = 8) -> np.ndarray:

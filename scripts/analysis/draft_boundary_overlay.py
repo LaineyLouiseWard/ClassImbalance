@@ -113,27 +113,18 @@ def gt_boundary_mask(mask: np.ndarray) -> np.ndarray:
 
 
 def _rgb_for(img_dir, iid):
-    """Canonical RGB read: per-band 2-98 percentile stretch, first 3 bands (matches the dataset)."""
-    try:
-        import rasterio
-        with rasterio.open(Path(img_dir) / f"{iid}.tif") as src:
-            data = np.transpose(src.read(), (1, 2, 0)).astype(np.float32)  # (H,W,C)
-        data = np.where(np.isnan(data), 0, data)
-        out = np.zeros_like(data)
-        for c in range(data.shape[2]):
-            band = data[:, :, c]
-            valid = band[(band != 0) & ~np.isnan(band)]
-            if valid.size:
-                p2, p98 = np.percentile(valid, (2, 98))
-                if p98 > p2:
-                    band = (np.clip(band, p2, p98) - p2) / (p98 - p2)
-            out[:, :, c] = band
-        out = (out * 255).clip(0, 255).astype(np.uint8)
-        out = out[:, :, :3] if out.shape[2] >= 3 else np.repeat(out, 3, axis=2)
-        return out
-    except Exception as e:  # pragma: no cover
-        print(f"  [warn] RGB read failed for {iid}: {e}; using grey placeholder")
-        return np.full((512, 512, 3), 200, np.uint8)
+    """The RGB the MODEL saw. Imports the one reader rather than reimplementing it.
+
+    This underlay sits beneath a figure about where the model errs, so it has to be the same
+    pixels the network received. It used to inline a per-band 2-98 percentile stretch computed
+    PER TILE, which stopped matching the dataset on 2026-07-27 when the reader moved to cached
+    per-site percentiles (docs/CORRECTIONS_PAPER_PT2.md). A copy that silently drifts from the
+    thing it claims to match is worse than no copy.
+    """
+    from geoseg.datasets.biodiversity_dataset import _read_tif_as_rgb_uint8
+    # Deliberately unguarded: the previous version swallowed every failure into a grey placeholder,
+    # so a missing or unreadable tile produced a plausible-looking figure instead of an error.
+    return np.asarray(_read_tif_as_rgb_uint8(str(Path(img_dir) / f"{iid}.tif")))
 
 
 def render(tiles, softmax_root, mask_dir, img_dir, cell, seeds, out_dir, use_tex, error_tiles=()):

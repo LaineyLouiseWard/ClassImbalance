@@ -82,6 +82,14 @@ export SAMPLER_TSV="artifacts/sampler_weights_clsbal_${SPLIT_TAG}.tsv"
 export TEACHER_CONFUSION_NPZ="artifacts/teacher_oem_gt_confusion_${SPLIT_TAG}.npz"
 export AUG_LIST="artifacts/train_augmentation_list_${SPLIT_TAG}.json"
 
+echo "[preflight] per-site normalisation statistics present"
+# The image reader hard-fails without this file, and it fails at the FIRST __getitem__ -- i.e. after
+# the job has queued and started, on all forty runs. It is committed, so it arrives with the clone;
+# each seed 43-51 is a `git worktree add`, which also carries tracked files only. This check turns a
+# twenty-hour-late FileNotFoundError into an instant one.
+NORM_STATS="artifacts/normalisation_stats_${SPLIT_TAG}.json"
+[ -f "$NORM_STATS" ] || { echo "FATAL: $NORM_STATS missing. Run scripts/data_prep/build_normalisation_stats.py and commit it."; exit 1; }
+
 echo "[preflight] taxonomy consistency (class orders, grounded OEM->student mapping)"
 # RUNBOOK stage A0 runs this, but the campaign window is B4..C5, so nothing in a seed's own run
 # checks it. If the grounded pre-train map ever stops matching argmax(teacher confusion), stage 2a

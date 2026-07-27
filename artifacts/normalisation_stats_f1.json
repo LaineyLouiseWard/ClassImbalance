@@ -1,0 +1,76 @@
+{
+  "split_tag": "f1",
+  "manifest": "artifacts/spatial_split_manifest_f1.json",
+  "seed": 42,
+  "px_per_tile_sampled": 20000,
+  "excludes": "NaN and exact zeros, matching the inherited per-tile reader",
+  "note": "One stretch per site, replacing the inherited per-tile 2-98 percentile stretch. OpenEarthMap is not listed: those tiles are already uint8 0-255 and are no longer stretched at all.",
+  "sites": {
+    "biodiversity": {
+      "p2": [
+        0.008119028881192208,
+        0.012203037552535535,
+        0.009326329901814461,
+        0.04794507369399071
+      ],
+      "p98": [
+        0.053440506011247585,
+        0.042015973925590505,
+        0.03031033299863338,
+        0.1380789577960968
+      ],
+      "n_pixels_sampled": [
+        21439549,
+        21439549,
+        21439549,
+        21439549
+      ],
+      "n_tiles": 1072,
+      "tiles_used": "train only"
+    },
+    "ireland1": {
+      "p2": [
+        0.009224716424942016,
+        0.014088914413005114,
+        0.011938239559531211,
+        0.053220875561237335
+      ],
+      "p98": [
+        0.028528584688901883,
+        0.029874922968447206,
+        0.024896749779582006,
+        0.11667631879448889
+      ],
+      "n_pixels_sampled": [
+        1171492,
+        1171492,
+        1171492,
+        1171492
+      ],
+      "n_tiles": 64,
+      "tiles_used": "all tiles of this held-out site (no training tiles exist)"
+    },
+    "ireland2": {
+      "p2": [
+        91.68644256591797,
+        121.67509643554688,
+        117.7363363647461,
+        368.12189819335936
+      ],
+      "p98": [
+        239.7091064453125,
+        250.73929534912108,
+        211.26457916259753,
+        1155.9470605468748
+      ],
+      "n_pixels_sampled": [
+        2429261,
+        2429260,
+        2429258,
+        2429263
+      ],
+      "n_tiles": 127,
+      "tiles_used": "all tiles of this held-out site (no training tiles exist)"
+    }
+  }
+}

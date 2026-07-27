@@ -81,6 +81,31 @@ SITE_COLOUR = {
 # EPSG code (e.g. a stale proj.db: to_epsg() returns None even though the projection math works).
 KNOWN_EPSG = {"biodiversity_": 32629, "ireland2_": 4326, "ireland1_": 4326}
 
+# The inland site is cut once along easting into train | val | test, with the tiles that
+# straddle either gap dropped. Shading it as one hue divided three ways keeps it reading as
+# a single site that was partitioned, rather than as three unrelated areas.
+# Every footprint is coloured by the role it plays in the split, not by which site it is:
+# the inland site is one hue divided three ways (so it reads as a single site that was cut),
+# and the two upland sites share the contrasting hue because together they are Test B.
+SPLIT_COLOUR = {"train": "#BBD4E8", "val": "#5E93BF", "test": "#1F4E79",
+                "external_test": "#C4622D", "dropped": "#E4E4E4"}
+# "test A"/"test B" rather than "test (a)"/"test (b)": the parenthesised letters label the three
+# SITES, and site (a) contains training, validation and test A, so reusing (a) for a split would
+# make one label mean two things. Capitalised A/B also matches Test A / Test B in the text.
+SPLIT_LABEL = {"train": "training", "val": "validation", "test": "test A (inland)",
+               "external_test": "test B (uplands)", "dropped": "excluded"}
+SPLIT_ORDER = ("train", "val", "test", "external_test", "dropped")
+INLAND_ORDER = ("train", "val", "test", "dropped")
+
+
+def load_assignment(root: Path) -> dict:
+    """tile id -> train/val/test from the split manifest; absent ids fell in a gap."""
+    import json
+    f = root / "artifacts/spatial_split_manifest_f1.json"
+    if not f.is_file():
+        return {}
+    return json.loads(f.read_text()).get("assignment", {})
+
 
 def find_repo_root() -> Path:
     p = Path.cwd().resolve()
@@ -123,8 +148,9 @@ def site_geometry(root: Path):
     t29 = Transformer.from_crs("EPSG:32629", "EPSG:4326", always_xy=True)
     sites = {}
     for prefix in SITES:
-        boxes = []
+        boxes, ids = [], []
         for f in sorted(glob.glob(str(root / f"data/biodiversity_raw/images/{prefix}*.tif"))):
+            ids.append(Path(f).stem)
             with rasterio.open(f) as src:
                 l, b, r, t = src.bounds
                 try:
@@ -149,12 +175,14 @@ def site_geometry(root: Path):
         polys_km = [box((x0 - lon0) * kx, (y0 - lat0) * ky, (x1 - lon0) * kx, (y1 - lat0) * ky)
                     for x0, y0, x1, y1 in boxes]
         cover_km = unary_union(polys_km)
+        tiles_km = dict(zip(ids, polys_km))
         cover_wgs = unary_union([box(*b) for b in boxes])  # true footprint in lon/lat
         sites[prefix] = {
             "centroid": (0.5 * (lon0 + lon1), 0.5 * (lat0 + lat1)),
             "bbox": (lon0, lat0, lon1, lat1),
             "count": len(boxes),
             "cover_km": cover_km,
+            "tiles_km": tiles_km,
             "cover_wgs": cover_wgs,
             "extent_km": (cover_km.bounds[2] - cover_km.bounds[0],
                           cover_km.bounds[3] - cover_km.bounds[1]),
@@ -186,22 +214,41 @@ def footprints_row(ax, sites, use_tex):
     ax.axis("off")
     times = r"$\times$" if use_tex else "x"
     order = ["biodiversity_", "ireland2_", "ireland1_"]
-    gap = 1.6   # enough that the two small SW sites' dimension labels do not collide
+    assign = sites.get("_assign", {})
+    letters = dict(zip(order, ("a", "b", "c")))
+    gap = 1.8   # the site labels stack on two lines, so they need little horizontal room
     x = 0.0
     hmax = max(sites[p]["extent_km"][1] for p in order)
     for prefix in order:
         s = sites[prefix]
         w, h = s["extent_km"]
-        add_geom(ax, s["cover_km"], x, 0, facecolor=SITE_COLOUR[prefix], edgecolor="black",
-                 linewidth=0.9, alpha=0.97, zorder=3)
+        if prefix == "biodiversity_" and assign:
+            groups = {k: [] for k in INLAND_ORDER}
+            for tid, poly in s["tiles_km"].items():
+                groups[assign.get(tid, "dropped")].append(poly)
+            for key in INLAND_ORDER:
+                if groups[key]:
+                    add_geom(ax, unary_union(groups[key]), x, 0,
+                             facecolor=SPLIT_COLOUR[key], edgecolor="none", zorder=3)
+            add_geom(ax, s["cover_km"], x, 0, facecolor="none", edgecolor="black",
+                     linewidth=0.9, zorder=4)
+        else:
+            face = SPLIT_COLOUR["external_test"] if assign else SITE_COLOUR[prefix]
+            add_geom(ax, s["cover_km"], x, 0, facecolor=face, edgecolor="black",
+                     linewidth=0.9, alpha=0.97, zorder=3)
         cx = x + w / 2
         # tile count centred ON the footprint (count only; the region is given in the caption)
         cc = s["cover_km"].centroid
         dy_lab = -1.5 if prefix == "biodiversity_" else 0.0  # nudge inland label off a coverage hole
+        lab_col = "#12314D" if (prefix == "biodiversity_" and assign) else "white"
         ax.text(cc.x + x, cc.y + dy_lab, f"{s['count']:,}\ntiles", ha="center", va="center",
-                fontsize=13, color="white", fontweight="bold", linespacing=0.95, zorder=6)
-        ax.text(cx, -0.5, f"{w:.1f} {times} {h:.1f} km", ha="center", va="top",
-                fontsize=12.5, color="#333333", zorder=5)
+                fontsize=13, color=lab_col, fontweight="bold", linespacing=0.95, zorder=6,
+                path_effects=[pe.withStroke(linewidth=2.2, foreground="white")]
+                if (prefix == "biodiversity_" and assign) else None)
+        # the site letter rides with the dimension label rather than floating above the
+        # footprint, where it read as an unanchored mark
+        ax.text(cx, -0.5, f"({letters[prefix]})\n{w:.1f} {times} {h:.1f} km", ha="center", va="top",
+                fontsize=12.5, color="#333333", linespacing=1.35, zorder=5)
         x += w + gap
     total_w = x - gap
 
@@ -211,6 +258,16 @@ def footprints_row(ax, sites, use_tex):
     for yy in (0, 2):
         ax.plot([xb - 0.18, xb + 0.18], [yy, yy], color="black", lw=1.5, zorder=5)
     ax.text(xb - 0.32, 1, "2 km", ha="right", va="center", rotation=90, fontsize=12, zorder=5)
+
+    if assign:
+        from matplotlib.patches import Patch
+        handles = [Patch(facecolor=SPLIT_COLOUR[k], edgecolor="black", linewidth=0.4,
+                         label=SPLIT_LABEL[k]) for k in SPLIT_ORDER]
+        # sits in the empty space above the two short southwest footprints, so it never
+        # overlays the inland site it describes
+        ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.57, 1.0),
+                  frameon=False, fontsize=9.5, handlelength=1.1, handleheight=0.9,
+                  labelspacing=0.34, borderpad=0.0)
 
     ax.set_xlim(xb - 0.7, total_w + 0.3)
     ax.set_ylim(-1.5, hmax + 0.4)
@@ -238,10 +295,20 @@ def locator(ax, sites, use_tex):
     gl.xlabel_style = gl.ylabel_style = {"size": 11.5, "color": "#444444"}
 
     pc = ccrs.PlateCarree()
+    assign = sites.get("_assign", {})
+    role = {"biodiversity_": "test", "ireland2_": "external_test", "ireland1_": "external_test"}
+    letters = {"biodiversity_": "a", "ireland2_": "b", "ireland1_": "c"}
     for prefix in ("biodiversity_", "ireland2_", "ireland1_"):
         lon, lat = sites[prefix]["centroid"]
-        ax.scatter(lon, lat, s=75, marker="o", facecolors=SITE_COLOUR[prefix],
+        face = SPLIT_COLOUR[role[prefix]] if assign else SITE_COLOUR[prefix]
+        ax.scatter(lon, lat, s=75, marker="o", facecolors=face,
                    edgecolors="black", linewidths=0.7, zorder=5, transform=pc)
+        # offset in points, not degrees: clears the 75 pt^2 marker by the same margin at every
+        # latitude and cannot drift onto the map frame
+        ax.annotate(f"({letters[prefix]})", xy=(lon, lat), xycoords=pc._as_mpl_transform(ax),
+                    xytext=(9, 0), textcoords="offset points",
+                    fontsize=12, color="#222222", ha="left", va="center", zorder=6,
+                    path_effects=[pe.withStroke(linewidth=2.4, foreground="white")])
 
 
 def _merc_aspect(ext):
@@ -256,6 +323,7 @@ def _merc_aspect(ext):
 def render(root: Path, out_dir: Path, use_tex: bool):
     setup_font(use_tex)
     sites = site_geometry(root)
+    sites["_assign"] = load_assignment(root)
 
     W, H = 8.6, 4.3
     fig = plt.figure(figsize=(W, H))

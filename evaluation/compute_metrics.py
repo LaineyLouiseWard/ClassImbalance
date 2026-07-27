@@ -20,6 +20,7 @@ import argparse
 import datetime
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Tuple
 
@@ -173,6 +174,7 @@ def evaluate_checkpoint(
     tta_scales: tuple = (1.0,),
     tta_flips: str = "",
     in_chans: int = 3,
+    keep_ids: set | None = None,
 ) -> Tuple[dict, np.ndarray, dict]:
     model = build_model(num_classes=6, in_chans=in_chans).to(device)
     model = load_checkpoint_into_model(model, ckpt_path, device)
@@ -216,10 +218,19 @@ def evaluate_checkpoint(
             preds = softmax(outputs).argmax(dim=1).cpu().numpy()  # (B,H,W)
 
         for tile_id, true, pred in zip(tile_ids, masks, preds):
+            # Tiles are 256 m footprints on a 128 m grid, so summing per-tile confusion matrices
+            # counts a mid-strip pixel ~4x and a strip-edge pixel once -- a metric over TILES, not
+            # over GROUND, and weighted differently on Test A (2.85x) than on the uplands
+            # (3.05x/3.26x), which is the contrast the paper leads on. keep_ids restricts scoring to
+            # a set of tiles that do not overlap each other, so each ground pixel is counted once.
+            # Inference and the per-tile record below still cover EVERY tile, so the subset can be
+            # changed later without re-running anything; only the pooled confusion matrix is
+            # restricted. artifacts/scoring_subset_<tag>.json; docs/CORRECTIONS_PAPER_PT2.md
             t_flat, p_flat = _apply_ignore_mask(true, pred, ignore_index)
             tile_cm = confusion_matrix(t_flat, p_flat, labels=list(range(6)))
-            cm += tile_cm
-            evaluator.add_batch(t_flat, p_flat)
+            if keep_ids is None or tile_id in keep_ids:
+                cm += tile_cm
+                evaluator.add_batch(t_flat, p_flat)
             # _apply_ignore_mask drops pixels whose TRUTH is the ignore class, but the model can
             # still predict that class elsewhere, so its column stays populated and it would be
             # recorded with intersection 0 and a non-zero union. That is a meaningless IoU of 0
@@ -332,6 +343,11 @@ def main() -> None:
              "this: rglob over model_weights/ picks up every stale checkpoint in the tree, including "
              "superseded ones from withdrawn campaigns, and scores them silently.",
     )
+    ap.add_argument("--scoring-subset", type=str,
+                    default=f"artifacts/scoring_subset_{os.environ.get('SPLIT_TAG', 'f1')}.json",
+                    help="Tiles that enter the pooled metric: a set that does not overlap itself, "
+                         "so each ground pixel is counted once. Pass 'none' for the old "
+                         "tile-weighted behaviour (not the reported protocol).")
     ap.add_argument("--pattern", type=str, default="*.ckpt", help="Checkpoint filename pattern.")
     ap.add_argument("--num-workers", type=int, default=0, help="Dataloader workers.")
     ap.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
@@ -387,6 +403,24 @@ def main() -> None:
     logging.info(f"Split={args.split}  data_root={data_root}")
     logging.info(f"Using ignore_index={args.ignore_index}")
 
+    # Which tiles enter the pooled metric. `--scoring-subset none` reproduces the old tile-weighted
+    # numbers; it is not the reported protocol. The subset key is the SPLIT DIRECTORY, not
+    # args.split, because Test B is passed as --split test with an external_test data_root.
+    keep_ids = None
+    if args.scoring_subset != "none":
+        p = Path(args.scoring_subset)
+        if not p.is_file():
+            raise FileNotFoundError(
+                f"{p} not found. Build it: SPLIT_TAG={os.environ.get('SPLIT_TAG', 'f1')} "
+                f"python scripts/data_prep/build_scoring_subset.py")
+        subsets = json.loads(p.read_text())["splits"]
+        key = data_root.name if data_root.name in subsets else args.split
+        if key not in subsets:
+            raise KeyError(f"{p} has no subset for '{key}'. Known: {sorted(subsets)}")
+        keep_ids = set(subsets[key]["tiles"])
+        logging.info(f"Scoring subset '{key}': {len(keep_ids)} non-overlapping tiles "
+                     f"(inference still runs on all; per-tile records stay complete)")
+
     for ckpt in ckpts:
         safe_name = ckpt.parent.name # Should only be keeping one checkpoint per ablation stage.
         run_dir = out_root / safe_name
@@ -414,6 +448,7 @@ def main() -> None:
             tta_scales=tta_scales,
             tta_flips=tta_flips,
             in_chans=args.in_chans,
+            keep_ids=keep_ids,
         )
 
         with open(run_dir / "metrics.json", "w", encoding="utf-8") as f:

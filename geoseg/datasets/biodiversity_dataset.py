@@ -50,33 +50,85 @@ except Exception:
     rasterio = None
 
 
-def _normalize_percentile(img: np.ndarray) -> np.ndarray:
-    out = np.zeros_like(img, dtype=np.float32)
-    for c in range(img.shape[2]):
-        band = img[:, :, c].astype(np.float32)
-        valid = band[(band != 0) & ~np.isnan(band)]
-        if valid.size > 0:
-            p2, p98 = np.percentile(valid, (2, 98))
-            if p98 > p2:
-                band = np.clip(band, p2, p98)
-                band = (band - p2) / (p98 - p2)
-        out[:, :, c] = band
-    return out
+_NORM_STATS: dict | None = None
+
+
+def _load_norm_stats() -> dict:
+    """Per-site 2-98 percentiles, built once by scripts/data_prep/build_normalisation_stats.py.
+
+    REPLACES the inherited per-tile stretch (ODOS starter code, `normalize_image` in their
+    biodiversity_tiff_dataset.py). Tiles overlap 50%, so computing percentiles per tile meant the
+    same ground entered the network under up to four different scalings: measured on this dataset,
+    raw values identical on shared ground but normalised values differing on 91-99.8% of shared
+    pixels, up to 88 of 255. On real softmax dumps over 69 overlapping pairs, 2.20% of shared
+    foreground pixels changed CLASS depending on which tile predicted them -- and 29x more often
+    within 0.5 m of a label boundary (15.21%) than in a field interior (0.52%).
+
+    That matters because a model sits at its decision threshold at a class boundary and is
+    confident inside a field, so any input perturbation flips predictions at boundaries and nowhere
+    else. That is the same signature this paper attributes to label ambiguity, produced by an
+    arbitrary preprocessing choice. See docs/CORRECTIONS_PAPER_PT2.md.
+
+    It also fixed a pathological case: a tile lying mostly outside the surveyed farm (22 of the 191
+    upland tiles are >90% void) computed its whole stretch from a few hundred pixels in one corner.
+    """
+    global _NORM_STATS
+    tag = os.environ.get("SPLIT_TAG", "f1")
+    # Keyed on the tag, not just loaded-once: a cache that ignored a changed SPLIT_TAG would serve
+    # the previous split's statistics silently, which is the failure shape this rebuild exists to
+    # remove. Not reachable today (nothing sets SPLIT_TAG mid-process), so this is a latch, not a fix.
+    if _NORM_STATS is None or _NORM_STATS.get("_tag") != tag:
+        import json
+        root = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+        p = osp.join(root, "artifacts", f"normalisation_stats_{tag}.json")
+        if not osp.exists(p):
+            # Falling back to per-tile percentiles here would silently reinstate the defect this
+            # exists to remove, and nothing downstream would show it. Fail instead.
+            raise FileNotFoundError(
+                f"{p} not found. Build it first:\n"
+                f"  SPLIT_TAG={tag} python scripts/data_prep/build_normalisation_stats.py")
+        with open(p) as f:
+            _NORM_STATS = dict(json.load(f)["sites"], _tag=tag)
+    return _NORM_STATS
+
+
+def _site_of_path(path: str) -> str:
+    """Site prefix from a tile path, e.g. .../ireland2_0060.tif -> 'ireland2'."""
+    return osp.splitext(osp.basename(path))[0].split("_")[0]
 
 
 def _read_tif_as_rgb_uint8(path: str) -> Image.Image:
     if rasterio is not None:
         with rasterio.open(path) as src:
             data = src.read()  # (C,H,W)
+            dtype = data.dtype
             data = np.transpose(data, (1, 2, 0))
-            data = np.where(np.isnan(data), 0, data)
-            data = _normalize_percentile(data)
-            data = (data * 255).clip(0, 255).astype(np.uint8)
-            if data.shape[2] >= 3:
-                data = data[:, :, :3]
-            else:
-                data = np.repeat(data, 3, axis=2)
-            return Image.fromarray(data)
+
+        if dtype == np.uint8:
+            # OpenEarthMap tiles are already 8-bit display imagery in 0-255. The inherited reader
+            # re-stretched them per tile, which is not a conversion but a second, uncalibrated
+            # contrast change applied to data that needed none.
+            data = data[:, :, :3] if data.shape[2] >= 3 else np.repeat(data, 3, axis=2)
+            return Image.fromarray(np.ascontiguousarray(data))
+
+        site = _site_of_path(path)
+        stats = _load_norm_stats()
+        if site not in stats:
+            raise KeyError(
+                f"no normalisation statistics for site '{site}' (from {path}). Known sites: "
+                f"{sorted(stats)}. Regenerate with build_normalisation_stats.py.")
+        p2 = np.asarray(stats[site]["p2"], dtype=np.float32)
+        p98 = np.asarray(stats[site]["p98"], dtype=np.float32)
+        if data.shape[2] != p2.size:
+            raise ValueError(f"{path}: {data.shape[2]} bands but stats hold {p2.size}")
+
+        # NaN -> 0 first, exactly as before: 0 falls below p2, so it clips to black. Keeping the
+        # order means void areas render identically to the inherited reader.
+        data = np.where(np.isnan(data), 0.0, data).astype(np.float32)
+        data = np.clip((data - p2) / (p98 - p2), 0.0, 1.0)
+        data = (data * 255).astype(np.uint8)
+        data = data[:, :, :3] if data.shape[2] >= 3 else np.repeat(data, 3, axis=2)
+        return Image.fromarray(np.ascontiguousarray(data))
 
     img = Image.open(path)
     if img.mode != "RGB":

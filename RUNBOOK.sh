@@ -321,6 +321,21 @@ fi
 
 if run_stage B4; then
   require_nonempty "$SPLIT_ROOT"/train/images A1
+
+  # Per-site percentile stretch. The reader HARD-FAILS without this, by design: falling back to the
+  # inherited per-tile percentiles would silently reinstate the defect it exists to remove (same
+  # ground entering the network under up to four scalings; 2.20% of shared foreground pixels
+  # changing class by tile choice, 29x concentrated at label boundaries). Idempotent and committed,
+  # so this is normally a no-op -- it is here so a fresh clone or a rebuilt split cannot start
+  # training without it. See docs/CORRECTIONS_PAPER_PT2.md.
+  NORM_STATS="artifacts/normalisation_stats_${SPLIT_TAG}.json"
+  if [ ! -f "$NORM_STATS" ]; then
+    echo "[B4] Building per-site normalisation statistics ($NORM_STATS)"
+    PYTHONPATH=. python scripts/data_prep/build_normalisation_stats.py
+  else
+    echo "[B4] Per-site normalisation statistics present ($NORM_STATS)"
+  fi
+
   echo "[B4] Building class-balanced (clsbal) sampler weights"
   PYTHONPATH=. python scripts/data_prep/build_clsbal_sampler.py \
     --data_root "$SPLIT_ROOT"/train \

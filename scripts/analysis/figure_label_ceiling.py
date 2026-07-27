@@ -176,34 +176,22 @@ def _load_maps(npz_path):
 
 
 def _rgb_for(img_dir, iid):
-    """Canonical RGB read matching the dataset: per-band 2-98 percentile stretch, first 3 bands.
+    """The RGB the MODEL saw. Imports the one reader rather than reimplementing it.
 
-    Inlined from biodiversity_dataset._read_tif_as_rgb_uint8 (importing that module pulls in
-    albumentations, which need not be installed in an analysis env).
+    The inlined copy this replaces applied a per-tile 2-98 percentile stretch and stopped matching
+    the dataset on 2026-07-27, when the reader moved to cached per-site percentiles
+    (docs/CORRECTIONS_PAPER_PT2.md). Its stated reason -- that importing the dataset module pulls
+    in albumentations -- no longer holds: albumentations is in the repo environment, and a copy
+    that drifts from what it claims to mirror costs more than the import.
     """
-    try:
-        import rasterio
-        with rasterio.open(Path(img_dir) / f"{iid}.tif") as src:
-            data = np.transpose(src.read(), (1, 2, 0)).astype(np.float32)  # (H,W,C)
-        data = np.where(np.isnan(data), 0, data)
-        out = np.zeros_like(data)
-        for c in range(data.shape[2]):
-            band = data[:, :, c]
-            valid = band[(band != 0) & ~np.isnan(band)]
-            if valid.size:
-                p2, p98 = np.percentile(valid, (2, 98))
-                if p98 > p2:
-                    band = (np.clip(band, p2, p98) - p2) / (p98 - p2)
-            out[:, :, c] = band
-        out = (out * 255).clip(0, 255).astype(np.uint8)
-        out = out[:, :, :3] if out.shape[2] >= 3 else np.repeat(out, 3, axis=2)
-        if out.shape[:2] != (512, 512):
-            from PIL import Image as _I
-            out = np.array(_I.fromarray(out).resize((512, 512)))
-        return out
-    except Exception as e:  # pragma: no cover
-        print(f"  [warn] RGB read failed for {iid}: {e}; using grey placeholder")
-        return np.full((512, 512, 3), 200, np.uint8)
+    from geoseg.datasets.biodiversity_dataset import _read_tif_as_rgb_uint8
+    # Deliberately unguarded: the previous version turned any read failure into a grey placeholder,
+    # so a missing tile produced a plausible-looking figure instead of an error.
+    out = np.asarray(_read_tif_as_rgb_uint8(str(Path(img_dir) / f"{iid}.tif")))
+    if out.shape[:2] != (512, 512):
+        from PIL import Image as _I
+        out = np.array(_I.fromarray(out).resize((512, 512)))
+    return out
 
 
 def fig_maps(cell, maps, img_dir, out, use_tex, tiles, vmax_total, vmax_mi):
