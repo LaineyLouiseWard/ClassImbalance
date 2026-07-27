@@ -16,10 +16,18 @@
 #SBATCH --job-name=lqc-campaign
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --constraint=l40s
+# bf16 is REQUIRED: train_supervision.py sets precision="bf16-mixed", which Volta (V100) cannot do
+# in hardware. l40s, a100 and h100 all can, and h100 is faster than l40s, so widening costs nothing
+# and roughly doubles the eligible pool (13 nodes / ~26 GPUs against 8 / 16). Every reported number
+# is a paired within-seed contrast and all four cells of a seed run on the same GPU, so mixed
+# hardware cannot leak into a cell comparison; run_provenance_seed<N>.json records the device.
+#SBATCH --constraint=l40s|a100|h100
 #SBATCH --array=0-9
 #SBATCH --time=20:00:00
-#SBATCH --cpus-per-task=8
+# 4, not 8: the dataloaders use num_workers=4, so 8 reserved twice what the job can use and blocked
+# it off nodes whose GPUs were idle but whose CPUs were taken. Measured 2026-07-27 -- sonicgpu18 sat
+# with two free L40S and three free CPUs while this job waited on Reason=Resources.
+#SBATCH --cpus-per-task=4
 # --output/--error/--account/--mail-user are supplied by submit_campaign.sh, because hard-coding
 # them is how the previous script ended up carrying one person's home directory into the repo.
 # No --mem: Sonic GPU nodes are RealMemory=1, so memory is not scheduled.
