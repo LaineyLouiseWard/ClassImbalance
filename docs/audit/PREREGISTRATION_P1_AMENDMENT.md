@@ -15,7 +15,7 @@ boundary-band versus deep-interior error rates per class, with per-class support
 number. No threshold, and nothing "fails".
 
 The full history below is retained unchanged, because a timestamped commitment should be superseded in
-the open rather than deleted. See `docs/DECISIONS_REBUILD_2026-07.md`, D16.
+the open rather than deleted. See `docs/audit/DECISIONS_REBUILD_2026-07.md`, D16.
 
 ---
 

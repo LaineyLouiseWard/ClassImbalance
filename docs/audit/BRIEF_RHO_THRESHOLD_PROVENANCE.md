@@ -1,6 +1,6 @@
 # SUPERSEDED 2026-07-26 — do not run this brief
 
-The threshold decision was settled directly: there is no pre-registered threshold. See D18 in `docs/DECISIONS_REBUILD_2026-07.md`. Retained for the argument on both sides and for the measured interval evidence at the end.
+The threshold decision was settled directly: there is no pre-registered threshold. See D18 in `docs/audit/DECISIONS_REBUILD_2026-07.md`. Retained for the argument on both sides and for the measured interval evidence at the end.
 
 ---
 
@@ -68,7 +68,7 @@ Three sub-questions, in order:
 </the_question>
 
 <the_case_for_withdrawing>
-The previous chat's reasoning, recorded as D16 in `docs/DECISIONS_REBUILD_2026-07.md`. Attack it.
+The previous chat's reasoning, recorded as D16 in `docs/audit/DECISIONS_REBUILD_2026-07.md`. Attack it.
 
 - Pre-registration is **not standard** in remote sensing or computer vision. It is standard in clinical
   trials and psychology. It was adopted here as credibility armour after the leak, not because the

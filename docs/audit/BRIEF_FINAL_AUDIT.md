@@ -49,8 +49,8 @@ training. Treat every such number as absent, not provisional.
 external_test 191 (Test B, two upland sites held out whole).
 
 **Read these — but AFTER dimension 1, not before. See `<do_this_first>`.**
-1. `docs/PRE_SUBMISSION_LEDGER.md` — the 42 findings of the sixth review and what was done about each.
-2. `docs/DECISIONS_REBUILD_2026-07.md` — D1 to D19, the settled decisions with evidence.
+1. `docs/audit/PRE_SUBMISSION_LEDGER.md` — the 42 findings of the sixth review and what was done about each.
+2. `docs/audit/DECISIONS_REBUILD_2026-07.md` — D1 to D19, the settled decisions with evidence.
 3. `docs/METHODS_STATED_LIMITATIONS.md` — eleven properties the methods section must state, each with
    a measurement. **This file is a prime target: it was written in the last session and some of it has
    already been corrected once.**
@@ -118,8 +118,8 @@ more than one place; foreground masking and ignore-index handling; per-class IoU
 parsing and site inference; anywhere a pixel size or a CRS conversion appears.
 
 **3. Check the tracked documents against the code, in both directions.**
-Every falsifiable claim in `docs/METHODS_STATED_LIMITATIONS.md`, `docs/DECISIONS_REBUILD_2026-07.md`,
-`docs/PRE_SUBMISSION_LEDGER.md` and `CLAUDE.md`. Both directions means: is what the document says true
+Every falsifiable claim in `docs/METHODS_STATED_LIMITATIONS.md`, `docs/audit/DECISIONS_REBUILD_2026-07.md`,
+`docs/audit/PRE_SUBMISSION_LEDGER.md` and `CLAUDE.md`. Both directions means: is what the document says true
 of the code, AND does the code do something material the documents do not mention?
 
 Pay particular attention to §6, §7, §9 and §10 of the methods file. §6 and §9 were corrected once

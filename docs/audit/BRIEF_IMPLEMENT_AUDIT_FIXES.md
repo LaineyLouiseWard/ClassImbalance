@@ -80,7 +80,7 @@ evidence; one implementation and a docstring is not. This is how the split geome
 how the retracted `lift` statistic was caught.
 
 **For anything touching the pre-registration (items 6, 12, 14, 15, 16, 17), spawn a subagent that reads
-only `docs/PREREGISTRATION_P1_AMENDMENT.md` and the code**, with no access to your reasoning, and asks
+only `docs/audit/PREREGISTRATION_P1_AMENDMENT.md` and the code**, with no access to your reasoning, and asks
 whether the code implements what the document registers. The document has already been wrong twice.
 
 Run subagents in parallel where they are independent. Report every subagent's verdict, including the
@@ -187,7 +187,7 @@ in the repository is from the withdrawn campaign — treat them as absent. `READ
 2. `notes/rebuild_2026-07/DECISIONS_LOG.md` — **the settled decisions and why. Do not contradict these.**
 3. `notes/rebuild_2026-07/audits/REVIEW_FINAL_PRE_SONIC_2026-07-26.md` — the audit you are implementing.
 4. `CLAUDE.md`, the "STATE AS OF 2026-07-26" section — conventions that are easy to get wrong.
-5. `docs/PREREGISTRATION_P1_AMENDMENT.md` — the registered claim.
+5. `docs/audit/PREREGISTRATION_P1_AMENDMENT.md` — the registered claim.
 
 **Commands that actually work** (the repo's default python is a different env with no lightning, and
 that trap cost hours):
@@ -323,7 +323,7 @@ number and must not be copied; 4 cells × 10 seeds; refuse to start on a dirty w
 Verify the arithmetic yourself: stage-2a's pool is 3,190 tiles of which 1,072 are the Biodiversity
 training tiles, so pre-training delivers ≈24,100 Bio gradient steps and the transfer arm gets ≈48,240
 against the baseline's ≈24,120. Also confirm transfer gets two val-selection passes to baseline's one.
-*Fix:* add a dated section to `docs/PREREGISTRATION_P1_AMENDMENT.md` stating the confound and both step
+*Fix:* add a dated section to `docs/audit/PREREGISTRATION_P1_AMENDMENT.md` stating the confound and both step
 counts. Do NOT change the pool — see D12 for why the obvious fix is worse.
 
 **7. Commit discipline (audit, minimum fix 6).**

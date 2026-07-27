@@ -82,7 +82,7 @@ were landscape-dependent.
   model was trained — the alternative hypothesis the claim exists to exclude.
 - v2, rho: a ratio of two rates over disjoint pixel sets. No area term, so landscape-independent.
 
-Full history in `docs/PREREGISTRATION_P1_AMENDMENT.md`, dated before any training.
+Full history in `docs/audit/PREREGISTRATION_P1_AMENDMENT.md`, dated before any training.
 **Outstanding:** the percentile CI under-covers (audit F8); the 4.0 threshold is calibrated on
 withdrawn figures and must be re-declared as a priori or its provenance stated.
 
@@ -258,7 +258,7 @@ calibrated bar, stated as such.
 
 **Decision:** no pre-registered threshold. The boundary claim is supported by the evidence the paper
 already computes — the trimap exclusion curve and the boundary-versus-interior error rates — reported
-descriptively. `docs/PREREGISTRATION_P1_AMENDMENT.md` is withdrawn.
+descriptively. `docs/audit/PREREGISTRATION_P1_AMENDMENT.md` is withdrawn.
 
 **Why.**
 
@@ -294,7 +294,7 @@ exactly this purpose, it is already implemented in `boundary_trimap_iou.py`, and
   reporting, as an observation.
 - Items 15, 16 and 17 of the implementation brief, and its `do_this_first` interval-coverage check.
 
-**Legitimacy of withdrawing it.** `docs/PREREGISTRATION_P1_AMENDMENT.md` is committed and timestamped,
+**Legitimacy of withdrawing it.** `docs/audit/PREREGISTRATION_P1_AMENDMENT.md` is committed and timestamped,
 so this withdrawal must be explicit rather than quiet. It is withdrawn **before any model has been
 trained on the corrected split**, so no result has been seen and nothing is being avoided. Withdrawing
 after seeing results would not be legitimate; withdrawing now is simply deciding not to use an optional
@@ -342,14 +342,14 @@ not running.
 D16 withdrew the pre-registration on my own judgement. That was a decision to hand over, not to take:
 it changes what the paper claims and how, and it was made in one exchange.
 
-`docs/BRIEF_RHO_THRESHOLD_PROVENANCE.md` puts it to an independent chat with both sides argued —
+`docs/audit/BRIEF_RHO_THRESHOLD_PROVENANCE.md` puts it to an independent chat with both sides argued —
 including the case AGAINST withdrawing, which nobody had made properly: that a timestamped commitment
 is the only clean answer to the suspicion that a second set of numbers was tuned after a first set was
 withdrawn for leakage, and that without a bar the claim is settled by interpretation, which is what
 produced the unsupportable "every class collapses to a near-zero interior rate" in the first place.
 
 Until that comes back, treat the pre-registration as **suspended, not withdrawn**.
-`docs/PREREGISTRATION_P1_AMENDMENT.md` keeps its withdrawal header and its full history; if the
+`docs/audit/PREREGISTRATION_P1_AMENDMENT.md` keeps its withdrawal header and its full history; if the
 decision reverses, the header is removed and the reversal is dated in the open.
 
 Nothing has been trained, so either outcome remains legitimate.
@@ -357,7 +357,7 @@ Nothing has been trained, so either outcome remains legitimate.
 ## D18 — No threshold. Settled by the author, not by the brief — 2026-07-26
 
 **Decision:** no pre-registered threshold. D16 stands; D16a's reopening is closed without running
-`docs/BRIEF_RHO_THRESHOLD_PROVENANCE.md`. That brief is superseded, not pending.
+`docs/audit/BRIEF_RHO_THRESHOLD_PROVENANCE.md`. That brief is superseded, not pending.
 
 **Why, in the author's words:** the number is arbitrary. A bar nobody can source is distracting and
 overpromises what it can adjudicate.

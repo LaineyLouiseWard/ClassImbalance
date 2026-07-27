@@ -20,9 +20,9 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | C2 | stage E syncs five of those figures into `manuscript/Figures/` | C | DONE |
 | C3 | `ablation_qualitative` figure built from the withdrawn campaign, exit 0 | C | DONE |
 | C4 | `oem_mapping.tex` (main.tex:181) embeds the withdrawn confusion matrix; its generator crashes so drift is invisible | C | DONE |
-| C5 | C3/C4 runbook stages accept a metrics.json of withdrawn provenance; only `aggregate_seeds` validates | C | DONE |
+| C5 | C3/C4 runbook stages accept a metrics.json of withdrawn provenance; only `aggregate_seeds` validates | C | **REOPENED then DONE 2026-07-26** |
 | C6 | withdrawn deliverables sit at the exact output paths the pipeline writes, unmarked | C | DONE |
-| C7 | **the trimap exclusion curve — the primary evidence since D18 — is in no RUNBOOK stage**, and one input is produced by nothing | C | DONE |
+| C7 | **the trimap exclusion curve — the primary evidence since D18 — is in no RUNBOOK stage**, and one input is produced by nothing | C | **REOPENED then DONE 2026-07-26** |
 | C8 | `accuracy_vs_separation.py` silently drops the entire external_test stratum | C | DONE |
 | C9 | campaign dumps softmax for test/external only; three stage-E consumers read *val* dumps against the withdrawn 219-tile mask dir | C | DONE |
 | C10 | `dump_seed_softmax.py` defaults to the withdrawn split; help text says 231 tiles | C | DONE |
@@ -46,12 +46,38 @@ Status: **DONE** = fixed and verified by execution | **OPEN** = not yet | **N/A*
 | E9 | METHODS §7's interval numbers have no committed code, contradicting the file's own opening rule | E | DONE |
 | E10 | `artifacts/replication_exposure_report.json` is a month stale, matches no split, referenced by nothing | E | DONE |
 
+## Two rows were marked DONE and were not — 2026-07-26
+
+Both were found by the seventh review, by RUNNING the fixed path rather than reading it. Recorded
+here because "marked DONE without being run" is the same defect class the rest of this ledger is
+about, and it survived the round that closed it.
+
+**C5 — the guard validated the model, not the data.** `export_final_test_table.py` and
+`aggregate_seeds.py` both gained a provenance check, and both checked only the checkpoint basename
+and `tta`. Taking the withdrawn campaign's metrics and changing ONLY the checkpoint basename was
+enough to build the manuscript's headline test table at exit 0, from files whose own fields read
+`split: val` and `data_root: .../biodiversity_split/val` — the withdrawn leaking split, and the
+validation split at that. Both fields were in the file, unread. Now one shared validator
+(`utils.assert_metrics_provenance`) checks checkpoint, `data_root` name, `data_root` parent and
+`tta`, and it is imported by both readers and mirrored in `campaign.slurm` rather than copied.
+
+**C7 — the evidence path was added and did not run.** Stage C5 was added to produce the per-seed
+softmax, and stage D was added to consume it, but the writer emits
+`analysis/seed_softmax/<cell>/seed<N>/` while `seed_disagreement.seed_dir` read
+`<root>/seed<N>/analysis/seed_softmax/<cell>/seed<N>/`. Stage D therefore globbed an empty directory:
+`boundary_trimap_iou.py` scored **zero tiles**, wrote NaN at every radius alongside `"n_seeds": 10`,
+and **exited 0**. `seed_dir` now resolves both layouts and raises naming each; the dumps are collected
+off each seed by `campaign.slurm`; and the trimap and rho paths fail loudly on an empty or partial
+dump set. Verified by running the failing input and the passing one.
+
 ## Not defects — declared decisions, recorded with evidence
 
 Re-reported by reviewers without the decision log; each stays as it is.
 
 - the transfer arm's 2.00x gradient-step confound and second val-selection pass — **D12**
-- no rho threshold, no dead band, no weak band — **D18**
+- no rho threshold, no dead band, no weak band — **D18**. And since 2026-07-26 no spatial
+  interval either: the block bootstrap existed to supply that threshold's lower bound and was
+  removed with it (METHODS §7). Uncertainty is per-seed and paired.
 - 950 m being ireland2's composition range rather than the inland site's — **D14**, justified in METHODS §4
 - the split clearing its adequacy floors at 5 of 10 grid phases — declared, METHODS §5
 - `README.md`, `RUNBOOK.md`, `docs/DESIGN_NOTES.md` describing the old split — stale by decision, fixed after the campaign

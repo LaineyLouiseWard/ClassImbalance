@@ -1,3 +1,10 @@
+> **⚠ STALE BY DECISION — 2026-07-27.** Every accuracy, contrast and figure below comes from a
+> campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
+> the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
+> split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
+> provisional. The current design is in `docs/METHODOLOGICAL_CHOICES.md`; this file is rewritten
+> after the rebuilt campaign runs.
+
 > **Pipeline: clean 3-stage.** Stage 3 (clsbal — class-balanced frequency-only sampling, Kang et al. 2020) is the final shipped model. Stage-4 knowledge distillation and self-distillation were tested and dropped as a negative result (distillation underperformed a step-matched control that trained for the same extra steps without it). See [docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md) for the design decisions and negative results.
 
 # Reproducibility Runbook

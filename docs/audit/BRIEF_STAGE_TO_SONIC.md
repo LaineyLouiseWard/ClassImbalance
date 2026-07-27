@@ -1,7 +1,7 @@
 # Brief — stage the campaign to Sonic and launch it
 
 Paste everything below the rule into a **fresh chat**. Run it only after
-`docs/BRIEF_FINAL_AUDIT.md` has come back and anything launch-blocking is fixed.
+`docs/audit/BRIEF_FINAL_AUDIT.md` has come back and anything launch-blocking is fixed.
 
 ---
 

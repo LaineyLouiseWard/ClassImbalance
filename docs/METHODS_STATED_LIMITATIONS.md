@@ -9,8 +9,11 @@ Two rules for this file. Every number is recomputed from the shipped configs or 
 disk — never from a code comment, a note, or the withdrawn leaking campaign. And an entry is added
 when the property is discovered, not when the results make it convenient.
 
-Related records: `docs/DECISIONS_REBUILD_2026-07.md` (why each design decision was taken),
-`docs/PREREGISTRATION_P1_AMENDMENT.md` (SUSPENDED 2026-07-26 pending D16a, retained in full).
+Related records: **`docs/CORRECTIONS.md`** (the opposite job — sentences currently in the
+manuscript that are WRONG and must be deleted; this file is properties that must be STATED),
+`docs/DO_NOT_ADD.md` (forbidden sentences and a fabricated source loose in the notes),
+`docs/audit/DECISIONS_REBUILD_2026-07.md` (why each design decision was taken),
+`docs/audit/PREREGISTRATION_P1_AMENDMENT.md` (SUSPENDED 2026-07-26 pending D16a, retained in full).
 
 ---
 
@@ -51,8 +54,9 @@ defensible rather than an excuse.
 173-tile validation split with `save_top_k=1`. Stage 2a selects a best epoch on that split; stage 2b
 then selects again from the model 2a handed over. Baseline and sampler-only select once.
 
-Validation sits 256 m from training, and its per-class support is thin: 8, 8, 6, 7 and 6 independent
-950 m blocks for Forest, Grassland, Cropland, Settlement and Semi-natural. Selection is on foreground
+Validation sits 256 m from training, and its per-class support is thin: 8, 8, 6, 7 and 6 grid cells
+of 950 m containing Forest, Grassland, Cropland, Settlement and Semi-natural respectively (cells
+touched, not independent parcels — §6). Selection is on foreground
 mIoU, which weights all five equally, so it is partly driven by a Cropland IoU estimated from 6
 blocks. The usual defence — that validation optimism is common-mode across the cells — holds for a
 level shift but not for a *selection rule*, and the arm that selects twice is the arm carrying the
@@ -85,12 +89,19 @@ exists to do.
 
 ## 4. The 950 m block size, where it comes from, and what the split's admissibility depends on
 
-**Measured 2026-07-26.** `SUPPORT_BLOCK_M = 950.0` is not only the bootstrap unit. It is also the
-block size in `MIN_CLASS_BLOCKS`, the criterion that ADMITTED this split, so the split's
-admissibility is a function of it.
+**Measured 2026-07-26.** `SUPPORT_BLOCK_M = 950.0` is the block size in `MIN_CLASS_BLOCKS`, the
+criterion that ADMITTED this split, so the split's admissibility is a function of it. It is no longer
+also a bootstrap unit — see §7.
+
+**The criterion does not cover Test B, and the paper must say so.** `SPLITS = ("train", "val",
+"test")` in `build_spatial_split.py`, so `MIN_CLASS_BLOCKS` is never applied to `external_test`. On
+the shipped split Test B's Cropland occupies **4** grid cells and its Settlement **6**, against the
+floor of 8 that Test A had to clear. That is not a defect — Test B is held out whole and was never a
+candidate to be re-cut, so a floor could only have rejected the site, not improved it — but a reader
+who finds it unaided will assume it was hidden.
 
 Recomputed against the shipped manifest by `scripts/analysis/block_size_sensitivity.py`. Each cell
-is the smallest number of independent blocks any one foreground class has in that split; the floors
+is the smallest number of grid cells any one foreground class occupies in that split; the floors
 are 5 for train and val and 8 for test.
 
 | block | train | val | test | verdict | where the number comes from |
@@ -154,67 +165,96 @@ correct than another — but a criterion that passes at half the offsets of an a
 property of the criterion, not of the ground, and belongs in the methods rather than in a reviewer's
 discovery.
 
-## 6. Nominal block counts overstate the support; report Kish n_eff beside them
+## 6. The 950 m grid counts CELLS TOUCHED, not independent parcels
 
-**Measured 2026-07-26, same script.** The blocks are badly unequal, so resampling them as
-exchangeable draws claims more independence than there is.
+**Measured 2026-07-26; the grid's role was settled the same day and the block bootstrap removed.**
 
-| split | tiles | blocks | n_eff (tiles) | n_eff (foreground px) | tiles per block |
+A count of grid cells is a spread statistic. It says how far apart the ground carrying a class is
+scattered. It is NOT a count of independent parcels, and this file described it as one until now.
+The ground does not hold as many parcels as the grid returns:
+
+| split | tiles | covered ground | 950 m cells of ground | cells touched | over-count |
+|---|---|---|---|---|---|
+| test (Test A) | 294 | 6.783 km² | 7.52 | **16** | **2.13x** |
+| external_test (Test B) | 191 | 5.164 km² | 5.72 | **14** | **2.44x** |
+| — ireland1 | 64 | 1.820 km² | 2.02 | 7 | 3.47x |
+| — ireland2 | 127 | 3.344 km² | 3.70 | 7 | 1.89x |
+
+Sixteen disjoint 950 m parcels cannot exist inside 7.52 parcels' worth of ground. The over-count is
+not a phase artefact: Test A is a strip 1024 m wide, which is 1.08 cells, so the grid cuts it into
+two columns, one of them a sliver; ireland1's full extent is 1.57 x 1.53 cells and the grid cuts it
+into seven. Adjacent slivers of one neighbourhood are not independent evidence about each other.
+
+**Kish effective counts, which the nominal totals must never be quoted without.** Kish measures
+unevenness in cell SIZE. It moves in the right direction and does not close the gap, because it does
+not measure dependence between adjacent slivers.
+
+| split | tiles | cells | n_eff (tiles) | n_eff (foreground px) | tiles per cell |
 |---|---|---|---|---|---|
 | train | 1072 | 32 | 27.46 | 26.93 | 55 … 8 |
 | val | 173 | 8 | 7.52 | 7.43 | 28 … 12 |
 | test (Test A) | 294 | 16 | **9.85** | 9.77 | 43, 36, 36, 35, 34, 33, 18, 17, 8, 7, 7, 6, 5, 4, 3, 2 |
 | external_test (Test B) | 191 | 14 | **7.15** | 5.78 | 42, 37, 34, 15, 14, 14, 9, 6, 6, 4, 4, 2, 2, 2 |
 
-Restricted to the 172 Test B tiles that carry a ground-truth boundary: **still 14 blocks**, n_eff
-**7.27**. The registered exclusion removes 19 tiles from one crowded block and costs **no blocks at
-all**; it raises n_eff slightly because it evens the distribution out.
+Test A: n_eff 9.85 against 7.52 of ground. Test B: 7.15 against 5.72. Six of Test A's sixteen cells
+hold 74% of its tiles. Restricted to the 172 Test B tiles carrying a ground-truth boundary: still 14
+cells, n_eff 7.27 — the registered exclusion costs no cells and evens the distribution slightly.
 
-**Corrected 2026-07-26.** Earlier versions of this section reported Test B as 12 blocks with n_eff
-7.36 after the exclusion, against 14 and 7.15 before it — as though the exclusion cost two blocks. It
-does not. The 12 came from a second, disagreeing implementation: `utils.spatial_blocks` grouped tiles
-by coordinate system alone, and ireland1 and ireland2 share EPSG:4326 while sitting ~50 km apart at
-51.54 and 52.03 degrees. It converted 950 m into degrees of longitude using **one mean latitude
-across both sites**, putting the cell edges somewhere neither site's own scaling would. So the
-bootstrap unit for Test B and the class-support unit for Test B were different partitions of the same
-ground, both described as "independent 950 m blocks". `spatial_blocks` now groups by site as well as
-CRS, and the two agree at 14.
+**Corrected twice, and the second correction is the instructive one.** Earlier versions reported Test
+B as 12 cells, from a second implementation that grouped tiles by coordinate system alone: ireland1
+and ireland2 share EPSG:4326 while sitting ~58 km apart at 51.55 and 52.04 degrees, and one mean
+latitude across both put the cell edges where neither site's own scaling would. `spatial_blocks` was
+fixed to group by site as well as CRS. **A THIRD implementation carried the same defect until
+2026-07-26**: `report_class_support.tile_geometry`, which is the function that writes
+`artifacts/class_support.json` and prints the per-class table describing this split. It still
+returned 12, and understated Test B support in four of five classes — Forest 11 → 13, Grassland
+7 → 9, Settlement 5 → 6, Semi-natural 11 → 13, Cropland 4 either way. It now delegates to
+`spatial_blocks`. There is one block function; do not add a second.
 
-**What must be written:** n_eff beside n_blocks wherever a block bootstrap is reported. Six of Test
-A's sixteen blocks hold 74% of its tiles.
+**What must be written:** the area audit and the Kish counts together, and the phrase "grid cells
+containing the class", never "independent 950 m blocks". The nominal count is a spread statistic. It
+was never an inferential n, and since 2026-07-26 nothing in this repository treats it as one.
 
-## 7. Test A's interval is not what a nominal 95% interval claims
+## 7. No spatial confidence interval is reported, on either test set
 
-**Measured by `scripts/analysis/interval_coverage.py`** on the real per-block band and interior
-pixel counts, with the output committed to `artifacts/interval_coverage.json`; independently re-derived
-from the rasters by a second implementation sharing no code. **Re-run 2026-07-26 after the block
-function was corrected** (Test B is 14 blocks, not 12 — see §6), so the numbers below are the shape
-of the finding rather than the exact figures in that artefact; read the artefact for those. Error is drawn
-per block with a log-normal random effect on both the interior rate and the rate ratio.
+**Settled 2026-07-26. The block bootstrap was REMOVED from the repository, not reweighted.** Four
+reasons, in order of weight:
 
-- The **percentile** interval under-covers at these block counts: 0.86–0.93 against a nominal 0.95,
-  and 0.92–0.93 even with zero between-block heterogeneity, which is six Monte-Carlo standard errors
-  low. The miss is asymmetric and on the side that matters — the interval sits entirely above the
-  truth about 7% of the time on Test A against a nominal 2.5%.
-- **BCa does not fix it and is worse**, which contradicts the assumption that a better interval would
-  be wider. BCa's median width is 1.012× the percentile's, its *lower* bound is HIGHER in 63 of 64
-  simulated cells, and its coverage falls to 0.74–0.86 — with 12 blocks the acceleration is estimated
-  from 12 jackknife points and is unstable.
-- A **delete-one-block jackknife t-interval on log** is the only one of the three that covers near
-  nominal (0.97 with no heterogeneity, 0.89–0.94 with it), and it is 20–45% wider.
-- The claim that a percentile interval on log(rho) is *bit-identical* to one on rho is false, though
-  only at 5e-8 — quantile interpolation on a convex transform does not commute. It is numerically
-  irrelevant and the word should not be written down.
+1. **It existed to defend a threshold that no longer exists.** The pre-registration judged rho >= 4.0
+   "on the lower bound of a tile-level bootstrap 95% CI, resampling by non-overlapping footprint
+   groups". D18 retired the threshold. The machinery outlived its only purpose, and then consumed
+   about ten rounds of design iteration arguing about the size of its unit.
+2. **Both test sets are complete enumerations of their ground.** Every tile is scored, every pixel
+   counted. There is no sample, so there is no sampling error to place an interval on.
+3. **Every claim this study makes is one of two kinds, and neither needs it.** A cross-cell contrast
+   is computed on IDENTICAL pixels — `n_near` and `n_far` are bit-identical across the four cells
+   because the band is built from the ground-truth mask alone — so the landscape is a constant in the
+   difference and the variance that matters is the training run. A level is a census statistic,
+   reported with the ground it covers.
+4. **Where spatial variance would genuinely be wanted — does this hold on other landscapes — a
+   within-site bootstrap estimates the wrong component.** Between-site is the component that matters
+   and its n is 2. No interval rescues n = 2; both sites are reported and the reader sees them.
 
-**Why this matters beyond the interval.** A threshold judged on a lower bound is not the threshold it
-appears to be. For a lower bound to clear 4.0 with 80% probability, the true rate ratio must be about
-**5.2 on Test A and 6.3 on Test B** under moderate heterogeneity, rising to 5.8 and 7.0 under strong
-heterogeneity, and 5.5 / 7.5 if the properly-covering jackknife interval is used. Test B needs roughly
-1.0–1.4 more than Test A for the same power, purely because it has fewer and more unequal blocks. The
-only non-leaking prior estimates available were 3.25 (baseline) and 4.77 (full model) on validation.
+**What is reported instead.** Uncertainty is PER-SEED AND PAIRED, over the ten training runs:
+`aggregate_seeds.py` for the factorial tables (within-seed paired contrasts, paired-t interval), and
+the per-seed curves already written by `boundary_trimap_iou.py`. **One estimator, not two.** Two
+uncertainty stories for one number is a methods section no reviewer follows.
 
-**What must be written:** if a threshold is used at all, its operating characteristic, computed
-before the campaign. If one is not, the coverage of whatever interval is reported, and n_eff.
+**What this costs, stated plainly.** The paper cannot say "this is how the number would move on new
+ground". It says "this is how it moves across training runs on this ground". Two purposively chosen
+upland sites never supported the first claim, so nothing defensible is lost. Levels are reported with
+their spatial extent; contrasts carry the interval.
+
+**What must be written:** that uncertainty is over training runs and what that does and does not
+cover, in the same paragraph as the area audit in §6 that motivates it.
+
+**Superseded.** Earlier versions of this section reported a coverage simulation
+(`interval_coverage.py`, `artifacts/interval_coverage.json`): the percentile interval under-covering
+at 0.86-0.93, BCa worse at 0.74-0.86, a jackknife-t the only one covering. Both script and artefact
+are deleted. The finding was real and is the reason the bootstrap is gone rather than repaired; it is
+recorded here and nowhere else. It also carried a power analysis — "the true ratio must be about 5.2
+on Test A and 6.3 on Test B for a lower bound to clear 4.0" — which was vestigial from the start,
+because it computes the operating characteristic of a threshold D18 had already retired.
 
 ## 8. The study is three Irish sites; the raw pool holds eleven
 
@@ -325,8 +365,13 @@ with the clearest statement of its cost.
 What Cheng *does* support is how to choose a width, and the method is thematically ideal because the
 width is set by label quality: *"the annotation consistency sets the lower bound on d"*, calibrated
 so that *"median Boundary IoU between the annotations of the two experts exceeds 0.9"*. **We cannot
-apply it.** This dataset carries a single annotation pass — 5,898,240 co-labelled pixels across 60
-overlapping tile pairs are 100.0000% identical — so no annotation-consistency distance exists.
+apply it.** This dataset carries a single annotation pass, so no annotation-consistency distance exists.
+
+**A measurement that must NOT be offered as evidence for that.** Overlapping tile pairs agree on
+100.0000% of their co-labelled pixels. That is a tautology of the chipping, not a statement about the
+annotator: tiles are cut from one source raster on a 50% stride, so an overlap region is the SAME
+pixels of the SAME raster, and identity is guaranteed by construction. It cannot stand in for a
+second annotation pass and must not appear in the paper as though it could.
 
 **Therefore, what must be written about the 8 m band:** it is an a-priori choice, stated as such and
 unvalidated against annotation consistency, with the sensitivity sweep reported. It must NOT be

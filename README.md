@@ -1,3 +1,10 @@
+> **⚠ STALE BY DECISION — 2026-07-27.** Every accuracy, contrast and figure below comes from a
+> campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
+> the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
+> split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
+> provisional. The current design is in `docs/METHODOLOGICAL_CHOICES.md`; this file is rewritten
+> after the rebuilt campaign runs.
+
 # Diagnosing a Label-Quality Ceiling in Imbalanced Rural Land-Cover Segmentation
 
 ![Graphical abstract: satellite imagery, the FT-UNetFormer segmentation map, and the boundary-localised residual error that points to a label-quality ceiling.](assets/graphical_abstract.png)
