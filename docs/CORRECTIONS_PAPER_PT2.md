@@ -5,6 +5,47 @@ already known to be wrong. Everything here is new and none of it is in the manus
 
 ---
 
+## In plain language, before the detail
+
+Two problems were found on 2026-07-27. Both are fixed. Neither is in the manuscript yet.
+
+**Problem 1 — the brightness ruler was measured per tile.** Before an image goes into the model,
+its brightness is rescaled onto a 0-255 range. That rescaling was worked out separately for every
+tile, using that tile's own darkest and brightest pixels. Tiles overlap by half, so the same field
+sits in up to four tiles and got four different rescalings. The model then saw the same ground four
+different ways and sometimes gave four different answers.
+
+That matters more than it sounds, because of *where* the disagreements land. In the middle of a
+field the model is 95% sure, so nudging the brightness changes nothing. At the edge between two
+land-cover types it is nearly 50/50, so the same nudge tips it over. Measured: predictions flipped
+on 15.2% of pixels within half a metre of a label boundary, against 0.52% in field interiors — 29x.
+That is the same pattern the paper attributes to ambiguous labels, produced by an arbitrary
+preprocessing choice instead.
+
+**Fixed** by measuring the ruler once per site rather than once per tile. Proof: overlapping tiles
+now produce byte-identical pixel values on the ground they share (0.00% differ; it was 91-99.8%).
+The paper needs one sentence in §2; nothing else changes, and the boundary analysis is untouched.
+
+**Problem 2 — scoring counted some ground several times.** The scorer added up one confusion matrix
+per tile. Because tiles overlap, a field in the middle of the test strip entered the total about
+four times and one at the edge once. Worse, the over-counting differed between Test A (2.85x) and
+the two upland sites (3.05x, 3.26x) — and the Test A vs Test B comparison is the paper's headline.
+
+**Fixed** by scoring only tiles that do not overlap each other: 90 of 294 on Test A, 51 of 191 on
+Test B. No averaging and no combining — the duplicate photographs of already-scored ground are
+simply not used. It keeps 90% and 93% of the labelled ground, with every class retained evenly.
+
+Two alternatives were tried and rejected, both because they changed more than the double counting:
+averaging the overlapping predictions is a hidden ensemble (it makes the model look better without
+being better), and taking each pixel from the tile it sits most centrally in changes which part of
+each tile gets scored, by different amounts per site.
+
+**Worth knowing, not alarming.** The subset leaves Test A's Cropland thinnest at 0.073 km²
+(~293,000 labelled pixels), so its per-class IoU will be the noisiest — say so in the results rather
+than be asked. And tile counts flatter the test sets generally: report ground area instead (§6).
+
+---
+
 ## 1. The problem
 
 Tiles are 256 m footprints on a 128 m grid, so every tile overlaps its neighbours by half. The
