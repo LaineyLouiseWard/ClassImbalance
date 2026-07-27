@@ -501,7 +501,11 @@ if run_stage C5; then
   for CELL in "${CELLS[@]}"; do
     CKPT="$(cell_ckpt "$CELL")"
     require_file "$CKPT" B5
-    for SPLIT in test external_test; do
+    # val is dumped as insurance only: the paper reports Test A and Test B, and stage D excludes
+    # validation because every checkpoint is selected on it. But the tiles overlap on a 128 m grid,
+    # so any reported number must be re-scored from a stitched map (docs/CORRECTIONS_PAPER_PT2.md),
+    # and without this dump that would mean re-running inference on all forty checkpoints.
+    for SPLIT in val test external_test; do
       PYTHONPATH=. python scripts/analysis/dump_seed_softmax.py \
         --ckpt      "$CKPT" \
         --data-root "$SPLIT_ROOT/$SPLIT" \
