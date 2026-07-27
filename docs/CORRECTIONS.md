@@ -24,6 +24,8 @@ The properties that must be STATED, not corrected — go to METHODS for the meas
 | The grid counts cells touched, not independent parcels | METHODS §6 |
 | No spatial interval is reported; uncertainty is per-seed and paired | METHODS §7 |
 | The study is three Irish sites of eleven in the delivered pool | METHODS §8 |
+| Overlapping tiles are scored without deduplication, so ground is weighted 1–4x | METHODS §6 |
+| Re-cutting the tiles without overlap was available and declined | METHODS §2 |
 
 **The split, in one paragraph, because it is described inconsistently elsewhere.** The inland site is
 an irregular survey polygon, NOT a rectangle — 1,952 tiles occupy 47 x 52 grid positions, so 20% of
@@ -234,3 +236,210 @@ wreckage. Done 2026-07-27: the audit trail moved to `docs/audit/` with a framing
 **Still to write, one sentence in §2:** that a threshold on rho was registered and withdrawn before
 any model was trained on the corrected split, with the date. Volunteered it is a credit; discovered
 it is a question.
+
+## Correction 10 — the spatial split is uncited, and the tile counts are described as ground
+
+**Verified in the code and the data 2026-07-27.** Measured directly from the GeoTIFF bounds: every
+tile is 512 x 512 px at 0.5 m, i.e. a 256 m footprint, and tile origins are spaced exactly 128 m
+apart in both axes. The chipping was not done here — there is no tile-writing code anywhere in this
+repo, and the imagery was delivered by ODOS (`README.md:84`). No reason for the 50% stride is
+recorded, so the paper must describe it, not justify it.
+
+**(a) The split has no citation, and it is the most distinctive thing in the methods.** Nothing in
+`manuscript/Bibliography.bib` supports spatially blocked validation. Three converted papers in
+`papers-md/` cover it and none is cited:
+
+| paper | what it gives us |
+|---|---|
+| [Roberts et al. 2017](../../papers-md/roberts-2017-cross-validation-strategies-temporal-spatial-hierarchical.md), *Ecography* | the canonical statement that random CV on structured data causes *"serious underestimation of predictive error"* |
+| [Kattenborn et al. 2022](../../papers-md/kattenborn-2022-spatially-autocorrelated-training-validation-cnn.md), *ISPRS Open J.* | the same result for **CNNs on remote sensing imagery**, random vs spatially blocked hold-outs — our exact case |
+
+Both are converted and linked above; read the conversion before quoting either.
+[Wadoux et al. 2021](../../papers-md/wadoux-2021-spatial-cross-validation-not-right-way-evaluate-map-accuracy.md),
+*"Spatial cross-validation is not the right way to evaluate map accuracy"*, was considered and does
+**not** apply: it disputes spatial CV as a way to estimate map accuracy over a target population,
+which is not claimed here, and says nothing about held-out tiles containing the same pixels as
+training tiles. Do not cite it. Recorded so nobody spends an afternoon rediscovering it.
+
+**And the design does meet the standard those two papers set, on the split that carries the result.**
+Measured separations, from the manifest and recomputed from the GeoTIFF bounds:
+
+| pair | separation | inland composition range 750 m | inland spectral range 1,350 m |
+|---|---|---|---|
+| train — test | **1,664 m** | clears | clears |
+| val — test | 768 m | clears | does not |
+| train — val | **256 m** | does not | does not |
+
+Test A is separated from training ground by 1,664 m, beyond the distance at which the landscape stops
+resembling itself on either measure — the composition correlogram's first non-significant bin is
+700–800 m (Mantel r = 0.0024, Holm p = 0.15). The known exception is validation, which sits 256 m from
+training and is where every checkpoint is selected; that is already in the stated-properties table
+above and must not be quietly dropped when the citations go in.
+
+**(b) Two reasons for a spatial split, which the current text runs together.** Repeated pixels — a
+held-out tile physically overlapping a training tile, which is recall rather than prediction — and
+spatial autocorrelation, where nearby but non-overlapping ground is still the same fields and
+hedgerows. The 256 m val buffer addresses the first, the 768 m test gap the second (inland
+composition range 750 m). Say which gap is doing which job.
+
+**(c) Tile counts are being written as though they were ground.** Exact union of the 294 Test A
+footprints is **6.767 km²**; adding the tiles up gives 19.268 km², which is 2.85x the same ground.
+Never report the summed figure. Corrected in `utils.py:201`, `boundary_rate_ratio.py:48` and
+`METHODS_STATED_LIMITATIONS.md:178` on 2026-07-27, where 6.783 km² / 7.52 cells did not reproduce and
+are now 6.767 / 7.50.
+
+**(d) Scoring double-counts, and nothing says so.** `Evaluator.add_batch` sums one global confusion
+matrix over tiles with no deduplication, so a patch appearing in four tiles contributes four times.
+Across Test A's 413 distinct 128 m cells the multiplicity is 41 / 118 / 117 / 137 cells at 1 / 2 / 3 /
+4 times, mean 2.85. Strip-interior ground therefore carries roughly four times the weight of
+strip-edge ground in every reported rate. **This does not touch any comparison** — all four cells are
+scored on identical pixels with identical weights, so it cancels exactly in every contrast — but it
+does affect absolute levels. State it, or deduplicate before scoring.
+
+**(e) Re-cutting without overlap: available, declined, and it should be said so.** Reassembly is
+exact rather than estimated (tiles sit on a perfect 128 m grid and overlap regions are byte-identical,
+`METHODS_STATED_LIMITATIONS.md:370`). Re-cutting the training ground at a 256 m stride would drop
+1,072 training tiles to about **355** — 23.28 km² of ground at 0.0655 km² per disjoint tile — while
+removing no ground at all. It would also invalidate the 45-epoch schedule, which restarts its
+learning rate at 15 and 45. And it would remove only the 256 m val buffer: the geographic cut, the
+768 m test gap, the dropped straddling tiles and the whole-site upland hold-out all exist for
+autocorrelation and would survive unchanged. Declined on that basis.
+
+**(g) POST-CAMPAIGN, cannot be run before results exist.** The train|val gap is 256 m, so validation
+is mildly optimistic, and the argument that this is harmless rests on the optimism being common-mode
+across the four cells. It is not quite: the transfer cells select a checkpoint twice and the other two
+select once (B4), so the transfer arm gets two draws on that optimism. Once the campaign returns,
+compare the validation-minus-test gap per cell. If it is larger for the transfer cells, factor A is
+inflated — the same direction as the 2.00x step confound. Minutes to compute; report either way.
+
+**(h) The 650 m buffer is justified by the wrong quantity. Report the realised separations instead.**
+`build_spatial_split.py:523` justifies it as *"650 m = 2.5x the 256 m tile footprint"* — geometry, not
+autocorrelation — and 650 m is also **ireland1's** composition range, a different site from the one
+being cut. The inland site's range is **750 m**, so the requested buffer is below it. The split is
+nonetheless sound: quantised onto the 128 m grid the realised separations are **1,664 m train—test**
+and **768 m val—test**, both above 750 m. Good outcome, wrong reason. Report the realised separations
+against the inland 750 m range and drop 650 m from the argument entirely.
+
+**(i) Test B pools two sites that are not twins, and nothing reports them separately.**
+`RUNBOOK.sh:504` scores `external_test` as one directory, and no script in `evaluation/` breaks it
+down by site. But ireland1 is 64 tiles on 1.82 km² with a 650 m composition range and ireland2 is 127
+tiles on 3.34 km² with a 950 m range, ~58 km apart, so the pooled figure is roughly two-thirds
+ireland2. **This is a missed opportunity rather than a defect** — the pooled number is not wrong, it
+just hides its own fragility. Report both sites separately: it is the same predictions counted in two
+piles, costs no compute, and if the two disagree that gap *demonstrates* the n = 2 limit the prose
+currently only asserts. If they agree it is a free robustness point.
+
+**This is a check to run, not a result to report — default is zero extra numbers in the paper.**
+Compute the per-site split of the headline Test B mIoU once and look at it. If the two sites agree,
+write one clause and no numbers: *"the two upland sites agree closely."* Only if they diverge does it
+earn a parenthetical, and in that case the divergence is itself the finding and you want to have seen
+it before a referee does. No new table, no new section, no per-class breakdown.
+
+**(j) Do NOT write that the 45-epoch budget was set for a larger training set and left unrevised.**
+It is true that steps fell — 1,553 inland tiles at 45 epochs was 34,920 updates, 1,072 is 24,120, a
+31% drop — but that is because there is less ground, not because the schedule is now short. Measured:
+the old training strip held 40.42 km² at multiplicity 2.52, the new one 23.28 km² at 3.02, so 45
+epochs now exposes each patch of ground **136 times against the old 113**. Per unit of ground the
+model trains 20% *harder* than the tuned configuration did. The schedule stays at 45 (two complete
+CosineAnnealingWarmRestarts cycles, T_0=15, T_mult=2; the next aligned stop is 105) and the learning
+rate is not touched. The live risk is overfitting rather than undertraining, and val-best checkpoint
+selection already handles it.
+
+**(k) Every design constant, classified — and the split satisfies the published rule.**
+Checked against the two converted papers rather than asserted. Roberts states two different rules and
+the applicable one is line 209, on **raw data**: *"at least as many units as the range of
+autocorrelation… dependence structures in this step are assessed on raw data."* (Line 92's
+*"substantially larger"* concerns **residual** autocorrelation, which is not what our correlogram
+measures.) Roberts line 92 also gives the buffer rule: *"a buffer size equivalent to distances at
+which residual autocorrelation is reduced to zero suffices."* Realised train—test separation is
+**1,664 m against a 750 m range** — the published rule is met with room, and that is the sentence to
+write.
+
+| constant | provenance | arbitrary? |
+|---|---|---|
+| 256 m val buffer | 512 px x 0.5 m, the exact pixel-identity distance | no, exact |
+| 45 epochs | two complete CosineAnnealingWarmRestarts cycles | no, derived |
+| 950 m support cell | ireland2's measured composition range | measured but from the wrong site; >= 750 m, so it satisfies Roberts regardless |
+| 1.5 m contact zone | Cheng's Boundary-IoU distance | borrowed, defensible |
+| 80/10/10 target | convention | arbitrary, universal |
+| 650 m requested buffer | 2.5x the tile footprint | **yes** — superseded by the realised 1,664 m, see (h) |
+| 5 / 8 class-support floors | nothing | **yes, and no precedent exists in either cited paper** |
+| 8 m boundary band | nothing | **yes** — already declared a-priori, METHODOLOGICAL_CHOICES E1 |
+
+**The 5/8 floors must not appear in the paper.** They were a filter on candidate cuts during the
+15,000-restart search, applied before anything was trained, so they cannot flatter a result — but no
+published method has such a rule, and 8 is not defensible if a referee asks. `block_phase_sweep.json`
+shows the shipped grid anchor clears the test floor by exactly zero (8 against 8) and that five of ten
+equally valid anchors would have failed it, which is a property of the anchor, not of the land.
+Describe the split that exists and its measured separation. Do not describe the search that found it.
+
+**What the sweep IS good for, and it is a strength rather than a confession.** Roberts line 199
+recommends exactly it: *"cross-validations could be run several times with spatial or other structured
+blocks defined in a variety of sizes and/or orientations. This approach produces a range of validation
+statistics… rather than just a single value."* `block_phase_sweep.json` and
+`block_size_sensitivity.json` are that. One clause, citing Roberts, and it is done.
+
+**(l) Report Test A per class; report Test B as one number, with one sentence that cannot be dropped.**
+Measured grid-cell support at 950 m: Test B's Cropland occupies **4** cells (30 tiles) and Settlement
+**6**, against 16 and 13 on Test A. Drop the per-class Test B breakdown — those two rows would each
+need their own hedge and the paper does not need the claim.
+
+**But note what does NOT follow, because the first version of this correction got it wrong.** Reporting
+only the overall figure does not retire the problem. Foreground mIoU is the unweighted mean of the five
+per-class scores (METHODOLOGICAL_CHOICES F2), so Cropland-on-4-cells is *inside* the headline number
+whether or not it is printed. Burying it is worse than stating it. The hedge cannot be removed, only
+made small — one sentence carrying both facts:
+
+> Test B is a different landscape — semi-natural is 60.3% of its foreground against 4.3% in training —
+> and two of its five classes occupy very little ground, so its mIoU is reported as a check on transfer
+> rather than as an accuracy estimate.
+
+**Do not pool Test A and Test B** — averaging a surveyed-area result with an unsurveyed-terrain result
+answers neither question and conceals that they are different places.
+
+**(m) The factorial needs an UPPER BOUND, not a decomposition — so it needs far fewer statistics.**
+The contribution is the diagnosis, not the 2x2 (METHODOLOGICAL_CHOICES A3). The factorial exists only
+to establish that the two interventions give modest gains, so that something else must be binding.
+
+The 2.00x step confound **inflates** factor A: part of what is credited to transfer is a second pass
+over the Biodiversity training data. A confound that makes a gain look *larger* cannot threaten a claim
+that the gain is *small*. The confounded estimate is therefore an upper bound, and an upper bound is
+exactly what the argument needs — *even crediting the procedure with everything, the gain is modest.*
+
+**Consequence, and it is a simplification.** No mechanism attribution (Corrections 2 and 3 already
+strike those sentences), no step-matched control, no decomposition of A into transfer versus extra
+pass, no interaction-term interpretation beyond reporting it. Four cells, foreground mIoU, paired
+per-seed differences, and the per-class table on Test A. Nothing further belongs in the factorial
+section, and adding more would move weight onto the part of the paper that is not the contribution.
+
+**(n) Interrogation elements 10–20, checked in the code 2026-07-27. No design change required.**
+Each was verified by reading the shipped file, not from memory or from these docs.
+
+| element | checked | verdict |
+|---|---|---|
+| 10 interaction term | `aggregate_seeds.py:100`, textbook Montgomery contrast | report it, do not interpret it; **rename the label** |
+| 11 "modest gains" | see (m) | supported as an upper bound |
+| 12 the 8 m band | `BAND_M = 8.0`, one constant, one use site, self-tested | consistent; already declared a-priori (E1) |
+| 14 GT-only banding asymmetry | METHODOLOGICAL_CHOICES E2 and METHODS §10/11 both carry Cheng's *"not symmetric and favors predictions whose masks are larger"* | already stated |
+| 15 boundary-free tiles | `boundary_rate_ratio.py:211` — a single-class tile *"must be EXCLUDED, not scored as zero"*, with a self-test that observes the exclusion and a null control | implemented and observed to work |
+| 17 the exclusion curve | `boundary_trimap_iou.py:193-202` — per-seed curves over 10 seeds with SD, not the ensemble argmax | matches E4; the curve is the deliverable |
+| 18 no spatial interval | see D1; the block bootstrap was removed 2026-07-26 | settled |
+| 19 paired per-seed contrasts | `FG_CLASSES` all five plus `SCALAR_METRICS` mIoU/mF1/OA across all three splits | the D2 defect (three classes only) is fixed |
+| 20 what Test B supports | see (l) and DO_NOT_ADD | settled |
+
+**Two small items fall out, both one-liners.**
+
+1. `aggregate_seeds.py:87` labels the interaction `"transfer x sampler (interaction)"`. Factor A is the
+   pre-train-then-finetune **procedure**, not transfer — Correction 1 fixed exactly this naming for the
+   main effect and left the interaction untouched. Read *procedure x sampler*.
+2. `SPLIT_DIRS` aggregates **val** alongside test and external_test. That is fine as a convergence
+   check, but validation sits 256 m from training and is where every checkpoint is selected, so no
+   headline number may be drawn from it. Report it, never lead on it.
+
+**(f) The split in four sentences, because §2 currently describes it inconsistently.**
+
+> Tiles were delivered on a grid with 50% overlap, so a random tile split would place the same ground
+> in both training and test. We instead cut one site into three geographic strips — train, validation
+> and test — separated by gaps wide enough that the landscape on either side is no longer correlated.
+> Tiles falling inside a gap are discarded. Two upland sites are held out whole as a second, harder
+> test set.

@@ -198,9 +198,9 @@ def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict
     WHAT THIS COUNTS, AND WHAT IT DOES NOT. It counts CELLS TOUCHED: how many grid cells the tiles of
     a split fall into. That is a spread statistic — how scattered the ground carrying a class is. It
     is NOT a count of independent parcels, and it was described as one until 2026-07-26. Test A's 294
-    tiles touch 16 cells while covering 6.783 km2, which is 7.52 cells' worth of ground; Test B's 191
+    tiles touch 16 cells while covering 6.767 km2, which is 7.50 cells' worth of ground; Test B's 191
     tiles touch 14 while covering 5.164 km2, or 5.72 cells' worth. Sixteen disjoint 950 m parcels
-    cannot exist inside 7.52 parcels of ground. Never write "independent 950 m blocks".
+    cannot exist inside 7.50 parcels of ground. Never write "independent 950 m blocks".
 
     THIS IS NOT AN INFERENTIAL UNIT AND THERE IS NO LONGER A BOOTSTRAP. `resample_blocks` was removed
     with the block bootstrap on 2026-07-26: it existed to supply the lower bound the withdrawn

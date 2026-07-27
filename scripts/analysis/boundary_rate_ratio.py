@@ -45,7 +45,7 @@ per-seed curves in boundary_trimap_iou.py). One estimator, not two.
 
 The 950 m grid is still reported, as DESCRIPTION: how many cells of ground the tiles touch. That is
 a spread statistic, not a count of independent parcels -- Test A's 294 tiles span 16 cells over
-6.783 km2, which is 7.52 cells' worth of ground, and Test B's 14 cells sit on 5.72 cells' worth.
+6.767 km2, which is 7.50 cells' worth of ground, and Test B's 14 cells sit on 5.72 cells' worth.
 Never call these independent.
 
 Run:

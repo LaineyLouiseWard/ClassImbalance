@@ -111,14 +111,28 @@ def curves(n_hist, e_hist, n_pts=101):
     return f, unc, oracle, random, ause, E / N
 
 
-def render(root, out_dir, seeds, use_tex):
+def render(root, out_dir, seeds, use_tex, split="test", softmax_root="analysis/seed_softmax"):
     setup_font(use_tex)
-    sr, md, cell = "sonic/results", f"data/split_{SPLIT_TAG}/val/masks", "stage3_clsbal"
+    # Both inputs were hard-coded to `sonic/results` and the VALIDATION split until 2026-07-27.
+    # Neither is what the pipeline produces or what the evidence policy allows:
+    #   * RUNBOOK stage C5 dumps softmax to analysis/seed_softmax; `sonic/results` is the
+    #     post-fetch layout and no stage writes it during a run.
+    #   * stage D computes this evidence on HELD-OUT ground only -- validation is the split every
+    #     checkpoint is selected on, so evidence drawn from it is optimistic.
+    # build_all_figures.py invokes this script bare, so these defaults are what stage E actually
+    # runs; they are not merely a convenience for a manual call.
+    sr, md, cell = softmax_root, f"data/split_{SPLIT_TAG}/{split}/masks", "stage3_clsbal"
     n_hist, e_hist, n = sparsification(root, sr, md, cell, seeds)
     f, unc, oracle, random, ause, base_err = curves(n_hist, e_hist)
-    print(f"[uncertainty_quality] cell={cell}  AUSE={ause:.4f}")
+    print(f"[uncertainty_quality] cell={cell}  split={split}  AUSE={ause:.4f}")
 
-    st = json.load(open(root / "analysis/label_ceiling/stats_stage3_clsbal.json"))
+    stats = root / f"analysis/label_ceiling/{split}/stats_{cell}.json"
+    if not stats.exists():
+        raise SystemExit(
+            f"{stats.relative_to(root)} not found.\n"
+            f"  It is written by scripts/analysis/seed_disagreement.py, which RUNBOOK stage D runs\n"
+            f"  per held-out split. Produce it with:  bash RUNBOOK.sh --from D --to D")
+    st = json.load(open(stats))
     dc = st["distance_curve_foreground"]
     em = [e for e in dc["edges_m"] if np.isfinite(e)]
     cen = [(a + b) / 2 for a, b in zip(em[:-1], em[1:])] + [em[-1] * 1.4]
@@ -167,18 +181,27 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", default="figures")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
+    ap.add_argument("--split", default="test", choices=["test", "external_test"],
+                    help="held-out split to compute on. Never validation — every checkpoint is "
+                         "selected on it.")
+    ap.add_argument("--softmax-root", default="analysis/seed_softmax",
+                    help="where RUNBOOK stage C5 dumps per-seed softmax. Use sonic/results only "
+                         "for a post-fetch cluster layout.")
     ap.add_argument("--no-tex", action="store_true")
     args = ap.parse_args()
     root = find_repo_root()
     out_dir = (root / args.out_dir).resolve()
     use_tex = not args.no_tex
     try:
-        render(root, out_dir, args.seeds, use_tex)
+        render(root, out_dir, args.seeds, use_tex, args.split, args.softmax_root)
+    except SystemExit:
+        raise            # a missing input is not a font problem; do not retry it as one
     except Exception as e:
         if not use_tex:
             raise
         print(f"[uncertainty_quality] usetex failed ({e}); retrying mathtext")
-        render(root, out_dir, args.seeds, use_tex=False)
+        render(root, out_dir, args.seeds, use_tex=False, split=args.split,
+               softmax_root=args.softmax_root)
 
 
 if __name__ == "__main__":

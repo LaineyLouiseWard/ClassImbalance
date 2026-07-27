@@ -551,6 +551,16 @@ if run_stage D; then
     PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py \
       --split-root "$SPLIT_ROOT" --split "$SPLIT" \
       --softmax-root analysis/seed_softmax --cell stage3_clsbal --per-site
+    # Seed-ensemble uncertainty: writes stats_<cell>.json, which the uncertainty and calibration
+    # figures read. It was in NO runbook stage before 2026-07-27, so stage E had no way to build
+    # them -- the same defect the trimap curve had, in the figure that carries the aleatoric /
+    # epistemic decomposition.
+    echo "[D] Seed-ensemble uncertainty decomposition — $SPLIT"
+    PYTHONPATH=. python scripts/analysis/seed_disagreement.py \
+      --softmax-root analysis/seed_softmax \
+      --mask-dir "$SPLIT_ROOT/$SPLIT/masks" \
+      --cell stage1_baseline --cell stage3_clsbal \
+      --out-dir "analysis/label_ceiling/$SPLIT"
   done
   echo "[D] Accuracy against distance from training ground — BOTH held-out strata on one axis"
   PYTHONPATH=. python scripts/analysis/accuracy_vs_separation.py \

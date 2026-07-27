@@ -175,12 +175,12 @@ The ground does not hold as many parcels as the grid returns:
 
 | split | tiles | covered ground | 950 m cells of ground | cells touched | over-count |
 |---|---|---|---|---|---|
-| test (Test A) | 294 | 6.783 km² | 7.52 | **16** | **2.13x** |
+| test (Test A) | 294 | 6.767 km² | 7.50 | **16** | **2.13x** |
 | external_test (Test B) | 191 | 5.164 km² | 5.72 | **14** | **2.44x** |
 | — ireland1 | 64 | 1.820 km² | 2.02 | 7 | 3.47x |
 | — ireland2 | 127 | 3.344 km² | 3.70 | 7 | 1.89x |
 
-Sixteen disjoint 950 m parcels cannot exist inside 7.52 parcels' worth of ground. The over-count is
+Sixteen disjoint 950 m parcels cannot exist inside 7.50 parcels' worth of ground. The over-count is
 not a phase artefact: Test A is a strip 1024 m wide, which is 1.08 cells, so the grid cuts it into
 two columns, one of them a sliver; ireland1's full extent is 1.57 x 1.53 cells and the grid cuts it
 into seven. Adjacent slivers of one neighbourhood are not independent evidence about each other.
@@ -196,7 +196,7 @@ not measure dependence between adjacent slivers.
 | test (Test A) | 294 | 16 | **9.85** | 9.77 | 43, 36, 36, 35, 34, 33, 18, 17, 8, 7, 7, 6, 5, 4, 3, 2 |
 | external_test (Test B) | 191 | 14 | **7.15** | 5.78 | 42, 37, 34, 15, 14, 14, 9, 6, 6, 4, 4, 2, 2, 2 |
 
-Test A: n_eff 9.85 against 7.52 of ground. Test B: 7.15 against 5.72. Six of Test A's sixteen cells
+Test A: n_eff 9.85 against 7.50 of ground. Test B: 7.15 against 5.72. Six of Test A's sixteen cells
 hold 74% of its tiles. Restricted to the 172 Test B tiles carrying a ground-truth boundary: still 14
 cells, n_eff 7.27 — the registered exclusion costs no cells and evens the distribution slightly.
 

@@ -3,6 +3,11 @@
 Paste everything below the rule into a **fresh chat**. Run it only after
 `docs/audit/BRIEF_FINAL_AUDIT.md` has come back and anything launch-blocking is fixed.
 
+**Revised 2026-07-27.** Three things in the previous version were wrong or missing and all three
+change the plan: the runtime figure, the concurrency assumption, and the state of scratch. Every
+number below was measured on the cluster on 2026-07-27, not estimated. See
+`## What changed on 2026-07-27` at the end for the diff.
+
 ---
 
 <role>
@@ -18,10 +23,108 @@ Do not modify the repository. If something is wrong with the code, stop and repo
 patching it here — the commit that runs must be the commit that was audited.
 </role>
 
+<the_runtime_reality>
+
+**Read this before planning anything around a deadline. The previous version of this brief said each
+run takes ~20 h; that was the Slurm `--time` ceiling, not a runtime, and it implied 40 × 20 h.**
+
+**You are capped at four concurrent GPUs.** Measured 2026-07-27:
+
+    QOS normal:  MaxTRESPU = cpu=200, gres/gpu=4
+
+`MaxTRESPU` is *max TRES per user*. The association is `shared_acc | normal`. So `--array=0-9` runs
+**four tasks at a time** regardless of how idle the cluster is, and the other six queue. There are 16
+L40S GPUs on the cluster (8 nodes × 2); none of that matters, the cap binds first.
+
+Confirmed empirically from the previous 10-seed campaign, job `454217` on 2026-06-27:
+
+| | |
+|---|---|
+| four tasks start together | 10:41:27 |
+| task 5 starts | 15:14:37 — **exactly** when task 3 ended |
+| task 6 starts | 16:12:16 — exactly when task 1 ended |
+| task 8 starts | 19:20:42 — exactly when task 4 ended |
+| per-task elapsed | **4 h 25 min – 5 h 32 min** |
+| **10 tasks, submit to last finish** | **13 h 55 min** |
+
+Strict backfill on a four-slot cap. So the wall clock is **three waves**, and everything turns on the
+per-task time:
+
+- at ~5.5 h/task (the 2026-06 rate) → **~17 h total**
+- at 14 h/task (the pessimistic estimate) → **~42 h total**
+
+The 2026-06 rate is the better guide. Training work per seed is now roughly 7 baseline-equivalents on
+1,072 tiles against roughly 5 on 1,706 last time — about **0.88× the old load**. Stage 2a trains
+**once** per seed and both transfer cells warm-start from it (`RUNBOOK.sh` B2 → B3, B5), so there is
+no duplication to remove. The genuinely new cost is the 4-cell × 2-split softmax dump, which is I/O
+heavy but not eight hours.
+
+**What to do with that:** submit the full `--array=0-9` rather than a pilot seed. The cap serialises
+you anyway, so holding nine back buys nothing and costs queue position, and you get real per-task
+timings from the first wave within about six hours — with `scancel` available on the pending tasks if
+they come in slow.
+
+**Watch the 20 h `--time`.** Comfortable at 12–16 h, no margin above that. A task that exceeds it is
+killed mid-collect.
+
+**Do not wait on anything to raise the cap.** A `boost` QOS exists at `gres/gpu=8` and the account is
+not associated with it, but at ~5.5 h/task three waves is ~17 h and that is fine — boost would save
+about six hours on a job that already fits. **This is not a prerequisite. Launch without it.** There
+is also no workaround worth trying: the cap is on total GPUs, not GPU type, so dropping
+`--constraint=l40s` buys no extra slot and only scatters the seeds across different hardware.
+
+If the campaign does turn out to be slow, the lever is cutting seeds at the step-5 decision point,
+not chasing more GPUs.
+
+</the_runtime_reality>
+
+<state_of_scratch>
+
+**Verified on the cluster 2026-07-27. Check it again before you rely on it — scratch is purgeable and
+this section is a snapshot, not a guarantee.**
+
+`/home/people/<user>/scratch/lqc` is the campaign root (`SONIC_SCRATCH`). It currently holds **17 GB**,
+already staged and verified:
+
+| path | size | state |
+|---|---|---|
+| `lqc/env` | 7.9 GB | **verified working**: `torch 2.9.1+cu128`, `pytorch-lightning 2.3.0`, `python 3.11.14` — exactly the pins in `environment.yaml`. `conda activate` resolves correctly from this prefix. |
+| `lqc/data_stage/data/biodiversity_split` | 8.4 GB | **verified byte-identical to the laptop**: `train 1706 / val 219 / test 218`, 4,286 files, first three image md5s match (`ad512bb3bfac`, `2a13c98bfdfe`, `635113ed0198`). |
+| `lqc/data_stage/pretrain_weights` | 542 MB | `stseg_base.pth` (464 MiB) + the teacher `.pth`. |
+| `lqc/logs` | empty | ready for the array's `--output`. |
+
+This came from renaming the June campaign root `classimb` → `lqc` and pruning 403 GB of withdrawn
+artefacts on 2026-07-27. The withdrawn campaign's result JSONs were archived to the laptop at
+`_archive/withdrawn_campaign_sonic_results/` (116 files, 2 MB) before the delete, because
+`rgbnir_results/` backs the near-infrared claim in the Discussion.
+
+**So step 1 is a 98 MB top-up, not a 9 GB upload, and step 2d is skipped entirely.** If any of the
+above is missing when you check, fall back to `## Appendix — staging from nothing`, which is complete
+and assumes an empty scratch.
+
+**Note on the `train/val/test` subdirectory names in `biodiversity_split`.** They are the *old* random
+split's directory layout and that is correct — the pool's directory structure is what the `split_f1`
+symlinks resolve through, even though the old assignment is discarded.
+`docs/METHODS_STATED_LIMITATIONS.md` §8 records why. Do not "fix" it.
+
+**Disk is not a constraint.** `/scratch` is BeeGFS, 559 TB with 61 TB free, and BeeGFS quota is an
+unlicensed Enterprise feature here so no per-user quota is enforced. The per-seed checkpoint collect
+in `campaign.slurm` checks `df` for 2× the checkpoint size (~120 GB across all ten seeds) before its
+first copy; against 61 TB free that check passes trivially. It exists so a half-copied checkpoint
+never looks like a successful collection.
+
+</state_of_scratch>
+
 <what_you_are_staging>
-`label-quality-ceiling`. Four factorial cells x ten seeds (42–51) = 40 training runs, each ~20 h on
-one L40S. Two data-curation interventions on a fixed FT-UNetFormer; the paper's contribution is a
-boundary-label diagnosis.
+`label-quality-ceiling`. Four factorial cells × ten seeds (42–51) = 40 training runs on a fixed
+FT-UNetFormer, testing two data-curation interventions. The paper's contribution is a boundary-label
+diagnosis, not the interventions.
+
+Each **array task** is one seed and runs `RUNBOOK.sh --from B4 --to C5`: the sampler build, the full
+leakage gate, five training configs (baseline, stage 2a pre-train, stage 2b finetune, sampler-only,
+stage 3 clsbal), evaluation on validation / Test A / Test B, and the per-seed softmax dumps the
+boundary evidence is computed from. Then it collects metrics, softmax dumps and checkpoints to
+`$SONIC_SCRATCH/results/`.
 
 **The launcher is `sonic/campaign/submit_campaign.sh`.** It is the only supported path. Do NOT use
 anything else under `sonic/` — those are the pre-rebuild scripts, they hard-code one person's student
@@ -30,53 +133,63 @@ artefacts that were withdrawn. `sonic/*` is gitignored EXCEPT `sonic/campaign/`,
 path and the one you want.
 
 **What the launcher refuses to do**, so you know what it is checking rather than being surprised:
-- it refuses on a dirty working tree, because nine of the ten seeds run a pinned commit
+- it refuses on a dirty working tree, because the array pins all ten seeds to one commit
 - it refuses if `$SONIC_SCRATCH/env` or any of `$SONIC_SCRATCH/seed42 … seed51` is missing
 - each array task re-checks the commit it is actually running and aborts if it differs
 - each array task runs the full leakage gate BEFORE training and aborts if it fails
+- the collect step refuses on a missing metrics file, an empty softmax directory, a missing
+  checkpoint, or insufficient disk — and it checks disk *before* the first copy
 
 **Environment variables it reads** (all optional except where noted):
 
-    SONIC_USER      cluster username                  (default: $USER)
-    SONIC_SCRATCH   campaign root on scratch          (default: /home/people/$SONIC_USER/scratch/lqc)
-    SONIC_ACCOUNT   Slurm account                     (default: shared_acc)
-    SONIC_MAIL      address for END,FAIL mail         (optional; no mail if unset)
-    SPLIT_TAG       which split to run                (default: f1)
-    BATCH_VARIANT   b2 = batch 2 / lr 3e-4 (default), b4 = batch 4 / lr 6e-4
+    SONIC_USER        cluster username                          (default: $USER)
+    SONIC_SCRATCH     campaign root on scratch                  (default: /home/people/$SONIC_USER/scratch/lqc)
+    SONIC_ACCOUNT     Slurm account                             (default: shared_acc)
+    SONIC_MAIL        address for END,FAIL mail                 (optional; no mail if unset)
+    SPLIT_TAG         which split to run                        (default: f1)
+    BATCH_VARIANT     b2 = batch 2 / lr 3e-4 (default), b4 = batch 4 / lr 6e-4
+    COLLECT_PRETRAIN  1 = also collect the stage-2a checkpoint  (default: 0)
+
+`DRYRUN` is anything other than empty or `0` — note that `DRYRUN=false` is a dry run, not a
+submission.
 </what_you_are_staging>
 
 <the_data_layout_that_matters>
-**Read this before you rsync anything. Getting it wrong is the single most likely way to waste a day.**
+**Read this before you rsync anything. Getting it wrong is the single most likely way to waste a day,
+and it has already happened once — see the warning at the end of this section.**
 
 The campaign's data is a two-level chain of RELATIVE symlinks, not three independent copies:
 
-    data/biodiversity_split/     8.4 GB   REAL FILES — the 2,143-tile pool
-    data/openearthmap_relabelled/  69 MB  REAL FILES — the relabelled OEM tiles
-    data/split_f1/                12 MB   SYMLINKS -> ../../../biodiversity_split/<split>/...
-    data/oem_combined_f1/         17 MB   SYMLINKS -> ../../../split_f1/...  and
-                                                   -> ../../../openearthmap_relabelled/...
-    pretrain_weights/            542 MB   REAL FILES — stseg_base.pth (485 MB) + the teacher
+    data/biodiversity_split/       8.4 GB   REAL FILES — the 2,143-tile pool      [already on scratch]
+    data/openearthmap_relabelled/   69 MB   REAL FILES — the relabelled OEM tiles [UPLOAD]
+    data/split_f1/                  12 MB   SYMLINKS -> ../../../biodiversity_split/<split>/...   [UPLOAD]
+    data/oem_combined_f1/           17 MB   SYMLINKS -> ../../../split_f1/...  and
+                                                     -> ../../../openearthmap_relabelled/...      [UPLOAD]
+    pretrain_weights/              542 MB   REAL FILES — stseg_base.pth + teacher [already on scratch]
 
 So `data/oem_combined_f1` points at `data/split_f1`, which points at `data/biodiversity_split`.
 
-Three consequences:
+Four consequences:
 
-1. **Transfer ~9.0 GB of real files plus ~28 MB of symlink trees, not 13 GB.** Send
-   `biodiversity_split`, `openearthmap_relabelled`, `split_f1`, `oem_combined_f1` and
-   `pretrain_weights`.
-2. **Preserve the symlinks. Do NOT use `rsync -L`.** Dereferencing turns 28 MB of links into ~13 GB
-   of duplicated pixels, and breaks the guarantee that the pre-training pool and the training split
-   are literally the same bytes — which is a property the leakage gate checks.
+1. **You are uploading ~98 MB, not 9 GB** — `openearthmap_relabelled`, `split_f1`, `oem_combined_f1`.
+   The 8.4 GB pool and the 542 MB of weights are already there and verified.
+2. **Preserve the symlinks. Do NOT use `rsync -L`.** Dereferencing turns 28 MB of links into ~13 GB of
+   duplicated pixels and breaks the guarantee that the pre-training pool and the training split are
+   literally the same bytes — a property the leakage gate checks.
 3. **The relative paths only resolve if all four directories sit under one common `data/` parent.**
-   Stage them into a single `data_stage/data/` that mirrors the repo layout exactly, then symlink
-   that one directory into each seed tree. Do not stage them separately.
+   They must land in `$SONIC_SCRATCH/data_stage/data/`, beside the existing `biodiversity_split`.
+4. **`notes/` must never travel.** It is gitignored, so a `git clone` will not carry it — which is one
+   reason the code arrives by clone rather than by rsync. If you rsync the repo for any reason,
+   exclude it explicitly.
+
+> **This actually happened.** The June staging was done with dereferencing on. It left a 15 GB
+> `biodiversity_oem_combined` of duplicated pixels and **6,000 dangling symlinks** in `data_stage`.
+> Both were deleted on 2026-07-27. The `find -xtype l | wc -l` check in step 1 exists because of it —
+> run it, and if it is non-zero, fix the layout rather than dereferencing again.
 
 `data/biodiversity_raw` (9 GB) and `data/openearthmap_raw` (25 GB) are **not** needed: they are
-A-stage inputs and the A stages have already run. Do not send them.
-
-**`notes/` must never travel.** It is gitignored, so a `git clone` will not carry it — which is one
-reason the code arrives by clone rather than by rsync. If you rsync the repo for any reason, exclude
-it explicitly.
+A-stage inputs and the A stages have already run. Do not send them. `data/dem` (76 MB) is used only by
+a Discussion-side analysis, not by B4..C5.
 
 **Every artefact the campaign needs is committed** and arrives with the clone: the split manifest, the
 sampler weights, the augmentation list, the teacher confusion, the boundary denominators, the
@@ -104,9 +217,20 @@ Confirm the audit's blocking findings are fixed and committed. Run the gate loca
 
     git push origin main
 
-## 1. Transfer the data (~9 GB, resumable)
+## 1. Confirm what is already on scratch, then top up (~98 MB)
 
-From the laptop. Set these once and reuse them:
+**First, check the snapshot in `<state_of_scratch>` still holds.** On Sonic:
+
+    BASE=$HOME/scratch/lqc
+    STAGE=$BASE/data_stage
+    du -sh $BASE/env $STAGE/data/biodiversity_split $STAGE/pretrain_weights 2>/dev/null
+    $BASE/env/bin/python -c "import torch, pytorch_lightning as pl; print(torch.__version__, pl.__version__)"
+    for s in train val test; do printf "%-8s %s\n" $s $(ls $STAGE/data/biodiversity_split/$s/images | wc -l); done
+    # expect  7.9G / 8.4G / 542M ;  2.9.1+cu128 2.3.0 ;  train 1706  val 219  test 218
+
+**If any of that is missing or wrong, stop and use the Appendix instead.** Do not half-reuse.
+
+Then, from the laptop:
 
     SONIC_USER=<username>            # ask the user; do not guess
     HOST=login.ucd.ie
@@ -117,10 +241,8 @@ From the laptop. Set these once and reuse them:
 
     # -a preserves symlinks as symlinks. NEVER add -L here.
     rsync -avh --partial --progress \
-      data/biodiversity_split data/openearthmap_relabelled data/split_f1 data/oem_combined_f1 \
+      data/openearthmap_relabelled data/split_f1 data/oem_combined_f1 \
       "$SONIC_USER@$HOST:$STAGE/data/"
-
-    rsync -avh --partial --progress pretrain_weights "$SONIC_USER@$HOST:$STAGE/"
 
 `rsync` is resumable — if it drops, re-run the same command.
 
@@ -131,16 +253,19 @@ From the laptop. Set these once and reuse them:
     # expect  train 1072   val 173   test 294   external_test 191
     ls oem_combined_f1/train/images | wc -l        # expect 3190
     find split_f1 oem_combined_f1 -xtype l | wc -l # expect 0  (no dangling symlinks)
-    ls -lh $STAGE/pretrain_weights/stseg_base.pth  # expect ~485 MB
+    ls -lh $STAGE/pretrain_weights/stseg_base.pth  # expect ~464M
 
 A non-zero dangling count means the symlinks did not resolve — almost always because the four data
 directories are not under one common parent. Fix the layout, do not dereference.
 
-## 2. Build the environment and the ten seed trees, on the LOGIN node
+The two sets of counts differ by design: `biodiversity_split` is the 2,143-tile pool under the old
+directory names, and `split_f1` is the spatially blocked assignment over it (1072/173/294 plus 191
+external).
 
-The login node has internet; compute nodes do not. The env build needs internet, the campaign does
-not (`HF_HUB_OFFLINE=1` is set at submit and every cell either loads a local checkpoint or a local
-`.pth`).
+## 2. Build the ten seed trees, on the LOGIN node
+
+The login node has internet; compute nodes do not. Nothing here needs internet except the clone
+(`HF_HUB_OFFLINE=1` is set at submit and every cell loads a local checkpoint or a local `.pth`).
 
     ssh $SONIC_USER@$HOST
     BASE=$HOME/scratch/lqc
@@ -162,19 +287,15 @@ not (`HF_HUB_OFFLINE=1` is set at submit and every cell either loads a local che
       ln -sfn $STAGE/pretrain_weights $BASE/seed$S/pretrain_weights
     done
 
-    # 2d. conda env in scratch (home quota is small)
-    module load anaconda3/2025.12-1
-    conda tos accept --override-channels --channel defaults 2>/dev/null || true
-    conda tos accept --override-channels \
-      --channel https://repo.anaconda.com/pkgs/main \
-      --channel https://repo.anaconda.com/pkgs/r 2>/dev/null || true
-    conda env create -f $BASE/seed42/environment.yaml -p $BASE/env
-
-`conda tos accept` is needed because conda 25.x gates the defaults channel behind an interactive
-prompt that would abort the build under `set -e`.
+**2d. The conda env already exists at `$BASE/env` and is verified — skip the build.** It survived the
+`classimb → lqc` rename: `bin/python` is a real binary rather than a shebang script, so the path
+change does not break it, and `conda activate $BASE/env` was confirmed working on 2026-07-27. Build it
+only if step 1's check failed; the Appendix has the command.
 
 **Verify before moving on:**
 
+    module load anaconda3/2025.12-1
+    source "$(conda info --base)/etc/profile.d/conda.sh"
     conda run -p $BASE/env python -c "import torch, pytorch_lightning as pl; print(torch.__version__, pl.__version__)"
     for S in 42 43 44 45 46 47 48 49 50 51; do
       printf "seed%-3s %s %s\n" $S "$(git -C $BASE/seed$S rev-parse --short HEAD)" \
@@ -183,7 +304,7 @@ prompt that would abort the build under `set -e`.
     # every row must show the SAME short commit and 1072
 
 The repo uses `pytorch_lightning`, not the unified `lightning` namespace — import that one or a
-healthy env will look broken.
+healthy env will look broken. (`import lightning` fails in this env, and that is expected.)
 
 ## 3. Prove a GPU node can actually run it, before spending 40 slots
 
@@ -199,7 +320,8 @@ healthy env will look broken.
         --oem-root data/oem_combined_f1 --sampler-tsv artifacts/sampler_weights_clsbal_f1.tsv
     exit
 
-If the gate fails here it will fail in all ten tasks. Fix the staging, not the gate.
+If the gate fails here it will fail in all ten tasks. Fix the staging, not the gate. This `srun` may
+itself wait for a slot — the four-GPU cap applies to interactive jobs too.
 
 ## 4. Dry run, then submit
 
@@ -216,9 +338,12 @@ Then, for real:
     SONIC_USER=<username> SONIC_SCRATCH=$BASE bash sonic/campaign/submit_campaign.sh
     squeue -u $SONIC_USER
 
-## 5. Watch the first task, and STOP
+**Expect four RUNNING and six PENDING.** That is the QOS cap, not a failure. Do not resubmit the
+pending tasks and do not resize the array to compensate.
 
-Do not walk away with all ten running blind. Within the first hour:
+## 5. Watch the first wave, and STOP
+
+Within the first hour:
 
     tail -f $BASE/logs/lqc-campaign_seed0_*.out
 
@@ -226,20 +351,32 @@ Confirm, in order: the provenance line naming the commit; `LEAKAGE PREFLIGHT PAS
 the sampler; `[B4b]` passing; then `[B1]` starting to train. The gate runs before any training by
 design — if you see `[B1]` before `[B4b]`, stop and report it.
 
-**When seed 42 finishes, stop and check two things before the other nine complete:**
+**When the first seed finishes, stop and check three things before the rest complete.** Under the
+four-GPU cap this is a natural checkpoint: six tasks have not started yet, so a problem found here
+costs four runs, not forty.
 
-1. **Convergence.** The 45-epoch budget was set for 1,706 training tiles and there are now 1,072. Read
+1. **Elapsed time.** `sacct -j <jobid> -X -o JobID,Elapsed,State`. This is the number the whole
+   schedule depends on and it has never been measured for this configuration. At ~5 h you finish in
+   about 17 h; at ~14 h you finish in about 42 h. If it is the latter, decide *now* whether to cancel
+   the pending tasks and cut seeds.
+2. **Convergence.** The 45-epoch budget was set for 1,706 training tiles and there are now 1,072. Read
    the validation curve from `$BASE/seed42/lightning_logs/`. If `val_mIoU` is still climbing at epoch
-   45, the baseline is under-trained and every intervention will look better than it is. That is a
-   result worth knowing before spending the other 39 runs.
-2. **Provenance.** `cat $BASE/seed42/model_weights/biodiversity/*/run_provenance_seed42.json` — commit,
+   45, the baseline is under-trained and every intervention will look better than it is. That is worth
+   knowing before spending the other runs, and `CLAUDE.md` lists it as still open.
+3. **Provenance.** `cat $BASE/seed42/model_weights/biodiversity/*/run_provenance_seed42.json` — commit,
    dirty flag, GPU, precision, torch and lightning versions. Confirm the commit is the campaign commit
    and `dirty` is `false`.
 
+**While the array runs, the wall clock is free.** Two analysis fixes from
+`docs/audit/METHODOLOGY_REVIEW_2026-07-27.md` are CPU-only, operate on the stage-C5 softmax dumps and
+are on the critical path afterwards — write them now rather than after the array lands: per-seed
+accumulation in `boundary_trimap_iou.py`'s A2 block, and a foreground-only boundary variant for
+Test B. Neither changes what the campaign computes.
+
 ## 6. Fetch and aggregate
 
-The array writes per-seed metrics to `$BASE/results/{val,test,external}/seed<N>_<cell>.json` and the
-per-seed softmax dumps under each seed tree.
+The array writes to `$BASE/results/`: `{val,test,external}/seed<N>_<cell>.json`,
+`softmax/<cell>/seed<N>/`, and `checkpoints/<cell>/seed<N>.ckpt`.
 
     rsync -avh "$SONIC_USER@$HOST:$BASE/results/" ./sonic/results_f1/
 
@@ -249,9 +386,15 @@ per-seed softmax dumps under each seed tree.
       --external-results-dir sonic/results_f1/external \
       --strict
 
-`--strict` fails if any of 4 cells x 3 splits x 10 seeds is missing. The aggregator also checks each
+`--strict` fails if any of 4 cells × 3 splits × 10 seeds is missing. The aggregator also checks each
 file's recorded checkpoint against the cell and split tag being asked for, so a metrics file from
 another campaign is rejected rather than averaged in.
+
+**Pull the checkpoints too, or at minimum confirm they were collected.** They are ~61 GB and they are
+what makes the campaign repeatable: re-evaluation on a corrected split, any new figure needing
+predictions, and the step-matched control D12 names as its own reversal condition all branch from
+them. Until 2026-07-27 they were not collected at all and would have died with the scratch purge.
+
 </procedure>
 
 <constraints>
@@ -259,6 +402,9 @@ another campaign is rejected rather than averaged in.
 - Do NOT use any script under `sonic/` except `sonic/campaign/`.
 - Do NOT use `rsync -L` on the data.
 - Do NOT transfer `notes/`, `data/biodiversity_raw` or `data/openearthmap_raw`.
+- Do NOT resubmit or resize the array to work around six PENDING tasks. That is the QOS cap.
+- Do NOT delete anything under `$SONIC_SCRATCH` without inspecting it first. The 2026-07-27 prune kept
+  17 GB out of 420 GB precisely because two of the survivors were expensive to recreate.
 - Ask the user for the cluster username and the Slurm account rather than guessing. Do not put either
   into a tracked file.
 - If a gate refuses, report it and stop. Every refusal in this pipeline was added because the thing it
@@ -269,6 +415,58 @@ another campaign is rejected rather than averaged in.
 1. **Where staging got to**, step by step, with the verification output for each.
 2. **Anything that refused**, what it said, and what you did.
 3. **The submitted job id**, and the plan the dry run printed.
-4. **The first task's first hour**: gate output, stage order, and whether training started.
-5. **Anything you could not verify** from the laptop side.
+4. **The first wave's first hour**: gate output, stage order, and whether training started.
+5. **The first completed seed's elapsed time**, and the resulting projection for all ten.
+6. **Anything you could not verify** from the laptop side.
 </output_format>
+
+---
+
+## Appendix — staging from nothing
+
+Use this if `$SONIC_SCRATCH` is empty, or if step 1's verification failed. It assumes nothing survives
+on scratch and supersedes steps 1 and 2d above.
+
+**Upload ~9 GB instead of 98 MB:**
+
+    rsync -avh --partial --progress \
+      data/biodiversity_split data/openearthmap_relabelled data/split_f1 data/oem_combined_f1 \
+      "$SONIC_USER@$HOST:$STAGE/data/"
+    rsync -avh --partial --progress pretrain_weights "$SONIC_USER@$HOST:$STAGE/"
+
+Then verify exactly as in step 1, plus:
+
+    for s in train val test; do printf "%-8s %s\n" $s $(ls $STAGE/data/biodiversity_split/$s/images | wc -l); done
+    # expect  train 1706  val 219  test 218   (the POOL's old directory names — correct, see above)
+
+**Build the conda env** (login node only; it needs internet):
+
+    module load anaconda3/2025.12-1
+    conda tos accept --override-channels --channel defaults 2>/dev/null || true
+    conda tos accept --override-channels \
+      --channel https://repo.anaconda.com/pkgs/main \
+      --channel https://repo.anaconda.com/pkgs/r 2>/dev/null || true
+    conda env create -f $BASE/seed42/environment.yaml -p $BASE/env
+
+`conda tos accept` is needed because conda 25.x gates the defaults channel behind an interactive
+prompt that would abort the build under `set -e`. Verify against the pins:
+
+    $BASE/env/bin/python -c "import torch, pytorch_lightning as pl; print(torch.__version__, pl.__version__)"
+    # expect  2.9.1+cu128 2.3.0
+
+Budget 30–60 minutes for the solve and download on a shared filesystem.
+
+---
+
+## What changed on 2026-07-27
+
+| | previous version | now |
+|---|---|---|
+| runtime | "40 training runs, each ~20 h on one L40S" | 20 h is the `--time` ceiling, not a runtime. 10 array tasks; measured 4 h 25 – 5 h 32 each in June. |
+| concurrency | assumed all ten run together | **QOS `normal` caps the user at 4 GPUs.** Three waves. Steps 4 and 5 rewritten around it. |
+| step 1 | rsync ~9 GB | ~98 MB top-up; the 8.4 GB pool is on scratch and verified byte-identical. Appendix keeps the full path. |
+| step 2d | build the conda env | already built and verified; skip. Appendix keeps the build. |
+| disk | not mentioned | 61 TB free, no quota; the collect step's 2× check passes trivially. Explained rather than worried about. |
+| dereferencing | warned about in the abstract | recorded as having actually happened, with the 15 GB and 6,000 dangling links it produced. |
+| checkpoints | not mentioned | collected since 2026-07-27; pull them, they are what makes the campaign repeatable. |
+| step 5 | two post-seed checks | three — elapsed time added first, because the schedule depends on it and it is unmeasured. |

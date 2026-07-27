@@ -187,9 +187,35 @@ def panel_interior_floor(ax, bvi, use_tex):
     ax.legend(handles=handles, loc="upper center", frameon=False)
 
 
-def render(root, out_dir, cell, use_tex):
+def trimap_json(root, split, cell):
+    """The trimap JSON for one cell on one held-out split, as RUNBOOK stage D writes it.
+
+    Stage D runs `boundary_trimap_iou.py --out-dir analysis/label_ceiling/$SPLIT` for SPLIT in
+    {test, external_test}, so the file is PER SPLIT. This script read the un-split path
+    `analysis/label_ceiling/boundary_trimap_<cell>.json` until 2026-07-27, which stage D never
+    writes -- so the paper's boundary figure could not be built from the campaign's own output.
+    Nothing wrote that path except a bare `boundary_trimap_iou.py` run taking its own default
+    --out-dir, which is Test A only and records no split, so the failure mode on a debug run was
+    not a crash but a manuscript figure of unrecorded provenance.
+    """
+    p = root / f"analysis/label_ceiling/{split}/boundary_trimap_{cell}.json"
+    if not p.exists():
+        legacy = root / f"analysis/label_ceiling/boundary_trimap_{cell}.json"
+        extra = (f"\n  NOTE: {legacy.relative_to(root)} exists. That is the un-split legacy path, "
+                 f"written only by a bare boundary_trimap_iou.py run; it records no split and is "
+                 f"NOT stage D output. Refusing it rather than plotting unrecorded provenance."
+                 if legacy.exists() else "")
+        raise SystemExit(
+            f"{p.relative_to(root)} not found.\n"
+            f"  Produce it with RUNBOOK stage D, which writes one file per held-out split:\n"
+            f"    bash RUNBOOK.sh --from D --to D\n"
+            f"  or pass --split {{test,external_test}} to name the one you mean.{extra}")
+    return p
+
+
+def render(root, out_dir, cell, use_tex, split="test"):
     setup_font(use_tex)
-    bt = json.load(open(root / f"analysis/label_ceiling/boundary_trimap_{cell}.json"))
+    bt = json.load(open(trimap_json(root, split, cell)))
 
     fig, axes = plt.subplots(1, 3, figsize=(9.8, 4.5))
     panel_recovery(axes[0], bt["recovery_trimap"], use_tex)
@@ -216,6 +242,10 @@ def render(root, out_dir, cell, use_tex):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cell", default="stage3_clsbal")
+    ap.add_argument("--split", default="test", choices=["test", "external_test"],
+                    help="which held-out split's trimap curve to plot. Test A (test) is the "
+                         "default; Test B (external_test) is the upland transfer set. Never "
+                         "validation -- every checkpoint is selected on it.")
     ap.add_argument("--out-dir", default="figures")
     ap.add_argument("--no-tex", action="store_true")
     args = ap.parse_args()
@@ -223,12 +253,16 @@ def main():
     out_dir = (root / args.out_dir).resolve()
     use_tex = not args.no_tex
     try:
-        render(root, out_dir, args.cell, use_tex)
+        render(root, out_dir, args.cell, use_tex, args.split)
+    except SystemExit:
+        # A missing/refused input is not a font problem. Retrying it under mathtext would report
+        # "usetex failed" for a file that does not exist, hiding the real cause behind a wrong one.
+        raise
     except Exception as e:
         if not use_tex:
             raise
         print(f"[boundary_limited_error] usetex failed ({e}); retrying with mathtext")
-        render(root, out_dir, args.cell, use_tex=False)
+        render(root, out_dir, args.cell, use_tex=False, split=args.split)
 
 
 if __name__ == "__main__":

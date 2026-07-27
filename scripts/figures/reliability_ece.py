@@ -121,9 +121,14 @@ def run_cell(root, softmax_root, mask_dir, cell, seeds, stratify=False):
     return overall, near, far, len(ids)
 
 
-def render(root, out_dir, seeds, use_tex):
+def render(root, out_dir, seeds, use_tex, split="test", softmax_root="analysis/seed_softmax"):
     setup_font(use_tex)
-    sr, md = "sonic/results", f"data/split_{SPLIT_TAG}/val/masks"
+    # Hard-coded to `sonic/results` and the VALIDATION split until 2026-07-27. RUNBOOK stage C5
+    # dumps softmax to analysis/seed_softmax, and panel (b) is a boundary-stratified statistic, so
+    # stage D's rule applies: held-out ground only, because validation is the split every checkpoint
+    # is selected on. build_all_figures.py invokes this script bare, so these defaults are what
+    # stage E runs.
+    sr, md = softmax_root, f"data/split_{SPLIT_TAG}/{split}/masks"
     base, _, _, n = run_cell(root, sr, md, "stage1_baseline", seeds, stratify=False)
     full, b_near, b_far, _ = run_cell(root, sr, md, "stage3_clsbal", seeds, stratify=True)
 
@@ -172,18 +177,27 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", default="figures")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
+    ap.add_argument("--split", default="test", choices=["test", "external_test"],
+                    help="held-out split to compute on. Never validation — every checkpoint is "
+                         "selected on it.")
+    ap.add_argument("--softmax-root", default="analysis/seed_softmax",
+                    help="where RUNBOOK stage C5 dumps per-seed softmax. Use sonic/results only "
+                         "for a post-fetch cluster layout.")
     ap.add_argument("--no-tex", action="store_true")
     args = ap.parse_args()
     root = find_repo_root()
     out_dir = (root / args.out_dir).resolve()
     use_tex = not args.no_tex
     try:
-        render(root, out_dir, args.seeds, use_tex)
+        render(root, out_dir, args.seeds, use_tex, args.split, args.softmax_root)
+    except SystemExit:
+        raise            # a missing input is not a font problem; do not retry it as one
     except Exception as e:
         if not use_tex:
             raise
         print(f"[reliability_ece] usetex failed ({e}); retrying mathtext")
-        render(root, out_dir, args.seeds, use_tex=False)
+        render(root, out_dir, args.seeds, use_tex=False, split=args.split,
+               softmax_root=args.softmax_root)
 
 
 if __name__ == "__main__":
