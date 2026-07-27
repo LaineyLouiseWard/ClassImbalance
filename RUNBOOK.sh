@@ -438,8 +438,12 @@ if run_stage C1b; then
       --ignore-index 0 \
       --force
   done
-  echo "[C1b] Per-class support for Test B (a share is not a support; classes under 5 independent"
-  echo "      950 m blocks are reported as unestimable, never as an estimate)"
+  # The verdict labels this used to advertise (ok / weak / UNESTIMABLE against MIN_BLOCKS=5,
+  # MIN_TILES=8) were removed under D17: all three bars were invented here. The counts are the
+  # output; the reader judges them. Note that Test B is NOT covered by the admissibility criterion
+  # at all -- MIN_CLASS_BLOCKS applies to train/val/test only -- and its Cropland sits in 4 cells.
+  echo "[C1b] Per-class support for Test B (a share is not a support; the block counts are reported"
+  echo "      without a verdict, and Test B has no admissibility floor applied to it)"
   PYTHONPATH=. python scripts/analysis/report_class_support.py --split-root "$SPLIT_ROOT"
 fi
 
@@ -519,9 +523,15 @@ if run_stage D; then
   PYTHONPATH=. python scripts/analysis/a4_val_test_gap.py
   PYTHONPATH=. python scripts/analysis/a5_majority_stability.py
   PYTHONPATH=. python scripts/analysis/a6_weight_gini.py
-  echo "[D] Bootstrap confidence intervals (950 m spatial blocks, all four cells, all three splits)"
-  # --force re-runs inference instead of reusing stale analysis/per_tile_cms/*.npz from a prior run.
-  PYTHONPATH=. python scripts/analysis/bootstrap_metrics.py --device cuda --force
+  # NO BLOCK BOOTSTRAP. Removed 2026-07-26. It entered the design to supply the lower bound the
+  # pre-registered rho >= 4.0 threshold was to be judged on; D18 retired the threshold and the
+  # machinery outlived its only purpose. It also answers a question this study does not ask: both
+  # test sets are COMPLETE ENUMERATIONS of their ground, so there is no sample and no sampling
+  # error to interval; every claim here is either a cross-cell contrast on identical pixels (where
+  # the landscape cancels and the variance that matters is the training run) or a census level
+  # (reported with the ground it covers). Where spatial variance would genuinely be wanted -- does
+  # this hold on other landscapes -- a within-site bootstrap estimates the wrong component, and the
+  # between-site n is 2. Uncertainty is per-seed and paired, via aggregate_seeds.py.
 
   # The boundary evidence. Since D18 retired the pre-registered threshold, the trimap exclusion
   # curve IS the primary evidence for the boundary claim -- and it was in no stage at all, which is

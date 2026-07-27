@@ -103,13 +103,13 @@
         "Forest": {
           "pixels": 3111636,
           "tiles": 138,
-          "blocks": 11,
+          "blocks": 13,
           "share": 0.10100211531999603
         },
         "Grassland": {
           "pixels": 7424540,
           "tiles": 106,
-          "blocks": 7,
+          "blocks": 9,
           "share": 0.24099677638320272
         },
         "Cropland": {
@@ -121,13 +121,13 @@
         "Settlement": {
           "pixels": 452688,
           "tiles": 75,
-          "blocks": 5,
+          "blocks": 6,
           "share": 0.014694021273689585
         },
         "Seminatural": {
           "pixels": 18585950,
           "tiles": 165,
-          "blocks": 11,
+          "blocks": 13,
           "share": 0.6032904443937788
         }
       }

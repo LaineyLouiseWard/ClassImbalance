@@ -94,8 +94,8 @@ class Evaluator(object):
         dropped anything and averaged in a hard zero at full weight. On a full split every class is
         present and nothing changed; it bit on SUBSETS. A block-bootstrap resample that happens to
         contain no Cropland scored Cropland IoU = 0 rather than excluding it, which drags the
-        resampled mIoU distribution down and widens it. Test A cropland sits in 8 blocks of 16 and
-        Test B cropland in 4 of 12, so that draw is common, not rare.
+        resampled mIoU distribution down and widens it. Test A cropland sits in 8 grid cells of 16 and
+        Test B cropland in 4 of 14, so that draw is common, not rare.
         """
         tp, fp, _, fn = self.get_tp_fp_tn_fn()
         denom = tp + fp + fn

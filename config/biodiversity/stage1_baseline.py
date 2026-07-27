@@ -44,7 +44,9 @@ ignore_index = 0
 #   Default is the legacy random-by-tile split, which LEAKS (see
 #   notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
 _BIO_SPLIT = os.environ["BIO_SPLIT"]  # required: the old default was the LEAKY split
-_BIO_OEM = os.environ.get("BIO_OEM_COMBINED", "data/biodiversity_oem_combined")
+# BIO_OEM_COMBINED is NOT read by this config -- only stage2a_oem_pretrain trains on the combined
+# pool. It was made a hard requirement here on 2026-07-26 along with the other four, which added a
+# failure mode for an unused variable. Removed 2026-07-27: require what you read.
 
 _BV = os.environ.get("BATCH_VARIANT", "b2")
 assert _BV in ("b2", "b4"), f"BATCH_VARIANT must be b2 or b4, got {_BV!r}"

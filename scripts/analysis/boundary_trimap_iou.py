@@ -121,6 +121,16 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     # per-class error vs distance for ALL foreground classes (panel c: boundary vs interior floor)
     err_n_k = {k: np.zeros(nb, dtype=np.int64) for k in FOREGROUND}
     err_e_k = {k: np.zeros(nb, dtype=np.int64) for k in FOREGROUND}
+    # PER-SEED as well as ensemble, added 2026-07-27. A1 and A3 already accumulate per seed via
+    # `seed_preds`; A2 was the only block left ensemble-only, which meant the boundary and interior
+    # error rates -- and therefore rho -- carried no seed-level variation and so no uncertainty at
+    # all. Since this study's uncertainty is per-seed and paired (METHODS §7), that made the headline
+    # boundary numbers the one place with no interval available. It also biased them: an ensemble
+    # removes more error in easy interior regions than at hard boundaries, so rho computed on the
+    # ensemble argmax is higher than the mean of the per-seed rhos, in the direction of the claim.
+    # `seed_preds` is already computed for A1/A3, so this costs one bincount per seed per tile.
+    err_n_seed = np.zeros((len(seeds), nb), dtype=np.int64)
+    err_e_seed = np.zeros((len(seeds), nb), dtype=np.int64)
     ent_sum = np.zeros(nb)                           # sum of ensemble total entropy H[mean_p], fg
 
     # A3 (panel c): Boundary-IoU per class per seed, micro-pooled over tiles, at each band d.
@@ -174,6 +184,10 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
             sel_k = (mask == k)
             err_n_k[k] += np.bincount(bidx[sel_k], minlength=nb)
             err_e_k[k] += np.bincount(bidx[sel_k & (ens_pred != mask)], minlength=nb)
+        # the same stratification, per seed, so the rates carry a spread over training runs
+        for si in range(len(seeds)):
+            err_n_seed[si] += np.bincount(fg_b, minlength=nb)
+            err_e_seed[si] += np.bincount(bidx[fg & (seed_preds[si] != mask)], minlength=nb)
 
     # --- reduce A1 ---
     ens_curve = [iou_from_conf(conf_ens[ri]) for ri in range(nR)]
@@ -252,6 +266,23 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
                       for k in FOREGROUND},
         "boundary_vs_interior": {"boundary_max_m": BND_MAX_M, "interior_min_m": INT_MIN_M,
                                  "per_class": bvi},
+        # PER-SEED boundary and interior rates, and the rho each seed implies. This is what carries
+        # the uncertainty: a spread over training runs, which is the only interval this study
+        # reports (METHODS §7). The ensemble figures above stay as the registered point estimate;
+        # they are NOT the centre of this spread, because rho is a ratio and the ensemble removes
+        # more interior error than boundary error. Report the gap rather than hiding it.
+        "per_seed": {
+            "seeds": list(seeds),
+            "boundary_error_rate": [agg_rate(err_e_seed[si], err_n_seed[si], bnd_bins)[0]
+                                    for si in range(len(seeds))],
+            "interior_error_rate": [agg_rate(err_e_seed[si], err_n_seed[si], int_bins)[0]
+                                    for si in range(len(seeds))],
+            "rho": [
+                (agg_rate(err_e_seed[si], err_n_seed[si], bnd_bins)[0]
+                 / agg_rate(err_e_seed[si], err_n_seed[si], int_bins)[0])
+                if agg_rate(err_e_seed[si], err_n_seed[si], int_bins)[0] > 0 else float("nan")
+                for si in range(len(seeds))],
+        },
     }
 
     out = {"recovery_trimap": recovery, "error_vs_distance": err_curve, "boundary_iou": boundary_iou}

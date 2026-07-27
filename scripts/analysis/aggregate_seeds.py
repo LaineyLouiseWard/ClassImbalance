@@ -54,7 +54,9 @@ import numpy as np
 
 # ── repo root ────────────────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scripts.analysis.utils import SPLIT_TAG, cell_dir, find_repo_root  # noqa: E402
+from scripts.analysis.utils import (  # noqa: E402
+    SPLIT_TAG, assert_metrics_provenance, cell_dir, find_repo_root,
+)
 
 REPO = find_repo_root()
 
@@ -130,8 +132,18 @@ MULTIPLICITY_NOTE = (
     "as descriptive, not as hypothesis tests._")
 
 # Metrics the factorial effects are reported for: headline mIoU + the two minority classes.
+# ALL FIVE foreground classes, not three. Until 2026-07-27 this listed mIoU, Settlement and
+# Semi-natural only, so Forest, Grassland and CROPLAND got a per-cell mean +/- sample std and no
+# paired contrast — the weaker statistic this file's own docstring says does not quantify whether an
+# effect exceeds seed noise. Cropland is the class the sampler is expected to COST, so it is the
+# evidence for the trade-off being a trade-off; omitting it reported the benefit paired and the cost
+# unpaired. The pairing must be identical across classes or the comparison between them is not like
+# for like. `metrics.json` already carries per_class_iou for all five, so this is free.
 EFFECT_METRICS = [
     ("mIoU", "mIoU_excluding_bg", None),
+    ("Forest", None, "Forest land"),
+    ("Grassland", None, "Grassland"),
+    ("Cropland", None, "Cropland"),
     ("Settlement", None, "Settlement"),
     ("Semi-natural", None, "Seminatural Grassland"),
 ]
@@ -252,7 +264,7 @@ def fmt_p(p: float) -> str:
 
 # ── loading ──────────────────────────────────────────────────────────────────
 
-def load_metrics_file(path: Path, folder: str) -> dict:
+def load_metrics_file(path: Path, folder: str, expect_split: str) -> dict:
     """Read one metrics.json → simplified dict with everything in PERCENT.
 
     The file must say which checkpoint produced it, and that checkpoint must be this cell's, for
@@ -264,14 +276,12 @@ def load_metrics_file(path: Path, folder: str) -> dict:
     """
     with open(path, encoding="utf-8") as f:
         m = json.load(f)
-    got = Path(m.get("checkpoint", "")).name
-    want = f"{cell_dir(folder)}.ckpt"
-    if got != want:
-        raise SystemExit(
-            f"{path}\n  was produced by checkpoint '{got or '(none recorded)'}', not '{want}'.\n"
-            f"  This is a metrics file from a different cell, a different split tag, or the "
-            f"withdrawn pre-2026-07-26 campaign. Point --results-dir at the current drop, or set "
-            f"SPLIT_TAG to the campaign you mean (currently '{SPLIT_TAG}').")
+    # Shared with export_final_test_table.py and campaign.slurm rather than copied into each, which
+    # is how the previous version came to have the same blind spot in three places: it checked the
+    # checkpoint and stopped, so a withdrawn metrics.json needed only a plausible checkpoint name to
+    # be aggregated into a complete factorial with p-values, at exit 0.
+    assert_metrics_provenance(m, path, folder, expect_data_root_name=expect_split,
+                              expect_tta=False)
     iou, f1 = m["per_class_iou"], m["per_class_f1"]
     return {
         "mIoU_excluding_bg": m["mIoU_excluding_bg"] * 100,
@@ -524,7 +534,7 @@ def main() -> None:
             for s in seeds:
                 p = cell_metrics_path(s, root_seed, split, folder, flat_for)
                 if p.exists():
-                    seedmap[s] = load_metrics_file(p, folder)
+                    seedmap[s] = load_metrics_file(p, folder, split)
             if seedmap:
                 data[split][folder] = {"label": label, "seedmap": seedmap}
 

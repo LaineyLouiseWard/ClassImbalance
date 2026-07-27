@@ -5,7 +5,7 @@ Two properties of `utils.spatial_blocks` that are invisible unless printed.
 
 PHASE. The grid is anchored at the CRS origin -- for the inland site, the UTM 29N false easting of
 500,000 m. That origin is arbitrary with respect to the landscape, so the block count is one member
-of a family indexed by the offset. It matters twice: every bootstrap interval scales roughly as
+of a family indexed by the offset. It matters because
 1/sqrt(n_blocks), and the block count feeds the class-support criterion that admitted the split.
 
 EFFECTIVE N. The blocks are badly unequal -- Test A's sixteen hold between 43 and 2 tiles -- so
@@ -32,6 +32,11 @@ from scripts.data_prep.build_spatial_split import (
     FOREGROUND, class_block_support, class_counts, read_pool, site_of,
 )
 
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
+
 BLOCK_M = 950.0
 N_PHASES = 10          # 0.1-cell steps, both axes together
 
@@ -49,8 +54,8 @@ def blocks_at_phase(pool: dict, block_m: float, frac: float) -> dict:
     for site, ids in by_site.items():
         cy = float(np.mean([(pool[t][2] + pool[t][4]) / 2 for t in ids]))
         geo = max(abs(pool[t][1]) for t in ids) <= 180
-        sx = block_m / (111320.0 * math.cos(math.radians(cy))) if geo else block_m
-        sy = block_m / 111132.0 if geo else block_m
+        sx = block_m / (M_PER_DEG_LON_EQ * math.cos(math.radians(cy))) if geo else block_m
+        sy = block_m / M_PER_DEG_LAT if geo else block_m
         for t in ids:
             x = ((pool[t][1] + pool[t][3]) / 2) / sx + frac
             y = ((pool[t][2] + pool[t][4]) / 2) / sy + frac

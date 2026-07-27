@@ -50,6 +50,11 @@ import numpy as np
 import rasterio
 from PIL import Image
 
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
+
 FOREGROUND = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 
 
@@ -94,8 +99,8 @@ def centroids_m(root: Path, split_root: Path, want_bounds: bool = False) -> dict
         ids = [k for k in raw if site_of(k) == site]
         geo = raw[ids[0]][0]
         lat0 = np.mean([raw[k][2] for k in ids]) if geo else None
-        mx = 111320.0 * math.cos(math.radians(lat0)) if geo else 1.0
-        my = 111132.0 if geo else 1.0
+        mx = M_PER_DEG_LON_EQ * math.cos(math.radians(lat0)) if geo else 1.0
+        my = M_PER_DEG_LAT if geo else 1.0
         for k in ids:
             _, x, y, l, b_, r, t = raw[k]
             out[k] = ((site, x * mx, y * my) if not want_bounds
@@ -291,7 +296,13 @@ def main() -> None:
     p = out_dir / f"correlogram_{args.descriptor}.json"
     p.write_text(json.dumps({"descriptor": args.descriptor, "increment_m": args.increment,
                              "n_perm": args.n_perm, "sites": results}, indent=2))
-    print(f"\nwrote {p.relative_to(root)}")
+    # relative_to raises for a path outside the repo, AFTER the result is written:
+    # exit 1 on a success, from a cosmetic print.
+    try:
+        _shown = p.relative_to(root)
+    except ValueError:
+        _shown = p
+    print(f"\nwrote {_shown}")
 
 
 if __name__ == "__main__":

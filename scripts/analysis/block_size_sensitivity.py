@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Recompute the block-support adequacy criterion at several block sizes, on the shipped manifest.
 
-SUPPORT_BLOCK_M is not only the bootstrap unit. It is the block size in MIN_CLASS_BLOCKS, which is
+SUPPORT_BLOCK_M is the block size in MIN_CLASS_BLOCKS, which is
 the criterion that ADMITTED this split, so the split's admissibility depends on which correlogram
 number is used. This prints the dependence rather than asserting it.
 

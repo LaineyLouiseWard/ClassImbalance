@@ -37,6 +37,11 @@ from rasterio.merge import merge
 from rasterio.warp import reproject, Resampling
 
 import os  # noqa: E402
+
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
 # The untagged split directories belong to the WITHDRAWN random split (219 val / 218 test tiles).
 SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
@@ -68,11 +73,16 @@ def build_dem(root: Path):
     elev, tf = merge(srcs)
     elev = elev[0].astype("float32")
     crs = srcs[0].crs
-    # pixel size in metres at this latitude (~52 N): dx = res_lon*111320*cos(lat), dy = res_lat*111320
+    # Pixel size in metres at this latitude (~52 N):
+    #   dx = res_lon * M_PER_DEG_LON_EQ * cos(lat)      dy = res_lat * M_PER_DEG_LAT
+    # dy used the LONGITUDE constant (111320) until 2026-07-26, where every other site in the repo
+    # uses 111132 for latitude. That overstated the north-south ground distance by 0.17%, so the
+    # north-south component of the elevation gradient -- and therefore the slope raster this whole
+    # analysis is built on -- was biased low by the same factor.
     res_x, res_y = abs(tf.a), abs(tf.e)
     lat0 = 52.0
-    dx = res_x * 111320.0 * np.cos(np.radians(lat0))
-    dy = res_y * 111320.0
+    dx = res_x * M_PER_DEG_LON_EQ * np.cos(np.radians(lat0))
+    dy = res_y * M_PER_DEG_LAT
     gy, gx = np.gradient(elev, dy, dx)  # m per m
     slope = np.degrees(np.arctan(np.sqrt(gx * gx + gy * gy)))
     for s in srcs:

@@ -56,6 +56,11 @@ import numpy as np
 import rasterio
 from PIL import Image
 
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
+
 SPLITS = ("train", "val", "test")
 # A fourth destination, outside the blocked design. Sites whose extent is smaller than twice their
 # autocorrelation range cannot be split internally at all (Roberts et al. 2017), so they are held
@@ -173,8 +178,8 @@ def support_blocks(pool: dict, block_m: float = SUPPORT_BLOCK_M) -> dict:
         cy = float(np.mean([(pool[t][2] + pool[t][4]) / 2 for t in ids]))
         # Degrees if the coordinates are small enough to be lon/lat; metres otherwise.
         geo = max(abs(pool[t][1]) for t in ids) <= 180
-        sx = block_m / (111320.0 * math.cos(math.radians(cy))) if geo else block_m
-        sy = block_m / 111132.0 if geo else block_m
+        sx = block_m / (M_PER_DEG_LON_EQ * math.cos(math.radians(cy))) if geo else block_m
+        sy = block_m / M_PER_DEG_LAT if geo else block_m
         for t in ids:
             x = ((pool[t][1] + pool[t][3]) / 2) / sx
             y = ((pool[t][2] + pool[t][4]) / 2) / sy
@@ -247,7 +252,7 @@ def pairwise_separation_m(kept: dict, root: Path, split_root: Path, orig: dict, 
     arr = np.array([bnds[t] for t in ids], float)   # (left, bottom, right, top)
     lab = np.array([kept[t] for t in ids])
     L, B, R, T = arr.T
-    mx, my = ((111320.0 * math.cos(math.radians(lat)), 111132.0) if geographic else (1.0, 1.0))
+    mx, my = ((M_PER_DEG_LON_EQ * math.cos(math.radians(lat)), M_PER_DEG_LAT) if geographic else (1.0, 1.0))
     out = {}
     for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
         ia, ib = np.where(lab == a)[0], np.where(lab == b)[0]

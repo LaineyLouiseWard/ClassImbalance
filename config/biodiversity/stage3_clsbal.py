@@ -42,7 +42,9 @@ ignore_index = 0
 #   Default is the legacy random-by-tile split, which LEAKS (see
 #   notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
 _BIO_SPLIT = os.environ["BIO_SPLIT"]  # required: the old default was the LEAKY split
-_BIO_OEM = os.environ.get("BIO_OEM_COMBINED", "data/biodiversity_oem_combined")
+# BIO_OEM_COMBINED is NOT read by this config -- only stage2a_oem_pretrain trains on the combined
+# pool. It was made a hard requirement here on 2026-07-26 along with the other four, which added a
+# failure mode for an unused variable. Removed 2026-07-27: require what you read.
 
 _BV = os.environ.get("BATCH_VARIANT", "b2")
 assert _BV in ("b2", "b4"), f"BATCH_VARIANT must be b2 or b4, got {_BV!r}"
@@ -163,7 +165,8 @@ if missing > 0:
     )
 
 # num_samples = len(train_dataset), so the sampler changes WHICH tiles are drawn and never how many.
-# On the f1 split that is 1072, matching stages 1/2a/2b at 536 steps per epoch. Two stale values have
+# On the f1 split that is 1072, matching stages 1 and 2b at 536 steps per epoch (stage 2a runs
+# over the 3,190-tile combined pool, so it is 1,595 steps per epoch, of which the Bio share is 536). Two stale values have
 # been corrected here: 2646 (a former replicated training set) and then 1846 (the pool before the
 # 2026-07-25 leakage rebuild). Neither is the current training set. Taking the length from the dataset
 # rather than writing a number is what stops it going stale a third time.

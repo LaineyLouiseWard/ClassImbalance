@@ -9,6 +9,11 @@ from pathlib import Path
 
 import numpy as np
 
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
+
 # ── Repo root detection ─────────────────────────────────────────────────────
 
 def find_repo_root(start: Path | None = None) -> Path:
@@ -38,6 +43,57 @@ def cell_dir(folder: str) -> str:
     Every reader goes through here so the writer and the readers cannot drift apart again.
     """
     return f"{folder}_{SPLIT_TAG}"
+
+
+def assert_metrics_provenance(m: dict, path, folder: str, expect_data_root_name: str,
+                              expect_tta: bool = False) -> None:
+    """Reject a metrics.json that did not come from this cell, this split tag AND this split.
+
+    ONE implementation, imported by every reader, because the previous version of this check was
+    copy-pasted into three places and therefore had the same blind spot three times: it validated
+    `checkpoint` and `tta` and nothing else. That is enough to catch a different CELL and a
+    different SPLIT_TAG, and not enough to catch a different SPLIT or a different DATASET.
+
+    Demonstrated 2026-07-26: taking the withdrawn campaign's metrics and changing ONLY the
+    checkpoint basename was sufficient to make `export_final_test_table.py` build the manuscript's
+    headline test table and exit 0, from files whose own fields read
+    `split: val`, `data_root: .../biodiversity_split/val` -- the withdrawn LEAKING split, and the
+    validation split at that, presented as held-out test. Both fields were sitting in the file,
+    unread. So read them.
+
+    `expect_data_root_name` is the split directory the metrics must have been computed over
+    ("val", "test", "external_test"). It is the discriminator that `split` cannot be, because
+    compute_metrics.py takes `--split test` for BOTH Test A and Test B and tells them apart only
+    by `--data-root`.
+    """
+    p = Path(path)
+    got_ckpt = Path(m.get("checkpoint", "")).name
+    want_ckpt = f"{cell_dir(folder)}.ckpt"
+    if got_ckpt != want_ckpt:
+        raise SystemExit(
+            f"{p}\n  was produced by checkpoint '{got_ckpt or '(none recorded)'}', not "
+            f"'{want_ckpt}'. This is a metrics file from another cell, another split tag, or the "
+            f"withdrawn pre-2026-07-26 campaign.")
+
+    data_root = m.get("data_root")
+    if not data_root:
+        raise SystemExit(
+            f"{p}\n  records no data_root, so the data it was computed over cannot be established. "
+            f"Re-run evaluation/compute_metrics.py; it has written this field since 2026-06.")
+    dr = Path(data_root)
+    if dr.name != expect_data_root_name:
+        raise SystemExit(
+            f"{p}\n  was computed over '{dr}', whose split directory is '{dr.name}', not "
+            f"'{expect_data_root_name}'. A metrics file for one split cannot stand in for another.")
+    want_parent = f"split_{SPLIT_TAG}"
+    if dr.parent.name != want_parent:
+        raise SystemExit(
+            f"{p}\n  was computed over '{dr}', which sits under '{dr.parent.name}', not "
+            f"'{want_parent}'. This is another split entirely — most likely the withdrawn "
+            f"'biodiversity_split', whose held-out tiles leak into training.")
+
+    if bool(m.get("tta")) is not bool(expect_tta):
+        raise SystemExit(f"{p}\n  has tta={m.get('tta')}; this reader expects tta={expect_tta}.")
 
 
 def resolve_artifact(env_var: str, template: str) -> Path:
@@ -125,29 +181,43 @@ def load_augmentation_list(path: Path | None = None) -> dict:
 
 # ── Unit of analysis: independent ground, not tiles ─────────────────────────
 
-def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict:
-    """{tile_id: block_id} on a grid of `block_m` cells, per CRS. THE BOOTSTRAP UNIT.
+# THE GRID ANCHOR, stated rather than implied. Cell membership is floor((coord - origin) / cell), and
+# until 2026-07-26 the origin was simply whatever the coordinate system happened to use: the UTM 29N
+# false easting of 500,000 m for the inland site, the prime meridian and the equator for the uplands.
+# Two unrelated arbitrary origins, neither chosen, neither written down. Neither has anything to do
+# with this landscape, so the shipped partition is ONE MEMBER of a family indexed by this offset --
+# scripts/analysis/block_phase_sweep.py reports the family, and the count moves by up to 40% across
+# it. (0.0, 0.0) reproduces the historical behaviour exactly; it is now a decision rather than a side
+# effect of the projection. Changing it changes the shipped partition -- do not, without a dated note.
+BLOCK_ORIGIN = (0.0, 0.0)
 
-    Tiles are chipped on a 50% stride, so neighbours repeat ground and resampling tile ids treats
-    dependent tiles as independent draws: 294 test tiles are only ~105 pixel-disjoint footprints, and
-    16 independent units at the 950 m block scale (measured, not estimated: the earlier "~14" in
-    this docstring was never checked against what the function returns). Intervals built on tile ids are roughly
-    1.6x too narrow at footprint level and 10-26x too narrow at the correlation scale (round-2 audit,
-    item B6).
+
+def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict:
+    """{tile_id: cell_id} on a grid of `block_m` cells, per (CRS, site). A DESCRIPTIVE UNIT.
+
+    WHAT THIS COUNTS, AND WHAT IT DOES NOT. It counts CELLS TOUCHED: how many grid cells the tiles of
+    a split fall into. That is a spread statistic — how scattered the ground carrying a class is. It
+    is NOT a count of independent parcels, and it was described as one until 2026-07-26. Test A's 294
+    tiles touch 16 cells while covering 6.783 km2, which is 7.52 cells' worth of ground; Test B's 191
+    tiles touch 14 while covering 5.164 km2, or 5.72 cells' worth. Sixteen disjoint 950 m parcels
+    cannot exist inside 7.52 parcels of ground. Never write "independent 950 m blocks".
+
+    THIS IS NOT AN INFERENTIAL UNIT AND THERE IS NO LONGER A BOOTSTRAP. `resample_blocks` was removed
+    with the block bootstrap on 2026-07-26: it existed to supply the lower bound the withdrawn
+    rho >= 4.0 threshold was judged on (D18), both test sets are complete enumerations of their
+    ground, and uncertainty in this study is per-seed and paired (aggregate_seeds.py). See METHODS §7.
 
     WHY A GRID AND NOT CONNECTED COMPONENTS. The obvious reading of "non-overlapping footprint group"
     is a single-linkage merge of overlapping tiles. That is wrong here and was tried first: a
-    contiguous test strip is one connected component under overlap (A overlaps B, B overlaps C), so
-    all 294 tiles collapse into ONE group and the bootstrap becomes degenerate. A grid partitions
-    space instead of chaining through it, so the unit count reflects area rather than connectivity.
+    contiguous strip is one connected component under overlap (A overlaps B, B overlaps C), so all
+    294 tiles collapse into ONE group. A grid partitions space instead of chaining through it, so the
+    count reflects area rather than connectivity.
 
     block_m defaults to 950 m, matching the scale used for class support. That is NOT the inland
     site's measured range, which this docstring claimed until 2026-07-26. Measured and committed
     under artifacts/correlogram/: inland composition 750 m (900 of 1,952 tiles), inland spectral
-    1,350 m; 950 m is ireland2's composition range. It sits above the inland composition range, so
-    it counts fewer independent units than that scale would and is conservative for a
-    composition-based criterion. Pass 256.0 (one tile footprint) for the pixel-disjoint count
-    instead — that is the less conservative unit, and the two should be reported together.
+    1,350 m; 950 m is ireland2's composition range. Pass 256.0 (one tile footprint) for the
+    pixel-disjoint count instead.
     """
     import math
     from collections import defaultdict
@@ -173,21 +243,21 @@ def spatial_blocks(split_root: Path, split: str, block_m: float = 950.0) -> dict
     for (crs, _site), rs in by_crs.items():
         lat = float(np.mean([r[2] for r in rs]))
         if rs[0][3]:
-            sx = block_m / (111320.0 * math.cos(math.radians(lat)))
-            sy = block_m / 111132.0
+            sx = block_m / (M_PER_DEG_LON_EQ * math.cos(math.radians(lat)))
+            sy = block_m / M_PER_DEG_LAT
         else:
             sx = sy = block_m
         for tid, cx, cy, _, _ in rs:
-            out[tid] = (crs, _site, int(math.floor(cx / sx)), int(math.floor(cy / sy)))
+            out[tid] = (crs, _site,
+                        int(math.floor((cx - BLOCK_ORIGIN[0]) / sx)),
+                        int(math.floor((cy - BLOCK_ORIGIN[1]) / sy)))
     return out
 
 
-def resample_blocks(tiles, blocks: dict, rng):
-    """One bootstrap draw: resample BLOCKS with replacement, return the tiles they contain."""
-    from collections import defaultdict
-    by_block = defaultdict(list)
-    for t in tiles:
-        by_block[blocks.get(t, t)].append(t)
-    keys = sorted(by_block)
-    pick = rng.choice(len(keys), len(keys), replace=True)
-    return [t for k in pick for t in by_block[keys[k]]], len(keys)
+# resample_blocks was REMOVED 2026-07-26 with the block bootstrap. It drew spatial blocks with
+# replacement for a percentile CI, and that CI existed to supply the lower bound the withdrawn
+# rho >= 4.0 threshold was judged on (D18). Both test sets are complete enumerations of their
+# ground, so there is nothing to resample; uncertainty here is per-seed and paired
+# (aggregate_seeds.py). spatial_blocks stays, as DESCRIPTION only -- how many 950 m cells of ground
+# the tiles touch, which is a spread statistic and not a count of independent parcels.
+# Do not reintroduce a second uncertainty channel.

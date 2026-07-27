@@ -62,6 +62,21 @@ def main() -> None:
                 f"{mf}\n  was produced by '{_got or '(none recorded)'}', but sits in "
                 f"'{mf.parent.name}/'. A metrics file from elsewhere has been placed at a path "
                 f"this stage reads.")
+        # ...and the DATA, not only the model. This was the FOURTH metrics reader in the tree and
+        # the only one the 2026-07-26 provenance work did not reach, so it still validated the
+        # checkpoint alone -- exactly the blind spot that let the withdrawn campaign's metrics build
+        # the manuscript table. A file recording data_root under any split root but the current one
+        # is from another campaign whatever its checkpoint says.
+        _dr = m.get("data_root")
+        if not _dr:
+            raise SystemExit(
+                f"{mf}\n  records no data_root, so the data behind it cannot be established.")
+        _tag = os.environ.get("SPLIT_TAG", "f1")
+        if Path(_dr).parent.name != f"split_{_tag}":
+            raise SystemExit(
+                f"{mf}\n  was computed over '{_dr}', which sits under "
+                f"'{Path(_dr).parent.name}', not 'split_{_tag}'. Most likely the withdrawn "
+                f"'biodiversity_split', whose held-out tiles leak into training.")
         rows.append(
             {
                 "run_dir": str(mf.parent),

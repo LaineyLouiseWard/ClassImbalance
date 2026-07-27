@@ -82,6 +82,13 @@ export SAMPLER_TSV="artifacts/sampler_weights_clsbal_${SPLIT_TAG}.tsv"
 export TEACHER_CONFUSION_NPZ="artifacts/teacher_oem_gt_confusion_${SPLIT_TAG}.npz"
 export AUG_LIST="artifacts/train_augmentation_list_${SPLIT_TAG}.json"
 
+echo "[preflight] taxonomy consistency (class orders, grounded OEM->student mapping)"
+# RUNBOOK stage A0 runs this, but the campaign window is B4..C5, so nothing in a seed's own run
+# checks it. If the grounded pre-train map ever stops matching argmax(teacher confusion), stage 2a
+# relabels OpenEarthMap against a mapping the artefact no longer supports and every transfer-arm run
+# is quietly wrong. Cheap here, unavailable later.
+python scripts/verify_taxonomy_consistency.py
+
 echo "[preflight] full leakage gate over the split AND every derived artefact"
 # Up front, before twenty hours of GPU time: the split, the pre-training pool, the sampler weights,
 # the augmentation list and the teacher confusion checked against each other. RUNBOOK stage B4b runs
@@ -113,19 +120,83 @@ for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsba
   done
 done
 
+echo "[collect] copying this seed's softmax dumps to the shared drop"
+# The metrics alone are not enough. rho and the trimap exclusion curve -- the primary evidence for
+# the boundary claim -- are computed from the per-seed softmax, and stage C5 writes it inside THIS
+# seed's tree. Nine of the ten seeds run in trees nobody afterwards looks in, so without this the
+# dumps stay on scratch until it is purged and the evidence costs a re-run of inference over all
+# forty checkpoints. Flat <root>/<cell>/seed<N> layout, which is what seed_disagreement.seed_dir
+# resolves.
+for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
+  SRC="analysis/seed_softmax/${CELL}/seed${SEED}"
+  [ -d "$SRC" ] || { echo "COLLECT FAIL seed ${SEED}: missing softmax dir ${SRC}"; exit 1; }
+  N="$(find "$SRC" -name '*.npy' | wc -l)"
+  [ "$N" -gt 0 ] || { echo "COLLECT FAIL seed ${SEED}: ${SRC} holds no .npy dumps"; exit 1; }
+  mkdir -p "${RESULTS}/softmax/${CELL}"
+  cp -r "$SRC" "${RESULTS}/softmax/${CELL}/"
+  echo "  ${CELL}: ${N} dumps -> ${RESULTS}/softmax/${CELL}/seed${SEED}"
+done
+
+echo "[collect] copying this seed's CHECKPOINTS to the shared drop"
+# Without this the campaign is unrepeatable. Until 2026-07-27 the collect step took metrics.json and
+# the softmax dumps and nothing else, so all fifty trained models stayed in each seed's scratch
+# worktree and died with the purge. That forecloses, permanently and silently: re-evaluating on a
+# corrected split, any new figure needing predictions, any analysis needing inference, and the
+# step-matched control D12 names as its own reversal condition -- which branches from the per-seed
+# stage1_baseline checkpoint and is cheap ONLY while that checkpoint exists.
+#
+# The four cell checkpoints are the default because they cover both re-evaluation and that control.
+# stage2a is opt-in: it is needed only to train a NEW variant from the pre-train, not to reproduce
+# anything already reported. Set COLLECT_PRETRAIN=1 to include it.
+CKPT_CELLS=(stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal)
+[ "${COLLECT_PRETRAIN:-0}" = "1" ] && CKPT_CELLS+=(stage2a_oem_pretrain)
+
+# Space is checked BEFORE the first copy. A half-copied 1.5 GB checkpoint that fails at seed 7 is
+# worse than a clean refusal at seed 0: it looks like a collection that happened.
+NEED_KB=0
+for CELL in "${CKPT_CELLS[@]}"; do
+  SRC="model_weights/biodiversity/${CELL}_${SPLIT_TAG}/${CELL}_${SPLIT_TAG}.ckpt"
+  [ -f "$SRC" ] || { echo "COLLECT FAIL seed ${SEED}: missing checkpoint ${SRC}"; exit 1; }
+  NEED_KB=$(( NEED_KB + $(du -k "$SRC" | cut -f1) ))
+done
+mkdir -p "${RESULTS}/checkpoints"
+AVAIL_KB="$(df -Pk "${RESULTS}" | awk 'NR==2 {print $4}')"
+if [ "$AVAIL_KB" -lt "$(( NEED_KB * 2 ))" ]; then
+  echo "COLLECT FAIL seed ${SEED}: need $(( NEED_KB/1024 )) MB for checkpoints (x2 margin), only $(( AVAIL_KB/1024 )) MB free on ${RESULTS}." >&2
+  echo "  Free space, or set COLLECT_PRETRAIN=0, or drop cells from CKPT_CELLS -- but understand that" >&2
+  echo "  an uncollected checkpoint is gone for good once scratch is purged." >&2
+  exit 1
+fi
+for CELL in "${CKPT_CELLS[@]}"; do
+  SRC="model_weights/biodiversity/${CELL}_${SPLIT_TAG}/${CELL}_${SPLIT_TAG}.ckpt"
+  mkdir -p "${RESULTS}/checkpoints/${CELL}"
+  cp "$SRC" "${RESULTS}/checkpoints/${CELL}/seed${SEED}.ckpt"
+  echo "  ${CELL}: $(du -h "$SRC" | cut -f1) -> ${RESULTS}/checkpoints/${CELL}/seed${SEED}.ckpt"
+done
+
 echo "[check] the four cells scored the right checkpoint, without TTA"
 python - "$SEED" "$SPLIT_TAG" <<'PY'
 import json, sys
 from pathlib import Path
 seed, tag = sys.argv[1], sys.argv[2]
 cells = ("stage1_baseline", "stage2b_oem_finetune", "stage_sampler_only", "stage3_clsbal")
-for split in ("val", "test", f"external_{tag}"):
+# (results directory, the split directory data_root must end in). They differ for Test B: the
+# results land in external_<tag> while the data lives in data/split_<tag>/external_test.
+for split, data_dir in (("val", "val"), ("test", "test"), (f"external_{tag}", "external_test")):
     for cell in cells:
         p = Path(f"evaluation/evaluation_results/{split}/{cell}_{tag}/metrics.json")
         m = json.loads(p.read_text())
+        # Check the DATA, not only the model. Validating `checkpoint` and `tta` alone is what let a
+        # withdrawn metrics.json -- one whose own fields read split: val, data_root:
+        # .../biodiversity_split/val -- pass for a held-out test result at exit 0. Both fields were
+        # in the file, unread. Mirrors scripts/analysis/utils.assert_metrics_provenance.
         assert m["tta"] is False, f"{split}/{cell}: TTA must be off"
         got = Path(m["checkpoint"]).name
         assert got == f"{cell}_{tag}.ckpt", f"{split}/{cell}: scored {got}"
+        dr = Path(m["data_root"])
+        assert dr.name == data_dir, f"{split}/{cell}: computed over {dr}, not a '{data_dir}' split"
+        assert dr.parent.name == f"split_{tag}", \
+            f"{split}/{cell}: computed over {dr}, not under split_{tag}"
         i = m["per_class_iou"]
         print(f"[seed {seed}] {split:12s} {cell:22s} Settl={i['Settlement']*100:5.2f}  "
               f"Semi={i['Seminatural Grassland']*100:5.2f}  mIoU={m['mIoU_excluding_bg']*100:5.2f}")

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 
@@ -29,6 +30,8 @@ SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 # Repo-root-relative, not CWD-relative: run from anywhere but the repo root, the old paths either
 # errored or wrote the manuscript table into whatever tree the shell happened to be in.
 REPO_ROOT = next(p for p in Path(__file__).resolve().parents if (p / "artifacts").is_dir())
+sys.path.insert(0, str(REPO_ROOT))
+from scripts.analysis.utils import assert_metrics_provenance  # noqa: E402
 TEST_DIR = REPO_ROOT / "evaluation/evaluation_results/test"
 OUTPUT_PATH = REPO_ROOT / "evaluation/evaluation_results/final_test_table.tex"
 
@@ -57,16 +60,13 @@ def load_metrics(stage_dir: str) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         m = json.load(f)
     # Resolving by tag is not enough on its own: a metrics.json can be copied, restored from a
-    # fetch, or left behind by an earlier campaign at a path that now looks current. Every one
-    # records the checkpoint that produced it, so check it rather than trust the directory name.
-    got = Path(m.get("checkpoint", "")).name
-    want = f"{stage_dir}_{SPLIT_TAG}.ckpt"
-    if got != want:
-        raise SystemExit(
-            f"{path}\n  was produced by '{got or '(none recorded)'}', not '{want}'. This is a "
-            f"metrics file from another cell, another split tag, or the withdrawn campaign.")
-    if m.get("tta") is not False:
-        raise SystemExit(f"{path}\n  has tta={m.get('tta')}; the reported table is the no-TTA run.")
+    # fetch, or left behind by an earlier campaign at a path that now looks current. Nor is checking
+    # the checkpoint enough, which is all this did until 2026-07-26 -- an audit took the withdrawn
+    # campaign's metrics, changed ONLY the checkpoint basename, and this function built the
+    # manuscript's headline test table at exit 0 from files whose own fields read `split: val` and
+    # `data_root: .../biodiversity_split/val`, the withdrawn LEAKING split. One shared validator
+    # now reads every field that identifies the data, not just the ones that identify the model.
+    assert_metrics_provenance(m, path, stage_dir, expect_data_root_name="test", expect_tta=False)
     return m
 
 

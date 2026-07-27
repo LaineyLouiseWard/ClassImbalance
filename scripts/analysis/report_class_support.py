@@ -38,6 +38,16 @@ import numpy as np
 import rasterio
 from PIL import Image
 
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+# (no geoseg.geo import: nothing here uses it. It was added by the 2026-07-26 constant
+# de-literalisation and left behind unused. build_all_figures.py runs figure scripts as
+# `subprocess.run([sys.executable, script], cwd=REPO_ROOT)`, and cwd is NOT on sys.path in
+# Python 3.11, so a dead top-level `from geoseg...` is a hard ModuleNotFoundError under the
+# shipped invocation even though it imports fine with PYTHONPATH=. set.)
+from scripts.analysis.utils import spatial_blocks  # noqa: E402
+
 FOREGROUND = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
 SPLITS = ("train", "val", "test", "external_test")
 
@@ -67,28 +77,27 @@ def find_repo_root() -> Path:
 
 
 def tile_geometry(split_root: Path, split: str) -> dict:
-    """{tile_id: (block_x, block_y)} at BLOCK_M, per CRS group so metres and degrees never mix."""
-    rows = []
-    for f in sorted((split_root / split / "images").glob("*.tif")):
-        with rasterio.open(f) as d:
-            b = d.bounds
-            geo = bool(d.crs and d.crs.is_geographic)
-            rows.append((f.stem, (b.left + b.right) / 2, (b.bottom + b.top) / 2, geo, str(d.crs)))
-    out = {}
-    by_crs = defaultdict(list)
-    for r in rows:
-        by_crs[r[4]].append(r)
-    for crs, rs in by_crs.items():
-        lat = float(np.mean([r[2] for r in rs]))
-        if rs[0][3]:
-            sx = BLOCK_M / (111320.0 * math.cos(math.radians(lat)))
-            sy = BLOCK_M / 111132.0
-        else:
-            sx = sy = BLOCK_M
-        for tid, cx, cy, _, _ in rs:
-            # CRS in the key so two sites in different systems can never share a block id.
-            out[tid] = (crs, int(math.floor(cx / sx)), int(math.floor(cy / sy)))
-    return out
+    """{tile_id: block key} at BLOCK_M. Delegates to utils.spatial_blocks -- ONE implementation.
+
+    DELETED 2026-07-26: this file carried its own copy, and that copy grouped tiles by CRS ALONE.
+    ireland1 and ireland2 both sit in EPSG:4326 ~58 km apart at 51.55 and 52.04 degrees, so one
+    mean latitude across both converted 950 m into degrees of longitude at a latitude neither site
+    is at, and the cell edges landed where neither site's own scaling would put them.
+
+    That is the SAME defect `utils.spatial_blocks` was corrected for on 2026-07-26 -- and the
+    correction reached two of the three implementations. This one still returned 12 blocks for
+    Test B, the withdrawn number METHODS section 6 records as fixed, and it is the implementation
+    that writes artifacts/class_support.json and prints the C1b table. Per-class Test B support
+    was understated in four of five classes:
+
+        Forest 11 -> 13, Grassland 7 -> 9, Settlement 5 -> 6, Semi-natural 11 -> 13.
+        Cropland is 4 either way.
+
+    Test A is unaffected: it is a single projected CRS, so no degree conversion happens.
+
+    There is now one block function. Do not add a second.
+    """
+    return spatial_blocks(split_root, split, BLOCK_M)
 
 
 def support(split_root: Path, split: str) -> dict:
@@ -156,7 +165,13 @@ def main() -> None:
     out = Path(args.out) if args.out else root / "artifacts/class_support.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(blobs, indent=2))
-    print(f"\nwrote {out.relative_to(root)}")
+    # relative_to raises for a path outside the repo, AFTER the result is written:
+    # exit 1 on a success, from a cosmetic print.
+    try:
+        _shown = out.relative_to(root)
+    except ValueError:
+        _shown = out
+    print(f"\nwrote {_shown}")
 
 
 if __name__ == "__main__":

@@ -38,6 +38,11 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
+
 INTERNAL = ("train", "val", "test")
 # The uplands are held out whole as a fourth split. It was originally omitted from this gate, so its
 # 191 tiles went unchecked: never confirmed disjoint from train, never confirmed non-empty, and
@@ -312,8 +317,8 @@ def main() -> int:
             # Degrees -> metres at the group's own latitude; the inland site is already in metres.
             lat = np.mean([(r[3] + r[5]) / 2 for r in rows])
             geo = abs(lat) <= 90 and max(abs(r[2]) for r in rows) <= 180
-            mx = 111320.0 * np.cos(np.radians(lat)) if geo else 1.0
-            my = 111132.0 if geo else 1.0
+            mx = M_PER_DEG_LON_EQ * np.cos(np.radians(lat)) if geo else 1.0
+            my = M_PER_DEG_LAT if geo else 1.0
             A = np.array([r[2:] for r in ra], float)
             for r in rb:
                 _, _, l, bo, rt, to = r
@@ -343,10 +348,15 @@ def main() -> int:
             checks.append(f"{EXTERNAL} is a separate site: nearest centroid {km:.0f} km from any "
                           f"train/val/test tile, outside their extent")
 
+    # Only report this as a passing check when it PASSED. Appending it unconditionally printed
+    # "ok   geometry: ... 10 cross-split overlaps" beside the FAIL line that the same number
+    # raised -- the exit code was right, but a gate that prints "ok" next to the number that
+    # failed it is a gate people learn to skim.
     if n_overlap:
         failures.append(f"{n_overlap} cross-split footprint overlaps, e.g. {example}")
-    checks.append(f"geometry: {sum(len(v) for v in by_crs.values())} tiles across "
-                  f"{len(by_crs)} CRS, {n_overlap} cross-split overlaps")
+    else:
+        checks.append(f"geometry: {sum(len(v) for v in by_crs.values())} tiles across "
+                      f"{len(by_crs)} CRS, no cross-split overlaps")
 
     for c in checks:
         print(f"  ok   {c}")

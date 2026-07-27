@@ -45,7 +45,13 @@ ignore_index = 0  # background ignored in loss/metrics
 #   Default is the legacy random-by-tile split, which LEAKS (see
 #   notes/rebuild_2026-07/decisions/TILE_OVERLAP_LEAKAGE_2026-07-25.md); the campaign must set it explicitly. ---
 _BIO_SPLIT = os.environ["BIO_SPLIT"]  # required: the old default was the LEAKY split
-_BIO_OEM = os.environ.get("BIO_OEM_COMBINED", "data/biodiversity_oem_combined")
+_BIO_OEM = os.environ["BIO_OEM_COMBINED"]  # required: the old default was the WITHDRAWN pool
+# Was os.environ.get(..., "data/biodiversity_oem_combined") -- a SOFT default beside a hard
+# BIO_SPLIT, pointing at the withdrawn pool. That pool's train set holds 239 of the 294 Test A
+# tiles, 153 of the 191 Test B tiles and 141 of the 173 val tiles, so an unset variable would
+# pre-train stage 2a on most of both test sets and inflate exactly the transfer contrast this
+# paper measures -- plausibly, and at exit 0. Both launchers do export it; that is not a reason
+# to keep a default that only ever resolves to withdrawn data.
 
 _BV = os.environ.get("BATCH_VARIANT", "b2")
 assert _BV in ("b2", "b4"), f"BATCH_VARIANT must be b2 or b4, got {_BV!r}"

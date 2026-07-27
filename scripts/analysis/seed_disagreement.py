@@ -59,22 +59,12 @@ EPS = 1e-12
 
 # Distance bins in PIXELS. GSD = 0.5 m/px, so metres = pixels * 0.5.
 GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
-# --- Per-site ground sample distance -------------------------------------------------------------
-# Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
-# isotropic; both upland sites are geographic (EPSG:4326) and ANISOTROPIC, so a single 0.5 m figure
-# is wrong for 191 of 2,143 tiles -- it makes the "<=1.5 m" boundary band really <=1.9 m in x and the
-# ">8 m" interior really >10.3 m in x at those sites. Pass sampling=(gsd_y, gsd_x) to
-# scipy.ndimage.distance_transform_edt so distances come out in metres directly.
-GSD_BY_SITE = {
-    "biodiversity": (0.500, 0.500),   # (y, x) metres per pixel
-    "ireland1":     (0.515, 0.641),
-    "ireland2":     (0.515, 0.634),
-}
-
-
-def gsd_for(tile_id):
-    """(gsd_y, gsd_x) in metres for a tile id, keyed on its site prefix."""
-    return GSD_BY_SITE.get(str(tile_id).split("_")[0], (0.5, 0.5))
+# Per-site ground sample distance: ONE definition, in geoseg/geo.py. This exact block was
+# duplicated verbatim in four files, and gsd_for() silently returned the inland (0.5, 0.5) for any
+# site it did not recognise -- rescaling every boundary distance by up to 28% in x without a word.
+# It now raises. geoseg/geo.py also records why the registered values are the spherical
+# approximation rather than the 0.2%-larger geodesic one.
+from geoseg.geo import GSD_BY_SITE, gsd_for  # noqa: E402,F401
 
 # Edges chosen to resolve the boundary band finely then widen; last bin is open-ended.
 DIST_BIN_EDGES_PX = np.array([0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, np.inf])
@@ -269,12 +259,46 @@ def load_mask(mask_dir, img_id) -> np.ndarray:
 
 
 def seed_dir(softmax_root, seed, cell):
-    return Path(softmax_root) / f"seed{seed}" / "analysis" / "seed_softmax" / cell / f"seed{seed}"
+    """Directory holding one seed's softmax dumps for one cell.
+
+    TWO layouts exist and both are current, which is why this resolves rather than assumes:
+
+      FLAT      <root>/<cell>/seed<N>
+                written by RUNBOOK stage C5, i.e. every local run and every per-seed cluster tree.
+      PER-SEED  <root>/seed<N>/analysis/seed_softmax/<cell>/seed<N>
+                a cluster fetch, where <root> holds one whole repo copy per seed.
+
+    This function returned ONLY the second form until 2026-07-26, so stage D -- which passes
+    --softmax-root analysis/seed_softmax, the flat root C5 writes to -- resolved to
+    analysis/seed_softmax/seed<N>/analysis/seed_softmax/<cell>/seed<N> and found nothing. The
+    consequence was not a crash: `list_tiles` globbed an empty directory, boundary_trimap_iou.py
+    scored zero tiles, wrote NaN for every radius alongside "n_seeds": 10, and exited 0. That is
+    the paper's primary evidence for the boundary claim reported by nothing at all.
+
+    So: a missing dump raises, with both candidates named. Never return a path that is not there
+    and let a caller glob it into an empty list.
+    """
+    root = Path(softmax_root)
+    flat = root / cell / f"seed{seed}"
+    nested = root / f"seed{seed}" / "analysis" / "seed_softmax" / cell / f"seed{seed}"
+    for cand in (flat, nested):
+        if cand.is_dir():
+            return cand
+    raise FileNotFoundError(
+        f"no softmax dumps for seed {seed}, cell {cell}. Looked for:\n"
+        f"  {flat}\n  {nested}\n"
+        f"Produce them with `bash RUNBOOK.sh --from C5 --to C5`, or point --softmax-root at the "
+        f"campaign drop that holds them.")
 
 
 def list_tiles(softmax_root, seeds, cell):
     d0 = seed_dir(softmax_root, seeds[0], cell)
-    return sorted(p.stem for p in d0.glob("*.npy"))
+    tiles = sorted(p.stem for p in d0.glob("*.npy"))
+    if not tiles:
+        raise FileNotFoundError(
+            f"{d0} exists but holds no .npy softmax dumps for cell {cell}, seed {seeds[0]}. "
+            f"An empty dump directory must not be scored as zero tiles.")
+    return tiles
 
 
 def list_val_tiles(softmax_root, seeds, cell, mask_dir):
@@ -286,6 +310,11 @@ def list_val_tiles(softmax_root, seeds, cell, mask_dir):
     Returns (kept_ids, dropped_ids)."""
     ids = list_tiles(softmax_root, seeds, cell)
     kept = [i for i in ids if (Path(mask_dir) / f"{i}.png").exists()]
+    if not kept:
+        raise FileNotFoundError(
+            f"none of the {len(ids)} dumped tiles for cell {cell} has a mask in {mask_dir}. "
+            f"The dumps and the mask directory describe different splits — scoring the empty "
+            f"intersection would report a metric computed from nothing.")
     return kept, sorted(set(ids) - set(kept))
 
 

@@ -83,6 +83,22 @@ LABEL_OFFSET = {
 LABEL_HA = {2: "right", 5: "right"}  # anchored on the right so text runs leftward
 
 
+# --- WITHDRAWN-DATA GUARD, added 2026-07-27 ---------------------------------------------------
+# analysis/eval_219/ is the WITHDRAWN campaign's output: 219 val tiles of the random-by-tile split,
+# whose held-out tiles share ~93% of their ground with training. Its per-class IoU is
+# leakage-inflated (Cropland 0.962, foreground mIoU 0.877). This script is stage E of RUNBOOK.sh and
+# builds a MANUSCRIPT figure, so without this it rebuilds a paper figure from withdrawn numbers and
+# exits 0 -- the same failure the boundary-evidence path had. The 219-tile split no longer exists;
+# this figure must be re-pointed at the current campaign's output before stage E is run.
+def _refuse_withdrawn(p):
+    from pathlib import Path as _P
+    if "eval_219" in _P(p).parts:
+        raise SystemExit(
+            f"{p}\n  is the WITHDRAWN pre-2026-07-26 campaign (leaking 219-tile random split).\n"
+            f"  This figure has not yet been re-pointed at the current campaign's output. Re-point it,\n"
+            f"  or pass --skip {_P(__file__).stem} to build_all_figures.py.")
+# ---------------------------------------------------------------------------------------------
+
 def find_repo_root() -> Path:
     p = Path.cwd().resolve()
     for _ in range(10):
@@ -138,6 +154,7 @@ def per_seed_iou(root: Path) -> dict[int, tuple[float, float, int]]:
     truth for per-class IoU shared with Fig 8 (confusion) and N2 (it matches the boundary
     standard_iou exactly). Irish-only, contamination-free."""
     p = root / "analysis/eval_219/per_class_iou.json"
+    _refuse_withdrawn(p)
     if not p.exists():
         raise FileNotFoundError(f"{p} not found -- run scripts/analysis/eval_on_dumps_219.py first")
     ev = json.load(open(p))["stage1_baseline"]

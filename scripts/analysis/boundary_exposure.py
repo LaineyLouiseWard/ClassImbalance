@@ -7,18 +7,20 @@ its ground-truth pixels lying within a fixed band of a class boundary ("boundary
 regressed against that class's baseline per-class IoU. Tests whether class difficulty is a
 geometric property (boundary exposure) rather than a function of class frequency.
 
-Ireland-only: uses the 219 Irish validation masks (data/biodiversity_split/val/masks), the same
-set the per-class IoU is scored on. Boundary distance = Euclidean distance (scipy EDT) from each
+Ireland-only: uses the current split's validation masks (data/split_$SPLIT_TAG/val/masks), the
+same set the per-class IoU is scored on. Boundary distance = Euclidean distance (scipy EDT) from each
 class pixel to the nearest edge of its own class, in metres (GSD 0.5 m/px).
 
-Baseline per-class IoU is read from analysis/eval_219/per_class_iou.json (stage1_baseline, the
-10-seed per-seed mean on the same 219 Irish tiles).
+Baseline per-class IoU is supplied by --baseline-iou. It is NOT defaulted: this read
+analysis/eval_219/per_class_iou.json unconditionally until 2026-07-26, which is the withdrawn
+leaking campaign's output.
 
 Output: analysis/label_ceiling/boundary_exposure.json (+ printed summary).
-Run: PYTHONPATH=. python scripts/analysis/boundary_exposure.py
+Run: PYTHONPATH=. python scripts/analysis/boundary_exposure.py --baseline-iou <current.json>
 """
 from __future__ import annotations
 
+import argparse
 import glob
 import json
 import pathlib
@@ -33,22 +35,12 @@ SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 
 GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
-# --- Per-site ground sample distance -------------------------------------------------------------
-# Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
-# isotropic; both upland sites are geographic (EPSG:4326) and ANISOTROPIC, so a single 0.5 m figure
-# is wrong for 191 of 2,143 tiles -- it makes the "<=1.5 m" boundary band really <=1.9 m in x and the
-# ">8 m" interior really >10.3 m in x at those sites. Pass sampling=(gsd_y, gsd_x) to
-# scipy.ndimage.distance_transform_edt so distances come out in metres directly.
-GSD_BY_SITE = {
-    "biodiversity": (0.500, 0.500),   # (y, x) metres per pixel
-    "ireland1":     (0.515, 0.641),
-    "ireland2":     (0.515, 0.634),
-}
-
-
-def gsd_for(tile_id):
-    """(gsd_y, gsd_x) in metres for a tile id, keyed on its site prefix."""
-    return GSD_BY_SITE.get(str(tile_id).split("_")[0], (0.5, 0.5))
+# Per-site ground sample distance: ONE definition, in geoseg/geo.py. This exact block was
+# duplicated verbatim in four files, and gsd_for() silently returned the inland (0.5, 0.5) for any
+# site it did not recognise -- rescaling every boundary distance by up to 28% in x without a word.
+# It now raises. geoseg/geo.py also records why the registered values are the spherical
+# approximation rather than the 0.2%-larger geodesic one.
+from geoseg.geo import GSD_BY_SITE, gsd_for  # noqa: E402,F401
 
 BAND_M = 2.0
 NAMES = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
@@ -69,9 +61,28 @@ def load_mask(path: str) -> np.ndarray:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    # No default, and the withdrawn path is refused outright. This read
+    #     analysis/eval_219/per_class_iou.json
+    # unconditionally and untagged until 2026-07-26. That file is the WITHDRAWN campaign's output:
+    # 219 val tiles of the random-by-tile split, whose held-out tiles share ~93% of their ground
+    # with training, giving leakage-inflated values (Cropland IoU 0.962, foreground mIoU 0.877).
+    # Nothing in RUNBOOK.sh or build_all_figures.py calls this script, so it never fired -- it was
+    # a landmine rather than a fire, and the fix is to disarm it rather than to note it.
+    ap.add_argument("--baseline-iou", required=True,
+                    help="JSON of per-class IoU for the baseline cell, from the CURRENT campaign "
+                         "(analysis/seed_aggregate/, or a per-cell metrics.json).")
+    ap.add_argument("--cell", default="stage1_baseline")
+    args = ap.parse_args()
+
     root = find_repo_root()
+    iou_path = Path(args.baseline_iou).resolve()
+    if "eval_219" in iou_path.parts or "_archive" in iou_path.parts:
+        raise SystemExit(
+            f"{iou_path}\n  belongs to the withdrawn pre-2026-07-26 campaign (the leaking "
+            f"219-tile random split). Point --baseline-iou at the current campaign's output.")
     masks = sorted(glob.glob(str(root / f"data/split_{SPLIT_TAG}/val/masks/*")))
-    iou = json.load(open(root / "analysis/eval_219/per_class_iou.json"))["stage1_baseline"]["per_class_iou_mean"]
+    iou = json.load(open(iou_path))[args.cell]["per_class_iou_mean"]
 
     within = {c: [] for c in NAMES}   # per-pixel indicator lists, per class
     for f in masks:

@@ -24,7 +24,8 @@ stratum. Three uses:
 
 The unit of analysis is the TILE, not the pixel. Overlapping chips and dense pixel scoring make
 pseudoreplication the default failure in this dataset: a previous claim of "168k pixels, therefore
-not noise" turned out to rest on three tiles. Intervals here are tile-level bootstraps.
+not noise" turned out to rest on three tiles, so the tile count is printed beside every
+stratum. No interval is reported: this is a description of a fully enumerated test set.
 
 Run:
     PYTHONPATH=. python scripts/analysis/accuracy_vs_separation.py \\
@@ -40,6 +41,11 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
+
+# Metres per degree: ONE definition, in geoseg/geo.py. These two literals appeared in seven
+# files with no derivation, and terrain_separability used the LONGITUDE constant for the
+# latitude direction.
+from geoseg.geo import M_PER_DEG_LAT, M_PER_DEG_LON_EQ  # noqa: E402,F401
 
 SPLITS_HELD_OUT = ("test", "external_test")
 FOREGROUND = {1: "Forest", 2: "Grassland", 3: "Cropland", 4: "Settlement", 5: "Seminatural"}
@@ -98,7 +104,7 @@ def distance_to_training_m(bounds: dict) -> dict:
             continue
         if geo:
             lat = (B + T) / 2.0
-            mx, my = 111320.0 * math.cos(math.radians(lat)), 111132.0
+            mx, my = M_PER_DEG_LON_EQ * math.cos(math.radians(lat)), M_PER_DEG_LAT
         else:
             mx = my = 1.0
         best = float("inf")
@@ -143,28 +149,10 @@ def macro_iou(tiles: list, per_tile: dict) -> float:
     return float(np.mean(vals)) if vals else float("nan")
 
 
-def bootstrap_ci(tiles: list, per_tile: dict, n_boot: int, rng, blocks: dict | None = None) -> tuple:
-    """Bootstrap CI resampling SPATIAL BLOCKS, not tile ids.
-
-    The tile is not an independent unit: on a 50% stride, 294 tiles are 104 pixel-disjoint footprints
-    and 16 independent units at the 950 m correlation scale, so resampling tile ids returns intervals
-    1.6-26x too narrow (round-2 audit, B6). `blocks` comes from utils.spatial_blocks; passing None
-    falls back to tile ids and is only correct for already-disjoint inputs.
-    """
-    if len(tiles) < 3:
-        return (float("nan"), float("nan"))
-    if blocks is None:
-        vals = [macro_iou(list(rng.choice(tiles, len(tiles), replace=True)), per_tile)
-                for _ in range(n_boot)]
-    else:
-        from scripts.analysis.utils import resample_blocks
-        vals = [macro_iou(resample_blocks(tiles, blocks, rng)[0], per_tile) for _ in range(n_boot)]
-    vals = [v for v in vals if np.isfinite(v)]
-    if not vals:
-        return (float("nan"), float("nan"))
-    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)))
-
-
+# bootstrap_ci REMOVED 2026-07-26 with the block bootstrap. This script reports macro IoU against
+# distance from training ground; the distance strata are a DESCRIPTION of a fully enumerated test
+# set, not a sample of one, so a resampling interval on them answers a question nobody asked.
+# Uncertainty in this study is per-seed and paired (aggregate_seeds.py).
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split-root", required=True, help="a materialised split, e.g. data/split_f1")
@@ -211,20 +199,18 @@ def main() -> None:
         if not sel:
             continue
         v = macro_iou(sel, per_tile)
-        ci = bootstrap_ci(sel, per_tile, args.n_boot, rng, blocks)
         by_split = defaultdict(int)
         for t in sel:
             by_split[bounds[t][0]] += 1
         label = ("inf" if hi == float("inf") else f"{hi:.0f}")
         rows.append({"lo_m": lo, "hi_m": (None if hi == float("inf") else hi),
                      "n_tiles": len(sel), "macro_fg_iou": v,
-                     "ci95": list(ci), "by_split": dict(by_split)})
-        strata.append((f"{lo:.0f}-{label}", len(sel), v, ci, dict(by_split)))
+                     "by_split": dict(by_split)})
+        strata.append((f"{lo:.0f}-{label}", len(sel), v, dict(by_split)))
 
-    print(f"\n{'separation (m)':>16} {'tiles':>6} {'macro fg IoU':>13} {'95% CI (tile bootstrap)':>26}  composition")
-    for name, n, v, ci, comp in strata:
-        ci_s = ("n/a" if not np.isfinite(ci[0]) else f"[{100*ci[0]:.1f}, {100*ci[1]:.1f}]")
-        print(f"{name:>16} {n:6d} {100*v:12.2f}% {ci_s:>26}  {comp}")
+    print(f"\n{'separation (m)':>16} {'tiles':>6} {'macro fg IoU':>13}  composition")
+    for name, n, v, comp in strata:
+        print(f"{name:>16} {n:6d} {100*v:12.2f}%  {comp}")
 
     print("\nReading: if IoU is flat beyond the 650 m buffer, nothing is left for a wider buffer to")
     print("remove. A decline continuing well past it is a forecast horizon, not a leakage artefact.")
@@ -234,9 +220,15 @@ def main() -> None:
     out = Path(args.out) if args.out else (root / args.metrics_dir[0] / "accuracy_vs_separation.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"split_root": args.split_root, "edges_m": EDGES_M,
-                               "n_boot": args.n_boot, "unit_of_analysis": "tile",
+                               "interval": None,
                                "strata": rows}, indent=2))
-    print(f"\nwrote {out.relative_to(root)}")
+    # relative_to raises for a path outside the repo, AFTER the result is written:
+    # exit 1 on a success, from a cosmetic print.
+    try:
+        _shown = out.relative_to(root)
+    except ValueError:
+        _shown = out
+    print(f"\nwrote {_shown}")
 
 
 if __name__ == "__main__":

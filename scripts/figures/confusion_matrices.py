@@ -35,7 +35,25 @@ if str(repo_root) not in sys.path:
 # 219-tile Irish val set (eval_on_dumps_219.py), then (in main) drop Background and
 # row-normalise. NOT the Sonic seed*/val/<cell>/confusion_matrix.npy artefacts -- those were
 # scored on 231 tiles (12 foreign tiles with no Irish mask).
+
+# --- WITHDRAWN-DATA GUARD, added 2026-07-27 ---------------------------------------------------
+# analysis/eval_219/ is the WITHDRAWN campaign's output: 219 val tiles of the random-by-tile split,
+# whose held-out tiles share ~93% of their ground with training. Its per-class IoU is
+# leakage-inflated (Cropland 0.962, foreground mIoU 0.877). This script is stage E of RUNBOOK.sh and
+# builds a MANUSCRIPT figure, so without this it rebuilds a paper figure from withdrawn numbers and
+# exits 0 -- the same failure the boundary-evidence path had. The 219-tile split no longer exists;
+# this figure must be re-pointed at the current campaign's output before stage E is run.
+def _refuse_withdrawn(p):
+    from pathlib import Path as _P
+    if "eval_219" in _P(p).parts:
+        raise SystemExit(
+            f"{p}\n  is the WITHDRAWN pre-2026-07-26 campaign (leaking 219-tile random split).\n"
+            f"  This figure has not yet been re-pointed at the current campaign's output. Re-point it,\n"
+            f"  or pass --skip {_P(__file__).stem} to build_all_figures.py.")
+# ---------------------------------------------------------------------------------------------
+
 EVAL_DIR = repo_root / "analysis/eval_219"
+_refuse_withdrawn(EVAL_DIR)
 CELL_BASELINE = "stage1_baseline"
 CELL_FULL = "stage3_clsbal"
 

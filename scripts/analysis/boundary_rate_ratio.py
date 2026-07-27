@@ -27,15 +27,26 @@ TWO CONVENTIONS, fixed by the registration and not adjustable here:
   * tiles with NO ground-truth boundary are EXCLUDED. 19 of 191 upland tiles are single-class, so the
     near-boundary set is empty by construction and any error they hold can only depress rho.
 
-THE UNIT OF ANALYSIS IS A SPATIAL BLOCK, NOT A TILE. Tiles are chipped on a 50% stride, so neighbours
-repeat ground: the 294-tile test split is 104 pixel-disjoint footprints and only 16 independent units
-at the 950 m correlogram range. Resampling tile ids gives intervals ~1.6x too narrow at footprint
-level and 10-26x too narrow at the correlation scale (round-2 audit, B6). The bootstrap resamples
-grid blocks via utils.spatial_blocks, defaulting to 950 m.
+NO INTERVAL IS REPORTED ON RHO, and the block bootstrap that used to produce one was removed on
+2026-07-26. Four reasons, in order of weight:
 
-Note single-linkage over overlapping footprints is the WRONG unit and was tried first: a contiguous
-test strip is one connected component (A overlaps B, B overlaps C), so all 294 tiles collapse into one
-group and the bootstrap becomes degenerate. A grid partitions space rather than chaining through it.
+  1. It existed to supply the lower bound the pre-registered rho >= 4.0 threshold was to be judged
+     on. D18 retired the threshold; the machinery outlived its only purpose.
+  2. Both test sets are COMPLETE ENUMERATIONS of their ground -- every tile scored, every pixel
+     counted. There is no sample, so there is no sampling error to interval.
+  3. Every claim this study makes is either a cross-cell contrast on IDENTICAL pixels (n_near and
+     n_far are bit-identical across the four cells, so the landscape is a constant in the difference
+     and the variance that matters is the training run) or a census level. Neither needs it.
+  4. Where spatial variance would genuinely be wanted -- does this hold on other landscapes -- a
+     within-site bootstrap estimates the wrong component. Between-site n is 2.
+
+Uncertainty in this study is PER-SEED AND PAIRED (scripts/analysis/aggregate_seeds.py, and the
+per-seed curves in boundary_trimap_iou.py). One estimator, not two.
+
+The 950 m grid is still reported, as DESCRIPTION: how many cells of ground the tiles touch. That is
+a spread statistic, not a count of independent parcels -- Test A's 294 tiles span 16 cells over
+6.783 km2, which is 7.52 cells' worth of ground, and Test B's 14 cells sit on 5.72 cells' worth.
+Never call these independent.
 
 Run:
     PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py --self-test
@@ -56,7 +67,7 @@ import rasterio
 from PIL import Image
 
 from scripts.analysis.seed_disagreement import boundary_distance
-from scripts.analysis.utils import spatial_blocks, resample_blocks
+from scripts.analysis.utils import spatial_blocks
 
 BAND_M = 8.0
 # NO THRESHOLD. The pre-registered rho >= 4.0, its 2.0 dead band and its weak band were retired on
@@ -114,38 +125,23 @@ def rho_from(counts: dict, tiles) -> float:
     return float("inf") if r_far == 0 else r_near / r_far
 
 
-def bootstrap(counts: dict, groups: dict, n_boot: int, rng) -> tuple:
-    """Percentile CI, resampling SPATIAL BLOCKS. The tile is not an independent unit here."""
-    n_units = len(set(groups.get(t, t) for t in counts))
-    if n_units < 3:
-        return (float("nan"), float("nan"), n_units)
-    vals = []
-    for _ in range(n_boot):
-        tiles, _ = resample_blocks(list(counts), groups, rng)
-        v = rho_from(counts, tiles)
-        if np.isfinite(v):
-            vals.append(v)
-    if not vals:
-        return (float("nan"), float("nan"), n_units)
-    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)), n_units)
-
-
-def report(name: str, counts: dict, groups: dict, n_boot: int, rng) -> dict:
+def report(name: str, counts: dict, groups: dict) -> dict:
+    """rho and the two rates it is built from. NO INTERVAL -- see the module docstring."""
     point = rho_from(counts, list(counts))
-    lo, hi, n_groups = bootstrap(counts, groups, n_boot, rng)
+    n_cells = len(set(groups.get(t, t) for t in counts))
     en = sum(c[0] for c in counts.values()); nn = sum(c[1] for c in counts.values())
     ef = sum(c[2] for c in counts.values()); nf = sum(c[3] for c in counts.values())
     print(f"\n{name}")
     print(f"  near-boundary error rate  {100*en/max(nn,1):7.4f}%   ({en:,} / {nn:,} px)")
     print(f"  beyond-8 m error rate     {100*ef/max(nf,1):7.4f}%   ({ef:,} / {nf:,} px)")
-    print(f"  rho = {point:.3f}   95% CI [{lo:.3f}, {hi:.3f}]  over {n_groups} blocks "
-          f"({len(counts)} tiles)")
-    print(f"  descriptive: no threshold is applied to this number (D18). The interval is a "
-          f"percentile block bootstrap and under-covers at this many blocks.")
-    return {"rho": point, "ci95": [lo, hi], "n_groups": n_groups, "n_tiles": len(counts),
+    print(f"  rho = {point:.3f}   over {len(counts)} tiles spanning {n_cells} grid cells "
+          f"of 950 m (cells touched, NOT independent parcels)")
+    print(f"  descriptive: no threshold (D18) and no interval. This is a census of the ground "
+          f"named above, not a sample of it; uncertainty in this study is per-seed and paired.")
+    return {"rho": point, "n_cells_touched": n_cells, "n_tiles": len(counts),
             "err_near": en, "n_near": nn, "err_far": ef, "n_far": nf,
             "rate_near": en / max(nn, 1), "rate_far": ef / max(nf, 1),
-            "threshold": None}
+            "threshold": None, "interval": None}
 
 
 def self_test() -> int:
@@ -173,33 +169,9 @@ def self_test() -> int:
             counts[t] = (e_near, n_near, e_far, n_far)
             groups[t] = ("synthetic", i // 3, 0)        # 3 tiles per footprint group
         r = rho_from(counts, list(counts))
-        lo, hi, ng = bootstrap(counts, groups, 400, rng)
         good = abs(r - TRUE_RHO) < 0.15
         ok &= good
-        print(f"  {label}: rho = {r:.3f} [{lo:.3f}, {hi:.3f}], {ng} groups  "
-              f"[{'ok' if good else 'FAIL'}]")
-
-    # The interval must widen when the unit of analysis is respected. Resampling 360 tiles as if
-    # independent, versus 120 groups of 3, must not give the same width -- that was audit item B6.
-    counts, groups, flat = {}, {}, {}
-    for i in range(360):
-        n_near, n_far = 52429, 209715
-        # ground repeats within a group, so all three tiles of a group share one draw
-        if i % 3 == 0:
-            e_near = rng.binomial(n_near, TRUE_RHO * R_FAR); e_far = rng.binomial(n_far, R_FAR)
-        t = f"t{i:04d}"
-        counts[t] = (e_near, n_near, e_far, n_far)
-        groups[t] = ("synthetic", i // 3, 0)
-        flat[t] = ("synthetic", i, 0)
-    _, _, ng = bootstrap(counts, groups, 400, rng)
-    g_lo, g_hi, _ = bootstrap(counts, groups, 400, np.random.default_rng(3))
-    t_lo, t_hi, nt = bootstrap(counts, flat, 400, np.random.default_rng(3))
-    widened = (g_hi - g_lo) > 1.4 * (t_hi - t_lo)
-    ok &= widened
-    print(f"\n  by footprint group ({ng} units): CI width {g_hi-g_lo:.4f}")
-    print(f"  by tile id        ({nt} units): CI width {t_hi-t_lo:.4f}")
-    print(f"  group CI is {(g_hi-g_lo)/(t_hi-t_lo):.2f}x wider  "
-          f"[{'ok, the unit of analysis matters' if widened else 'FAIL: no difference'}]")
+        print(f"  {label}: rho = {r:.3f}  [{'ok' if good else 'FAIL'}]")
 
     # The counts above are synthetic, so nothing so far exercises the three conventions the
     # registration actually fixes: the 8 m band, the STRICT `<` membership, the per-site anisotropic
@@ -248,6 +220,46 @@ def self_test() -> int:
           f"[{'ok' if good else 'FAIL'}]")
     ok &= good
 
+    # (e) THE NULL CONTROL, added 2026-07-27. Everything above plants a rho of 6.0 and checks it
+    # comes back. Nothing had ever asked the opposite question: given ground with NO boundary
+    # concentration, does the instrument correctly say so? An instrument that manufactures
+    # concentration out of geometry -- the distance transform, the strict band edge, the anisotropic
+    # sampling, the boundary-free exclusion -- would produce this paper's headline result from noise,
+    # and every test above would still pass. This repository's own standard is that a gate which has
+    # not been observed to fail does not exist; this is that observation for the primary statistic.
+    #
+    # Errors are placed at a UNIFORM rate over foreground, independent of distance to a boundary, on
+    # a REAL raster geometry rather than synthetic counts, because the geometry is the thing at risk.
+    import tempfile
+    from PIL import Image as _I2
+    rng2 = np.random.default_rng(7)
+    P_ERR = 0.10
+    with tempfile.TemporaryDirectory() as td:
+        masks = {}
+        for i in range(6):
+            mm = np.ones((256, 256), np.uint8)
+            for _ in range(9):                              # irregular multi-class patches
+                y, x = rng2.integers(0, 200, 2); h, w = rng2.integers(25, 70, 2)
+                mm[y:y+h, x:x+w] = rng2.integers(1, 6)
+            tid = f"biodiversity_95{i:02d}"
+            _I2.fromarray(mm).save(Path(td) / f"{tid}.png")
+            masks[tid] = mm
+
+        def uniform_err_pred(tid):
+            mm = masks[tid]
+            pred = mm.copy()
+            flip = rng2.random(mm.shape) < P_ERR           # uniform in space, ignores distance
+            wrong = (mm % 5) + 1
+            pred[flip] = wrong[flip]
+            return pred
+
+        got = per_tile_counts(Path(td), uniform_err_pred)
+    r_null = rho_from(got, list(got))
+    good = abs(r_null - 1.0) < 0.05
+    ok &= good
+    print(f"  NULL CONTROL: error spread uniformly, no boundary concentration -> rho = {r_null:.3f} "
+          f"(must be ~1.000)  [{'ok' if good else 'FAIL: the instrument invents concentration'}]")
+
     print("\nSELF-TEST PASSED" if ok else "\nSELF-TEST FAILED")
     return 0 if ok else 1
 
@@ -264,10 +276,8 @@ def main() -> int:
                     help="also report each site separately. Registered as binding for external_test, "
                          "which pools two sites whose band area shares differ by 2x.")
     ap.add_argument("--block-m", type=float, default=950.0,
-                    help="bootstrap block size. 950 m = the correlogram range, the "
+                    help="grid cell size for the DESCRIPTIVE cells-touched count. 950 m = the "
                          "conservative unit. 256 m gives the pixel-disjoint count.")
-    ap.add_argument("--n-boot", type=int, default=2000)
-    ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default=None)
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
@@ -284,10 +294,19 @@ def main() -> int:
 
     from scripts.analysis.seed_disagreement import load_seed_stack
 
+    # A tile with no dump is a MISSING tile, not an absent one. The blanket `except Exception:
+    # return None` this replaces swallowed a missing seed, a truncated .npy and a shape mismatch
+    # alike, and per_tile_counts drops a None without a word -- so an incomplete ensemble came out
+    # as a smaller tile count and a rho computed from whatever happened to be on disk. Total
+    # failure was visible; PARTIAL failure was not, and partial is the likely one when nine of ten
+    # seeds run in separate worktrees.
+    missing: list[str] = []
+
     def pred_for_tile(tid: str):
         try:
             stack = load_seed_stack(str(root / args.softmax_root), args.seeds, args.cell, tid)
-        except Exception:
+        except FileNotFoundError:
+            missing.append(tid)
             return None
         return stack.mean(axis=0).argmax(axis=0)
 
@@ -300,23 +319,37 @@ def main() -> int:
     if not counts:
         raise SystemExit(f"no scorable tiles for {args.split}: no predictions found, or every tile "
                          f"lacks a GT boundary")
-    rng = np.random.default_rng(args.seed)
+    if missing:
+        raise SystemExit(
+            f"{len(missing)} of {len(counts) + len(missing)} boundary-carrying {args.split} tiles "
+            f"have no softmax dump for cell {args.cell} across seeds {args.seeds}.\n"
+            f"  e.g. {missing[:5]}\n"
+            f"rho would be computed from the {len(counts)} tiles that happen to be on disk, which "
+            f"is a different estimand from the registered one. Complete the dumps "
+            f"(`bash RUNBOOK.sh --from C5 --to C5` for each seed) or pass the seeds you actually "
+            f"have via --seeds.")
 
     out = {"split_root": args.split_root, "split": args.split, "cell": args.cell,
            "seeds": args.seeds, "band_m": BAND_M,
-           "unit_of_analysis": f"spatial block at {args.block_m:.0f} m"}
-    out["pooled"] = report(f"{args.split} — pooled", counts, groups, args.n_boot, rng)
+           "grid_cells_touched_at_m": args.block_m, "interval": None}
+    out["pooled"] = report(f"{args.split} — pooled", counts, groups)
 
     if args.per_site:
         out["per_site"] = {}
         for site in sorted({site_of(t) for t in counts}):
             sub = {t: c for t, c in counts.items() if site_of(t) == site}
-            out["per_site"][site] = report(f"{args.split} — {site}", sub, groups, args.n_boot, rng)
+            out["per_site"][site] = report(f"{args.split} — {site}", sub, groups)
 
     p = Path(args.out) if args.out else root / f"artifacts/rho_{args.split}_{args.cell}.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(out, indent=2))
-    print(f"\nwrote {p.relative_to(root)}")
+    # relative_to raises for an --out outside the repo, which crashed the run AFTER the result had
+    # been written and every number computed: exit 1 on a success, from a cosmetic print.
+    try:
+        shown = p.relative_to(root)
+    except ValueError:
+        shown = p
+    print(f"\nwrote {shown}")
     return 0
 
 

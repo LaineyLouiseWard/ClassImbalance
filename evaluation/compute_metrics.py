@@ -308,7 +308,13 @@ def main() -> None:
     ap.add_argument(
         "--data-root",
         type=str,
-        default="data/biodiversity_split/val",
+        required=True,
+        # No default. It used to be "data/biodiversity_split/val" -- the WITHDRAWN leaking split,
+        # whose held-out tiles share ~93% of their ground with training. Every caller in RUNBOOK.sh
+        # passes this explicitly, so the default could only ever fire by accident, and when it fired
+        # it produced a complete, plausible metrics.json over leaked data at exit 0. The metrics
+        # file records data_root and the readers now check it, but the cheaper fix is not to offer
+        # the wrong answer as a default.
         help="Split root (contains images/ and masks/). Use val or test root depending on --split.",
     )
     ap.add_argument(

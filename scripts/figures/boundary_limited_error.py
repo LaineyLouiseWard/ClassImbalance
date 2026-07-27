@@ -68,22 +68,16 @@ BAR_ORDER = ["Forest", "Grassland", "Cropland", "Settlement", "Seminatural"]
 # Narrative classes traced in panel (a).
 TRACE = ["Forest", "Settlement", "Seminatural"]
 GSD_M = 0.5  # NOTE: inland only; see GSD_BY_SITE
-# --- Per-site ground sample distance -------------------------------------------------------------
-# Measured from the GeoTIFF transforms 2026-07-26. The inland site is projected (UTM29N) and
-# isotropic; both upland sites are geographic (EPSG:4326) and ANISOTROPIC, so a single 0.5 m figure
-# is wrong for 191 of 2,143 tiles -- it makes the "<=1.5 m" boundary band really <=1.9 m in x and the
-# ">8 m" interior really >10.3 m in x at those sites. Pass sampling=(gsd_y, gsd_x) to
-# scipy.ndimage.distance_transform_edt so distances come out in metres directly.
-GSD_BY_SITE = {
-    "biodiversity": (0.500, 0.500),   # (y, x) metres per pixel
-    "ireland1":     (0.515, 0.641),
-    "ireland2":     (0.515, 0.634),
-}
-
-
-def gsd_for(tile_id):
-    """(gsd_y, gsd_x) in metres for a tile id, keyed on its site prefix."""
-    return GSD_BY_SITE.get(str(tile_id).split("_")[0], (0.5, 0.5))
+# Per-site ground sample distance: ONE definition, in geoseg/geo.py. This exact block was
+# duplicated verbatim in four files, and gsd_for() silently returned the inland (0.5, 0.5) for any
+# site it did not recognise -- rescaling every boundary distance by up to 28% in x without a word.
+# It now raises. geoseg/geo.py also records why the registered values are the spherical
+# approximation rather than the 0.2%-larger geodesic one.
+# (no geoseg.geo import: nothing here uses it. It was added by the 2026-07-26 constant
+# de-literalisation and left behind unused. build_all_figures.py runs figure scripts as
+# `subprocess.run([sys.executable, script], cwd=REPO_ROOT)`, and cwd is NOT on sys.path in
+# Python 3.11, so a dead top-level `from geoseg...` is a hard ModuleNotFoundError under the
+# shipped invocation even though it imports fine with PYTHONPATH=. set.)
 
 
 
