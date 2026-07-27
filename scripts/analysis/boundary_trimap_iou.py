@@ -240,7 +240,13 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     ent_n = np.where(err_n > 0, err_n, 1)
     edges_m = DIST_BIN_EDGES_M
     # boundary band <= 1.5 m (matches headline d=3px); interior > 8 m (the floor).
-    BND_MAX_M, INT_MIN_M = 1.5, 8.0
+    # TWO DIFFERENT STATISTICS, TWO DIFFERENT NAMES (2026-07-27).
+    # This block's near band is 1.5 m, matching Cheng's Boundary-IoU distance; boundary_rate_ratio.py
+    # uses the registered 8 m band. They are NOT the same partition -- 71.75% of the 8 m band lies
+    # beyond 1.5 m, so the 1.5-8 m annulus is in neither set here -- and until now both ratios were
+    # called "rho". The 8 m ratio is rho. This one is the CONTACT-ZONE ratio and must never be
+    # reported under the same name or in the same column.
+    BND_MAX_M, INT_MIN_M = 1.5, 8.0        # contact-zone band / deep-interior floor
     bnd_bins = np.where(edges_m[1:] <= BND_MAX_M + 1e-9)[0]      # bins fully within 1.5 m
     int_bins = np.where(edges_m[:-1] >= INT_MIN_M - 1e-9)[0]     # bins starting beyond 8 m
 
@@ -264,7 +270,8 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
         "per_class": {STUDENT_CLASSES[k]: {"n": err_n_k[k].tolist(),
                                            "error_rate": rate(err_e_k[k], err_n_k[k])}
                       for k in FOREGROUND},
-        "boundary_vs_interior": {"boundary_max_m": BND_MAX_M, "interior_min_m": INT_MIN_M,
+        "contact_zone_vs_interior": {"statistic": "contact-zone ratio, NOT rho (rho is the 8 m band in boundary_rate_ratio.py)",
+                                 "contact_max_m": BND_MAX_M, "interior_min_m": INT_MIN_M,
                                  "per_class": bvi},
         # PER-SEED boundary and interior rates, and the rho each seed implies. This is what carries
         # the uncertainty: a spread over training runs, which is the only interval this study

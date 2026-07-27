@@ -158,12 +158,13 @@ def panel_distance(ax, err, use_tex):
 
 
 def panel_interior_floor(ax, bvi, use_tex):
-    """(c) per-class error rate in the boundary band vs the interior floor.
+    """(c) per-class error rate in the CONTACT ZONE vs the interior floor.
 
-    Boundary-limited (label-ceiling) classes collapse to ~0 in the interior; a class with
-    a non-zero interior floor (Seminatural) has genuine interior/semantic error."""
+    The near band here is 1.5 m, not the registered 8 m boundary band -- this panel does not
+    show rho. Boundary-limited (label-ceiling) classes collapse to ~0 in the interior; a class
+    with a non-zero interior floor (Seminatural) has genuine interior/semantic error."""
     pc = bvi["per_class"]
-    bmax, imin = bvi["boundary_max_m"], bvi["interior_min_m"]
+    bmax, imin = bvi["contact_max_m"], bvi["interior_min_m"]
     names = BAR_ORDER
     x = np.arange(len(names))
     w = 0.38
@@ -179,7 +180,7 @@ def panel_interior_floor(ax, bvi, use_tex):
     ax.set_title("(c)")
     ax.grid(True, axis="y", ls=":", lw=0.5, color="#cccccc")
     from matplotlib.patches import Patch
-    blab = (rf"boundary ($\leq{bmax:g}$\,m)" if use_tex else f"boundary (<={bmax:g} m)")
+    blab = (rf"contact zone ($\leq{bmax:g}$\,m)" if use_tex else f"contact zone (<={bmax:g} m)")
     ilab = (rf"interior ($>{imin:g}$\,m)" if use_tex else f"interior (>{imin:g} m)")
     handles = [Patch(facecolor="#999999", edgecolor="black", label=blab),
                Patch(facecolor="#999999", edgecolor="black", alpha=0.4, hatch="///", label=ilab)]
@@ -193,7 +194,7 @@ def render(root, out_dir, cell, use_tex):
     fig, axes = plt.subplots(1, 3, figsize=(9.8, 4.5))
     panel_recovery(axes[0], bt["recovery_trimap"], use_tex)
     panel_distance(axes[1], bt["error_vs_distance"], use_tex)
-    panel_interior_floor(axes[2], bt["error_vs_distance"]["boundary_vs_interior"], use_tex)
+    panel_interior_floor(axes[2], bt["error_vs_distance"]["contact_zone_vs_interior"], use_tex)
 
     # Shared class legend at the bottom (panels a and c use the class colours).
     from matplotlib.lines import Line2D
