@@ -17,6 +17,32 @@ manuscript that are WRONG and must be deleted; this file is properties that must
 
 ---
 
+## STATUS 2026-07-27 — which of these reached the manuscript
+
+Worked in the manuscript pre-write chat. Open items live in `docs/CORRECTIONS_PAPER_PT2.md`.
+
+| property | where it landed |
+|---|---|
+| §1 transfer arm gets 2.00× the gradient steps | **STATED**, §2.3 |
+| §2 transfer arm selects a checkpoint twice | **STATED**, §2.3 |
+| §3 OEM contributes no Cropland and no Semi-natural | **STATED**, §2.1.4 — and the mapping itself was corrected: bareland now maps to Grassland and Water is excluded, which the old text got wrong |
+| §4 Test B has no per-class support floor; its Cropland is in 4 cells | **HALF**, §2.1.2 gives the 4-cell count. The floor itself cannot be named: CORRECTIONS (k) forbids the 5/8 floors appearing in the paper. Deliberate, not an oversight |
+| §5 the 950 m grid is phase-dependent | **STATED in one clause**, §2.1.2, citing Roberts for repeating the count at other sizes and offsets. No table — no page for one |
+| §6 the grid counts cells touched, not parcels | **STATED**, §2.1.2, with the 16-cells-on-7.50-cells-of-ground audit |
+| §6 overlapping tiles scored without deduplication | **STATED**, §2.1.2, as 2.85× on average, and that it cancels in every contrast |
+| §7 no spatial interval; uncertainty per-seed and paired | **STATED**, §2.6 |
+| §8 three Irish sites of eleven, and which were excluded | **WILL NOT BE WRITTEN.** Author decision 2026-07-27: the Colombian and Danish tiles are not mentioned at all; the paper says only that ODOS provided 2,143 tiles from three Irish sites as a subset of a larger holding |
+| §10/§11 the 8 m band is a-priori, GT-only banding is asymmetric | **STATED**, §2.6, citing Kohli/Csurka for the curve and Cheng for both the width rule we cannot apply and the asymmetry cost |
+| train/val gap 256 m, validation not spatially independent | **STATED**, §2.1.2 |
+| re-cutting without overlap available and declined | **STATED**, §2.1.2 |
+
+Also corrected in the manuscript while doing this, though not on this list: the blanket
+"0.5 m GSD" was wrong for the 191 upland tiles that now form Test B. §2.1.1 now gives
+0.500 m inland and the anisotropic 0.641 × 0.515 m / 0.634 × 0.515 m upland values,
+verified from the GeoTIFFs.
+
+---
+
 ## 1. The transfer arm receives exactly twice the Biodiversity gradient steps
 
 **Measured 2026-07-26, from the imported configs and the tiles on disk.**
@@ -429,8 +455,10 @@ their authors. Label them as derived, and name their denominators.**
 
 Neither is a boundary-to-interior rate ratio. Csurka's is band-against-whole-image, and the band's
 area fraction is unpublished, so the true ratio is larger and unrecoverable. Volpi & Tuia's is
-all-pixels-against-interior, and the eroded band's area fraction is likewise unpublished. **A
-boundary-to-interior error rate ratio, stated as such, appears in none of the papers opened.**
+all-pixels-against-interior, and the eroded band's area fraction is likewise unpublished, and both
+are measured at 0.15–0.27 m, one to two orders of magnitude narrower than the 8 m band used here, so
+neither is a benchmark for its value. **A boundary-to-interior error rate ratio, stated as such,
+appears in none of the papers opened.**
 
 Volpi & Tuia's own reading is worth quoting because it is the same phenomenon in the same kind of
 imagery: *"By evaluating on eroded boundary ground truths, we observe a similar behavior, but with

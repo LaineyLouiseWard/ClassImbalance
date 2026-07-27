@@ -1,5 +1,19 @@
 # CORRECTIONS — verified, and they need to happen
 
+> ## STATUS 2026-07-27 — worked in the manuscript pre-write chat
+>
+> Each correction below now carries a status line. Anything still open was moved to
+> **`docs/CORRECTIONS_PAPER_PT2.md`** (written by the other chat — do not duplicate it here).
+>
+> | | |
+> |---|---|
+> | DONE | 1, 2 (subtractive half), 4, 6, 8, 9, 10 (a)(b)(c)(d)(e)(f)(h)(k)(l) |
+> | OPEN → PT2 | 2 (replacement sentence), 3, 5, 7, 10 (g)(i)(n-code) |
+> | STANDING RULE, nothing to do | 10 (j)(m) |
+>
+> Pages held at 28. `main.tex` compiles with all references resolved (eight figures are
+> deliberately absent, so `latexmk` fails on a missing graphic — that is expected).
+
 **Every item below was checked against the actual file, not inferred.** The line numbers, the
 quotations and the supporting measurements were all opened and read on 2026-07-27. These are not
 suggestions to consider; they are errors that are in the manuscript now.
@@ -78,6 +92,11 @@ alternative; it is a measured one.
 
 ## Correction 1 — `main.tex:201` states something untrue
 
+> **DONE 2026-07-27.** §2.3 now reads "All four cells share the same split, augmentation and
+> evaluation protocol, but they are not matched on optimisation." Factor A renamed to
+> *OpenEarthMap pre-training* throughout, including the Table 2 header and the interaction label.
+
+
 **Currently:**
 > "All four cells share identical optimisation settings, data splits, augmentation, and evaluation
 > protocols, **differing only in the two factors under study**."
@@ -93,6 +112,11 @@ alternative; it is a measured one.
 > transfer in isolation, and is reported as such."
 
 ## Correction 2 — `main.tex:433` eliminates two explanations and omits the live one
+
+> **HALF DONE 2026-07-27.** The subtractive fix is applied: the mechanism attribution and the
+> $+1.66$ pp are gone from §4.2. The replacement sentence needs a number from stage C1 → **PT2**.
+> The only surviving `1.66` is inside Table 2, which is frozen withdrawn Results.
+
 
 **Currently:**
 > "cropland gains $+1.66$ pp from OEM transfer… **This gain cannot come from more cropland pixels or
@@ -124,6 +148,11 @@ After stage C1 produces a real number, and only if the gain reproduces, add:
 
 ## Correction 3 — `main.tex:322` makes the same move for semi-natural
 
+> **OPEN → PT2.** The sentence sits in §3, which the pre-write brief froze. Note it will
+> contradict the new §2 the moment §3 is unfrozen: §2 now states no OEM class maps to
+> semi-natural grassland, while `main.tex:322` still says it is "mapped from bareland".
+
+
 **Currently:**
 > "The semi-natural grassland gain does not reflect substantial added exposure to that class… **It
 > instead reflects OpenEarthMap's broader land-cover variety**, which gives a stronger, more general
@@ -138,6 +167,10 @@ explanation. The replacement sentence gets written once there is a number from t
 
 ## Correction 4 — Methods must state the step counts
 
+> **DONE 2026-07-27.** §2.3 states the 3,190-tile pool, 48,240 against 24,120 Biodiversity
+> gradient steps, the ratio of exactly 2.00, and that it is declared rather than corrected.
+
+
 Add to §2, from `docs/METHODS_STATED_LIMITATIONS.md` §1, which already has the arithmetic:
 
 > "Stage 2a pre-trains on a pool of 3,190 tiles of which 1,072 are the Biodiversity training tiles
@@ -147,12 +180,19 @@ Add to §2, from `docs/METHODS_STATED_LIMITATIONS.md` §1, which already has the
 
 ## Correction 5 — free, and it is real evidence
 
+> **OPEN → PT2.** Needs campaign output. §2 does now establish the reporting shape it depends on:
+> two test sets, reported separately and never pooled.
+
+
 Report factor A on **Test A and Test B side by side**. The second pass is over inland training
 ground; OpenEarthMap's contribution is diversity. If factor A helps Test B (uplands, ~58 km away,
 never surveyed) as much as Test A, the second-pass explanation weakens. If Test A greatly exceeds
 Test B, it is live. Costs nothing, needs no threshold, and the campaign already produces it.
 
 ## Correction 6 — a scale caveat in a WORKING DOC, not the paper
+
+> **DONE 2026-07-27.** The clause is in `METHODS_STATED_LIMITATIONS.md` §11.
+
 
 **No new table goes in the manuscript.** This concerns the table already inside
 `docs/METHODS_STATED_LIMITATIONS.md` §11, which is an internal working record that feeds the
@@ -185,6 +225,11 @@ properly. They simply left no artefact anyone could check until now.
 
 ## Correction 7 — TWO different statistics are both called rho
 
+> **OPEN → PT2.** Code, not manuscript. It blocks one manuscript item: §2 defines the 8 m band
+> but not the 1.5 m contact zone that §3 and the appendix use, and documenting that zone before
+> the rename would write the defect into the paper.
+
+
 **Verified in the code 2026-07-27.** Two scripts in the same stage compute a boundary/interior ratio
 from partitions that are not the same partition:
 
@@ -207,6 +252,12 @@ calls the ensemble argmax "the registered estimator" at lines 272, 293 and 328.
 
 ## Correction 8 — the second arm is a necessary condition, not a diagnosis
 
+> **ALREADY SATISFIED — verified 2026-07-27.** Both qualifiers are present in
+> `METHODOLOGICAL_CHOICES.md` §E5 and in `CLAUDE.md` (an earlier check missed them because the
+> phrases wrap across lines). `main.tex` keeps the compliant "convergent evidence rather than
+> proof" sentence. The missing across-cell implementation is code → **PT2**.
+
+
 The arm reads: if error is label-limited, the near-boundary rate stays flat across cells while the
 interior rate falls. **Observing that does not establish the premise.** Every rival cause that is
 constant across the four cells predicts the same pattern — encoder–decoder edge blur, mixed pixels at
@@ -226,6 +277,10 @@ eye. Either compute the across-cell comparison or stop calling it an arm.
 
 ## Correction 9 — presentation of the audit trail (free, and worth more than it costs)
 
+> **DONE 2026-07-27.** §2.6: "a threshold on that ratio was registered and withdrawn on
+> 26 July 2026, before any model was trained on this split."
+
+
 A leakage retraction guarantees a referee asks whether the second set of numbers was tuned after the
 first was withdrawn. **This project has a dated answer** — every decision and all three
 pre-registration versions predate any training on the corrected split — but it was filed behind the
@@ -238,6 +293,16 @@ any model was trained on the corrected split, with the date. Volunteered it is a
 it is a question.
 
 ## Correction 10 — the spatial split is uncited, and the tile counts are described as ground
+
+> **MOSTLY DONE 2026-07-27.** New §2.1.2 *Spatially Blocked Split* carries (a) Roberts 2017 and
+> Kattenborn 2022, both read in the conversions before citing and both added to `Bibliography.bib`;
+> (b) which gap does which job; (c) ground in km² never summed tiles; (d) the 2.85× scoring
+> multiplicity and that it cancels in every contrast; (e) re-cutting declined; (f) the split
+> described plainly; (h) realised 1,664 m / 768 m against the 750 m range, and **650 m appears
+> nowhere in the manuscript**; (k) the 5/8 support floors appear **nowhere**; (l) the Test B hedge.
+> **Open → PT2:** (g) and (i), both post-campaign, and the two code one-liners in (n).
+> (j) and (m) are standing rules with nothing to execute.
+
 
 **Verified in the code and the data 2026-07-27.** Measured directly from the GeoTIFF bounds: every
 tile is 512 x 512 px at 0.5 m, i.e. a 256 m footprint, and tile origins are spaced exactly 128 m
@@ -381,7 +446,8 @@ statistics… rather than just a single value."* `block_phase_sweep.json` and
 
 **(l) Report Test A per class; report Test B as one number, with one sentence that cannot be dropped.**
 Measured grid-cell support at 950 m: Test B's Cropland occupies **4** cells (30 tiles) and Settlement
-**6**, against 16 and 13 on Test A. Drop the per-class Test B breakdown — those two rows would each
+**6**, against **8** and 13 on Test A. (Corrected 2026-07-27: this line said 16 for Test A's Cropland;
+`artifacts/class_support.json` gives 8. 16 is Test A's Forest/Grassland/Semi-natural count.) Drop the per-class Test B breakdown — those two rows would each
 need their own hedge and the paper does not need the claim.
 
 **But note what does NOT follow, because the first version of this correction got it wrong.** Reporting

@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-rho — the pre-registered primary statistic for the boundary-concentration claim.
+rho — the boundary/interior error rate ratio.
 
     rho = (foreground error rate within 8 m of a GT boundary) / (error rate beyond 8 m)
 
-Reported DESCRIPTIVELY. The pre-registration that carried a rho >= 4.0 threshold was withdrawn on
-2026-07-26 (D18); the boundary claim rests on the trimap exclusion curve and the per-class boundary
-and interior rates. rho is a one-line summary of those rates. There is no threshold and nothing fails.
+Reported descriptively. A pre-registered rho >= 4.0 threshold was withdrawn on 2026-07-26 (D18),
+so rho is not tested against anything. The boundary claim rests on the trimap exclusion curve and
+the per-class boundary and interior rates; rho summarises those rates in one number.
+
+rho IS THE 8 m BAND. The contact-zone ratio in boundary_trimap_iou.py uses a 1.5 m near band
+against the same 8 m interior floor, so the 1.5-8 m annulus falls in neither of its sets. It is a
+different statistic on a different partition. Report the two separately and never under one name.
 
 WHY A RATE RATIO AND NOT A SHARE. Two earlier forms were registered and retracted the same day:
 
@@ -269,7 +273,7 @@ def main() -> int:
     ap.add_argument("--split-root", default="data/split_f1")
     ap.add_argument("--split", default="test", choices=["test", "external_test", "val"])
     ap.add_argument("--softmax-root", default=None,
-                    help="per-seed softmax dump root; the ensemble argmax is the registered estimator")
+                    help="per-seed softmax dump root; rho is computed from the ten-seed ensemble argmax")
     ap.add_argument("--cell", default="stage3_clsbal")
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
     ap.add_argument("--per-site", action="store_true",
@@ -289,8 +293,8 @@ def main() -> int:
     sr = root / args.split_root
     if not args.softmax_root:
         raise SystemExit(
-            "--softmax-root is required: rho is computed from the ten-seed ensemble argmax, which is "
-            "the registered estimator. Run --self-test to check the arithmetic without predictions.")
+            "--softmax-root is required: rho is computed from the ten-seed ensemble argmax. "
+            "Run --self-test to check the arithmetic without predictions.")
 
     from scripts.analysis.seed_disagreement import load_seed_stack
 
