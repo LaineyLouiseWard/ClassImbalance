@@ -90,6 +90,26 @@ echo "[preflight] per-site normalisation statistics present"
 NORM_STATS="artifacts/normalisation_stats_${SPLIT_TAG}.json"
 [ -f "$NORM_STATS" ] || { echo "FATAL: $NORM_STATS missing. Run scripts/data_prep/build_normalisation_stats.py and commit it."; exit 1; }
 
+echo "[preflight] non-overlapping scoring subset present, with all three split keys"
+# The SECOND artefact added on 2026-07-27, and it was left unguarded when the first one was not.
+# compute_metrics.py defaults --scoring-subset to this file and raises FileNotFoundError if it is
+# absent, or KeyError if it lacks the split being scored. Both happen in stages C1..C4 -- i.e. AFTER
+# all five trainings have finished -- so an unguarded failure costs a whole seed's GPU time at the
+# last step. Checking the keys too, not just the file: a subset rebuilt for one split would pass a
+# bare -f test and still kill the run.
+SCORE_SUBSET="artifacts/scoring_subset_${SPLIT_TAG}.json"
+[ -f "$SCORE_SUBSET" ] || { echo "FATAL: $SCORE_SUBSET missing. Run scripts/data_prep/build_scoring_subset.py and commit it."; exit 1; }
+python - "$SCORE_SUBSET" <<'PY' || exit 1
+import json, sys
+need = {"val", "test", "external_test"}
+have = set(json.load(open(sys.argv[1]))["splits"])
+missing = need - have
+if missing:
+    sys.exit(f"FATAL: {sys.argv[1]} has no subset for {sorted(missing)}. Known: {sorted(have)}. "
+             f"Rebuild with scripts/data_prep/build_scoring_subset.py")
+print(f"  scoring subset keys ok: {sorted(have)}")
+PY
+
 echo "[preflight] taxonomy consistency (class orders, grounded OEM->student mapping)"
 # RUNBOOK stage A0 runs this, but the campaign window is B4..C5, so nothing in a seed's own run
 # checks it. If the grounded pre-train map ever stops matching argmax(teacher confusion), stage 2a
