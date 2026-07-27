@@ -71,6 +71,16 @@ def main():
     if out.exists() and not args.force:
         raise SystemExit(f"{out} exists; pass --force to regenerate")
 
+    # This reads the RAW imagery, which is deliberately not staged to the cluster
+    # (docs/audit/BRIEF_STAGE_TO_SONIC.md: "data/biodiversity_raw (9 GB) is not needed"). The output
+    # is committed, so this script should never need to run there -- but if a rebuilt split ever
+    # triggers the RUNBOOK B4 fallback on Sonic, say why rather than failing per-tile.
+    raw = root / "data/biodiversity_raw/images"
+    if not raw.is_dir():
+        raise SystemExit(
+            f"{raw} not found. This script needs the raw imagery, which is not staged to the "
+            "cluster. Build it where the raw data lives, commit the JSON, and pull it there.")
+
     man = json.loads((root / args.manifest).read_text())
     assign = man["assignment"]
 
