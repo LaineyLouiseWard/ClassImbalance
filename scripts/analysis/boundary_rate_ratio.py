@@ -74,6 +74,13 @@ from scripts.analysis.seed_disagreement import boundary_distance
 from scripts.analysis.utils import spatial_blocks
 
 BAND_M = 8.0
+# Settable with --band-m so rho can be reported as a SWEEP over widths rather than at one arbitrary
+# width (docs/CORRECTIONS_PAPER_PT2.md §8). 8 m stays the default because it is what was registered.
+# Two widths matter beyond it: 1.5 m is 3 px at 0.5 m/px, the pixel-matched comparison to Volpi &
+# Tuia's 3 px erosion, and the ladder in boundary_trimap_iou.RADII_PX shares this figure's x-axis.
+# self_test() forces this back to 8.0 -- its expectations (32 columns either side of one boundary,
+# a pixel at exactly 8.000 m excluded by strict `<`) are arithmetic on the 8 m band, so running the
+# gate at another width would silently check nothing.
 # NO THRESHOLD. The pre-registered rho >= 4.0, its 2.0 dead band and its weak band were retired on
 # 2026-07-26 (D18): the bar was arbitrary, and a lower-bound rule at 12-16 blocks has an operating
 # point near 5.2 and 6.3 rather than 4.0, so defending it needed two further pieces of apparatus.
@@ -149,6 +156,8 @@ def report(name: str, counts: dict, groups: dict) -> dict:
 
 
 def self_test() -> int:
+    global BAND_M
+    BAND_M = 8.0   # see the note at BAND_M: this gate's arithmetic is specific to 8 m
     """Plant a known rho and confirm recovery, and confirm rho is blind to the band's area share.
 
     The second property is the whole point: it is what the two retracted versions lacked.
@@ -283,8 +292,14 @@ def main() -> int:
                     help="grid cell size for the DESCRIPTIVE cells-touched count. 950 m = the "
                          "conservative unit. 256 m gives the pixel-disjoint count.")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--band-m", type=float, default=8.0,
+                    help="near-band half-width in metres; 8.0 is the registered value, "
+                         "1.5 is 3 px at 0.5 m/px (Volpi pixel-matched). Sweep it.")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
+
+    global BAND_M
+    BAND_M = float(args.band_m)
 
     if args.self_test:
         return self_test()

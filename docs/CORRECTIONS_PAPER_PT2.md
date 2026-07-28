@@ -217,3 +217,49 @@ doi:10.3389/fnins.2020.00065. Converted and read:
 
 Optional, for §2 if the subset choice needs a precedent: Cira C-I et al. (2024), *Remote Sensing*
 16(16) 2954, doi:10.3390/rs16162954. Read pp. 1–2, 6–9. Not yet converted into `references_md/`.
+
+## 8. Report rho as a width sweep, not a single number — and match Volpi in PIXELS, never in metres
+
+**Added 2026-07-28 after the first seed's boundary run.**
+
+**The problem with one width.** `boundary_rate_ratio.py:76` hard-codes `BAND_M = 8.0`. That 8 m is
+a-priori and cannot be cited to anyone: Kohli's "8" is 8 *pixels* on 320x213 photographs, and the
+numeric coincidence is a coincidence (`docs/DO_NOT_ADD.md`). A single arbitrary width is the weakest
+form of the evidence and invites the one question there is no principled answer to — *is 2x a lot?* —
+because the rho >= 4.0 threshold was withdrawn and D3 forbids inventing a replacement.
+
+**The fix, and it needs no re-training.** Report rho across a sweep of band widths rather than at one.
+It is the same distance-to-boundary array re-thresholded, so it is a loop over widths, CPU-only, run
+on the softmax dumps after the campaign. `boundary_trimap_iou.py:54` already sweeps
+`RADII_PX = [-1, 0, 1, 2, 3, 4, 6, 8, 12, 16]` (0 to 8 m at 0.5 m/px) for the exclusion curve; rho
+should use the same ladder so the two figures share an x-axis.
+
+**This is the citable form.** Kohli et al. 2009 sweep the band width and report a curve, and never
+choose a single width — `DO_NOT_ADD` already records that Kohli is the right citation for *"the
+deliverable is a curve"*. A swept rho is that deliverable. A single-width rho is not.
+
+**Matching Volpi & Tuia 2017: possible in pixels, impossible in metres.**
+
+| | Volpi | here |
+|---|---|---|
+| erosion radius | 3 px | 3 px = **1.5 m** |
+| ground sample distance | 9 cm (Vaihingen), 5 cm (Potsdam) | **0.5 m** |
+| band width in metres | 0.27 m / 0.15 m | 1.5 m |
+| reported ratio | 1.24-1.33 / 1.14-1.19 | to be measured |
+
+Their 0.15-0.27 m band is **sub-pixel at 0.5 m GSD** and cannot be computed here at all, so a
+metre-scale match is physically impossible rather than merely awkward. **A pixel-scale match already
+exists**: 3 px is 1.5 m for us, which is exactly the contact-zone band `boundary_trimap_iou.py`
+computes. Pixels are also the more defensible unit, because receptive field and annotation precision
+are both pixel-scale phenomena.
+
+**So the permitted comparison is:** rho at 3 px against Volpi's 3 px erosion, stated as a pixel-matched
+comparison, with the GSD difference named in the same sentence. Never compare the 8 m value to their
+numbers, and never describe any of it as a benchmark that was passed or failed — their ratio is a
+published observation on different imagery, not a bar.
+
+**What the numbers are, since this is easy to misread.** Volpi's 1.14-1.33 is a *ratio* of the same
+kind as rho — boundary error rate divided by interior error rate, dimensionless — not an error level
+and not a distance. Their models erred 1.14-1.33x as often near boundaries as inside regions.
+`DO_NOT_ADD` records that both figures were recomputed from their Tables I and III and reproduce
+exactly.
