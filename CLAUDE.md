@@ -83,19 +83,17 @@ via `\ref`. The graphical abstract is built separately
 not more thorough, and it costs reading time that does not exist near a deadline. Lead with the answer.
 No preamble, no restating the question, no closing summary of what you just said.
 
-**Check your own checks.** Every gate written in this repository during the 2026-07-28 session passed
-on the first attempt and four of them could not fail: the tile-edge guard lived in `main()` while the
-self-test only called helpers; a contact test was blind to one axis because the fixture's only seam ran
-the other way; a denominator fix was asserted by a line that recomputed it rather than calling it. The
-rule is in "Gate discipline" below and it is not optional. **Mutate the code, watch the check fail,
-revert.** A check that has not been observed to fail does not exist.
+**Mutation-test every gate.** Anthropic's Opus 5 guidance says to REMOVE generic "verify your work"
+instructions — the model already self-verifies and they cause over-verification. The failure seen here
+is narrower and real: on 2026-07-28 every gate written passed first time and four could not fail. The
+tile-edge guard lived in `main()` while the self-test only called helpers; a contact test was blind to
+one axis because the fixture's only seam ran the other way; a denominator fix was asserted by a line
+that recomputed it rather than calling it. So: break the thing the gate guards, watch it fail, revert.
+See "Gate discipline" below.
 
-**The same applies to prose and to reading.** If you state that a document says something, quote the
-line. If you state that a number reproduces, run the command. Several claims in that session were
-confidently wrong about files that were open in the same conversation.
-
-**Verify before reporting, not after.** Do not describe work as done and then check. The order matters
-because the reply is what gets acted on.
+**Quote before asserting.** If you say a document says something, quote the line. If you say a number
+reproduces, run `scripts/analysis/verify_narrative_numbers.py`. Several claims that session were
+confidently wrong about files open in the same conversation.
 
 **When a check fails, suspect the check first.** Four failures that session were wrong expectations,
 not wrong code — a band computed in pixels where the code used metres, a symmetry counted twice, an
@@ -201,19 +199,17 @@ versions, two of them retracted, dated before any training.
 not more thorough, and it costs reading time that does not exist near a deadline. Lead with the answer.
 No preamble, no restating the question, no closing summary of what you just said.
 
-**Check your own checks.** Every gate written in this repository during the 2026-07-28 session passed
-on the first attempt and four of them could not fail: the tile-edge guard lived in `main()` while the
-self-test only called helpers; a contact test was blind to one axis because the fixture's only seam ran
-the other way; a denominator fix was asserted by a line that recomputed it rather than calling it. The
-rule is in "Gate discipline" below and it is not optional. **Mutate the code, watch the check fail,
-revert.** A check that has not been observed to fail does not exist.
+**Mutation-test every gate.** Anthropic's Opus 5 guidance says to REMOVE generic "verify your work"
+instructions — the model already self-verifies and they cause over-verification. The failure seen here
+is narrower and real: on 2026-07-28 every gate written passed first time and four could not fail. The
+tile-edge guard lived in `main()` while the self-test only called helpers; a contact test was blind to
+one axis because the fixture's only seam ran the other way; a denominator fix was asserted by a line
+that recomputed it rather than calling it. So: break the thing the gate guards, watch it fail, revert.
+See "Gate discipline" below.
 
-**The same applies to prose and to reading.** If you state that a document says something, quote the
-line. If you state that a number reproduces, run the command. Several claims in that session were
-confidently wrong about files that were open in the same conversation.
-
-**Verify before reporting, not after.** Do not describe work as done and then check. The order matters
-because the reply is what gets acted on.
+**Quote before asserting.** If you say a document says something, quote the line. If you say a number
+reproduces, run `scripts/analysis/verify_narrative_numbers.py`. Several claims that session were
+confidently wrong about files open in the same conversation.
 
 **When a check fails, suspect the check first.** Four failures that session were wrong expectations,
 not wrong code — a band computed in pixels where the code used metres, a symmetry counted twice, an

@@ -5,9 +5,10 @@ means this directory contains two very different kinds of document, and reading 
 order gives entirely the wrong impression of the project. **Read the first group. The second group is
 the record of how the first group was arrived at.**
 
-**Before quoting any number:** `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py`.
-It checks every figure the narrative uses against the committed artifact that produced it, and names
-the regenerating command for any that is missing.
+**The manuscript is being rewritten** to match the narrative in `NARRATIVE_FINAL.md`. Until that is
+done this file, `README.md` and `RUNBOOK.md` still describe the earlier design in places. That is
+deliberate — they are fixed after the manuscript, so the manuscript is not written to match a summary
+of itself.
 
 ## Read these — they state the design as it now is
 
@@ -18,6 +19,10 @@ the regenerating command for any that is missing.
 | **`FINDING_BOUNDARY_IS_PER_CLASS.md`** | the per-class boundary result and its confounds |
 | **`METHODOLOGICAL_CHOICES.md`** | every deliberate choice in plain language, with what it costs. **Start here.** |
 | **`METHODS_STATED_LIMITATIONS.md`** | eleven properties the methods section must state, each with the measurement behind it |
+
+Before quoting any number, run `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py`.
+It checks each figure the narrative uses against the committed artifact behind it, and prints the
+regenerating command for anything missing.
 | **`CORRECTIONS.md`** | sentences currently in the manuscript that are wrong and must change |
 | **`DO_NOT_ADD.md`** | sentences the design forbids, and sources that do not exist or do not say what they are cited for |
 | **`FIGURES.md`** | the figure map |
