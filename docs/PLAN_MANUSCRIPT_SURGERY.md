@@ -1,14 +1,20 @@
 # Plan — manuscript surgery
 
-> **SKELETON. DO NOT EXECUTE.** Written 2026-07-28 on six of ten seeds, so the work is designed before
-> the deadline rather than during it.
+> **ALL FOUR GATES ARE GREEN as of 2026-07-28.** Ten seeds completed; metrics aggregated on the
+> non-overlapping subset; class-pair share and symmetry restated (§7 fired — see below); boundary
+> sweep restated per seed, four cells, both widths, plus the registered across-cell arm.
 >
-> **Gates, all four green before `manuscript/` is touched:** ten seeds COMPLETED · metrics aggregated
-> on the non-overlapping subset · class-pair share and symmetry restated on ten seeds · boundary sweep
-> restated per seed, four cells, both test sets.
+> **But the plan below is now partly obsolete, because the numbers moved the story.** Read
+> `docs/NARRATIVE_FINAL.md` first — it replaces the arc this plan was written to serve. In
+> particular R1's upper-bound framing is gone, R2's symmetry claim is withdrawn, and the paper's
+> centre of gravity is now the per-class factorial decomposition, which this plan does not contain.
+> §1 (strike the forbidden sentences), §5 (sentences owed to Methods and Limitations) and §6
+> (language discipline) are unaffected and still correct.
 >
-> **Then: check the numbers against §7, update this plan and `CORRECTIONS_PAPER_PT4.md` if any moved,
-> and only then edit.**
+> **§7 outcome:** the symmetry placeholder FIRED — the confusion is imbalance-shaped, not symmetric,
+> and the absolute-count version of the claim was wrong. The registered across-cell arm PASSED in
+> 10 of 10 seeds. Boundary ratio held its shape (3.85 at 1 m, 2.28 at 8 m). Transfer's +2.6 pp did
+> not survive.
 
 Line numbers are as of 2026-07-28 and will drift. Re-grep after the first edit. Class is `mdpi`
 `remotesensing,article,submit`, single column.

@@ -1,5 +1,14 @@
 # Part 4 — the narrative we are going with
 
+> **SUPERSEDED IN PART by `docs/NARRATIVE_FINAL.md`, later the same day.** Read that first; where the
+> two disagree it wins. Three things here are now known to be wrong and are corrected there: the
+> claim that the confusion runs against the majority class (it does not, once class sizes are
+> accounted for), the "near-symmetric" wording, and the framing of the whole paper on a null result.
+> The per-class factorial decomposition, the registered across-cell arm and the sampler's measured
+> effect had not been computed when this file was written. What survives intact: the boundary
+> literature framing, the NIR and terrain material, the conditional recommendation, the scope limits,
+> and the data-curation framing at the end.
+
 Parts 1-3 are lists of things to fix. This is the story they add up to, written once so the manuscript
 rewrite has something to aim at. Where this disagrees with parts 1-3, this wins.
 
