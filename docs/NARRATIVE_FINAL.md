@@ -116,13 +116,20 @@ What that bought:
 That distinction is the whole finding, and it is only visible because the intervention demonstrably
 did its job.
 
-The mechanism is countable. Semi-natural appears in 261 of 1,072 training tiles. Showing those 261
-tiles more often adds repetitions, not new places. Across our five classes, per-class accuracy is
-ordered almost perfectly by *how many distinct places a class appears in* (Spearman +0.98 against
-950 m grid cells, +0.90 against tiles) and much more loosely by *how many pixels it has* (+0.60). With
-five classes that is an ordering and not a fit, and it must be reported as one. But it says plainly
-what neither lever can supply: **more places.** The sampler re-weights the places that exist, and the
-public dataset contributes no places at all for these two classes.
+**Report this as an observation and attach no explanation to it.** A draft of this document explained
+the null by arguing that per-class accuracy is ordered by how many distinct places a class occupies
+rather than by pixel count. That was checked adversarially on 2026-07-28 and **it fails** — the
+p-values were wrong at n=5, the three predictors are one variable, the whole thing reduces to a single
+settlement-versus-cropland comparison, and the same ordering is reproduced perfectly by *test*-set
+instance counts that involve no training exposure at all. `RESULTS_TEN_SEED.md` §12(c) records the
+full autopsy.
+
+Two facts about the interventions do survive, because they are properties of the code rather than
+statistics. The sampler draws with replacement from the same 1,072 training tiles, so it cannot
+introduce ground the training set does not already hold. And no OpenEarthMap class maps to cropland or
+semi-natural, so pre-training cannot supply labelled examples of either — though OEM does add 2,118
+new scenes overall, so the honest wording is that it adds no labelled examples of *these two classes*,
+not that it adds nothing.
 
 ### Finding 3 — the error that is left sits at the lines between classes, and stays there
 
@@ -314,8 +321,6 @@ than by a null.
   gain and a 19-point loss.
 - **Rebalancing changes what the model claims, not what it can tell apart.** If the model already
   over-claims the rare class, more of it will not help.
-- **What predicts per-class accuracy here is the number of distinct places a class appears in, not the
-  number of pixels.** Buying more pixels of the same fields is not the same as buying more fields.
 - **Annotation effort pays where there is a real edge to trace, and recovers nothing where the
   transition has no line on the ground.**
 - **Some class definitions ask for a distinction the sensor cannot deliver.** That is the question

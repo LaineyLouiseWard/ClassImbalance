@@ -279,25 +279,47 @@ This is the strongest form of the null. The intervention is not inert — it mov
 boundary as intended — and the classification does not improve. The model is not reluctant to say
 semi-natural; it cannot tell which pixels are semi-natural.
 
-**(c) Scene count orders the classes; pixel count does not.** Test A IoU against three ways of
-counting how much of a class the training set holds, over five classes:
+**(c) WITHDRAWN 2026-07-28, same day, after an adversarial check.** An earlier version of this
+section claimed that per-class accuracy is ordered by the number of distinct places a class occupies
+rather than by its pixel share, with Spearman +0.600 / +0.900 / +0.975 over pixel share, training
+tiles and 950 m blocks, and used it to explain the sampler null. **Do not write any of that.** It
+failed on four counts:
 
-| predictor | Spearman |
-|---|---|
-| share of training pixels | +0.600 (p=0.285) |
-| training tiles containing the class | +0.900 (p=0.037) |
-| 950 m grid cells containing the class | **+0.975** (p=0.005) |
+- **The p-values were wrong.** They came from SciPy's asymptotic approximation, which is meaningless
+  at n=5. Exact two-sided permutation p-values over all 120 orderings are 0.350, **0.083** and
+  **0.033**, not 0.285, 0.037 and 0.005. The tile predictor is not significant. Selecting the best of
+  three predictors, the chance of reaching rho>=0.90 under the null is 1 in 12.
+- **The three predictors are one variable.** Tiles and blocks rank-correlate at +0.975 and are
+  rank-identical apart from one tie. Train holds exactly 32 blocks and Forest and Grassland both sit
+  at 32, so the block variable is censored at its ceiling on the one pair the tile ordering gets
+  wrong. The +0.900 to +0.975 gap is that saturation tie, not information.
+- **It reduces to a single pairwise comparison.** Dropping any one of Cropland, Settlement or
+  Seminatural makes pixel share and tile count exactly equally good. The whole claim is: settlement
+  has 3.34% of training pixels and scores 0.711, cropland has 7.70% and scores 0.340.
+- **It is confounded with test geometry.** The same IoU ordering is reproduced perfectly
+  (Spearman +1.000) by the number of *test* tiles containing each class, and by the number of
+  connected components in the test masks. Neither involves training exposure at all.
 
-n = 5, so this is an ordering and not a fit — report it descriptively and never as a regression.
-Settlement is the rarest class by pixels (3.34%) and the third best segmented (IoU 0.711), because it
-appears in 724 of 1,072 training tiles. Cropland has 2.3x settlement's pixels in 248 tiles and is the
-worst.
+**And the inference did not follow even if the ordering held.** Variation across five classes at one
+fixed configuration cannot license a counterfactual about what happens to one class when its sampling
+rate changes. Place count is manipulated in no arm of the design. And there is a direct
+counterexample in §8: on Test B the sampler moves Seminatural **+7.49 pp** in 6 of 10 seeds, which a
+training-set mechanism must predict a null for on both test sets.
 
-**This is what explains the sampler null mechanically, not just empirically.** The sampler re-weights
-the tiles that exist. Semi-natural is in 261 training tiles; showing those 261 tiles 2.84x more often
-adds repetitions, not scenes. And OpenEarthMap adds no scenes of semi-natural or cropland at all,
-because no OEM class maps to either. Neither lever could add the thing that predicts per-class
-accuracy here.
+**What survives, and it is only this.** Two facts about the interventions, both verifiable from code
+and neither statistical:
+
+- The class-balanced sampler draws with replacement from the same 1,072 training tiles
+  (`WeightedRandomSampler`, `num_samples=len(train_dataset)`), so it cannot introduce ground the
+  training set does not already hold. The weights file holds three values over 261 / 550 / 261 tiles
+  and reproduces the documented 1.27x settlement and 2.84x semi-natural uplift.
+- No OpenEarthMap class maps to Cropland or to Seminatural (`geoseg/taxonomy.py:67-91`), so
+  pre-training cannot supply labelled examples of either. **State it that way** — OEM does add 2,118
+  new scenes overall, so "adds no places" is false; what it adds no places of is these two classes.
+  Any effect on them is representation transfer, not label transfer.
+
+Report §12(b) — the sampler acted and bought almost nothing — as an observation. Do not attach an
+explanation of why to it.
 
 **Class pair shares are unchanged** (recomputed, matching §4): Grassland->Seminatural 7,195,002 px and
 Seminatural->Grassland 5,704,254 px, together **46.68%** of all foreground error.
