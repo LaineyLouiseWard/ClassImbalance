@@ -153,9 +153,18 @@ def main() -> int:
     tiles = sorted(p for p in (root / f"data/split_{SPLIT_TAG}/{args.split}/masks").glob("*.png")
                    if p.stem in keep)
 
+    # Two guards, deliberately.
+    #   per-band  -- guard each band at its own width. Uses the most pixels for that band, but the
+    #                8 m and 32 m figures then come from DIFFERENT pixel populations, so the decay
+    #                across widths is not comparable.
+    #   common    -- guard once at the WIDEST band and report every band on that one subset. Fewer
+    #                pixels, but the decay is comparable because the population is fixed.
+    # Quote the common-guard column for any statement about how the rate CHANGES with width.
+    WIDEST = max(BANDS)
     acc = {(a, b): {s: {"n": 0, **{f"beyond{w:g}": 0 for w in BANDS},
                         **{f"guard_n{w:g}": 0 for w in BANDS},
                         **{f"guard_beyond{w:g}": 0 for w in BANDS},
+                        "common_n": 0, **{f"common_beyond{w:g}": 0 for w in BANDS},
                         "sizes": []} for s in args.seeds} for a, b in pairs}
     n_scored = n_skipped = 0
     for p in tiles:
@@ -180,11 +189,14 @@ def main() -> int:
                     continue
                 c = acc[(a, b)][s]
                 c["n"] += int(e.sum())
+                common = e & (ed > WIDEST)
+                c["common_n"] += int(common.sum())
                 for w in BANDS:
                     c[f"beyond{w:g}"] += int((e & (d >= w)).sum())
                     g = e & (ed > w)          # cannot be changed by anything outside the tile
                     c[f"guard_n{w:g}"] += int(g.sum())
                     c[f"guard_beyond{w:g}"] += int((g & (d >= w)).sum())
+                    c[f"common_beyond{w:g}"] += int((common & (d >= w)).sum())
                 c["sizes"].extend(component_sizes(e, px_area).tolist())
 
     out = {"split": args.split, "cell": args.cell, "seeds": args.seeds, "bands_m": list(BANDS),
@@ -205,6 +217,9 @@ def main() -> int:
                 **{f"guarded_beyond{w:g}_pct":
                    100 * c[f"guard_beyond{w:g}"] / max(c[f"guard_n{w:g}"], 1) for w in BANDS},
                 **{f"guarded_n{w:g}": c[f"guard_n{w:g}"] for w in BANDS},
+                "common_guard_n": c["common_n"],
+                **{f"common_guarded_beyond{w:g}_pct":
+                   100 * c[f"common_beyond{w:g}"] / max(c["common_n"], 1) for w in BANDS},
                 "n_components": int(sizes.size),
                 "median_component_m2": float(np.median(sizes)) if sizes.size else 0.0,
                 "largest_component_m2": float(sizes[0]) if sizes.size else 0.0,
@@ -225,10 +240,13 @@ def main() -> int:
         b8 = np.mean([r["beyond8_pct"] for r in rows])
         g8 = np.mean([r["guarded_beyond8_pct"] for r in rows])
         g32 = np.mean([r["guarded_beyond32_pct"] for r in rows])
+        c8 = np.mean([r["common_guarded_beyond8_pct"] for r in rows])
+        c32 = np.mean([r["common_guarded_beyond32_pct"] for r in rows])
         s1k = np.mean([r["share_mass_in_components_over_1000m2"] for r in rows])
         med = np.mean([r["median_component_m2"] for r in rows])
         print(f"  {key:26s} n={n:>12,.0f}  >8m {b8:5.1f}% (guarded {g8:5.1f}%)  "
-              f"guarded >32m {g32:5.1f}%  mass in >1000 m2 comps {100*s1k:5.1f}%  "
+              f"guarded >32m {g32:5.1f}%  [common guard: >8m {c8:5.1f}% >32m {c32:5.1f}%]  "
+              f"mass in >1000 m2 comps {100*s1k:5.1f}%  "
               f"median comp {med:8.1f} m2")
     print(f"wrote {f}")
     return 0
