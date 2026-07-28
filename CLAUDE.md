@@ -91,6 +91,13 @@ one axis because the fixture's only seam ran the other way; a denominator fix wa
 that recomputed it rather than calling it. So: break the thing the gate guards, watch it fail, revert.
 See "Gate discipline" below.
 
+**Use adversarial subagents on this project, despite the general guidance against it.** Anthropic's
+Opus 5 notes say not to delegate verification. Here it earns its cost: on 2026-07-28 independent
+checkers refuted a claim about which direction the class confusion ran, found a contact denominator
+wrong by a factor of two, and identified four gates that could not fail. The pattern is that the first
+interpretation of a result is usually wrong, and a checker that re-derives from raw data rather than
+reading the code is what catches it. Give them a different path to the answer, not the same one.
+
 **Quote before asserting.** If you say a document says something, quote the line. If you say a number
 reproduces, run `scripts/analysis/verify_narrative_numbers.py`. Several claims that session were
 confidently wrong about files open in the same conversation.
@@ -206,6 +213,13 @@ tile-edge guard lived in `main()` while the self-test only called helpers; a con
 one axis because the fixture's only seam ran the other way; a denominator fix was asserted by a line
 that recomputed it rather than calling it. So: break the thing the gate guards, watch it fail, revert.
 See "Gate discipline" below.
+
+**Use adversarial subagents on this project, despite the general guidance against it.** Anthropic's
+Opus 5 notes say not to delegate verification. Here it earns its cost: on 2026-07-28 independent
+checkers refuted a claim about which direction the class confusion ran, found a contact denominator
+wrong by a factor of two, and identified four gates that could not fail. The pattern is that the first
+interpretation of a result is usually wrong, and a checker that re-derives from raw data rather than
+reading the code is what catches it. Give them a different path to the answer, not the same one.
 
 **Quote before asserting.** If you say a document says something, quote the line. If you say a number
 reproduces, run `scripts/analysis/verify_narrative_numbers.py`. Several claims that session were
