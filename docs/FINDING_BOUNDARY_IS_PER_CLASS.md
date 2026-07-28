@@ -108,6 +108,29 @@ That is whole-parcel misassignment: the outline was drawn correctly and the fiel
 wrong type — or the field genuinely could be either. It is not an edge-precision problem, and no
 amount of more careful tracing addresses it.
 
+## Independent confirmation, from adjacency rather than distance
+
+Found 2026-07-28 by a verifier auditing a different script, so it is arrived at from a direction that
+shares no arithmetic with the tables below.
+
+The two grassland classes **barely touch each other on the ground.** They share 6,578 four-neighbour
+boundary contacts, which is **1.59% of all foreground-to-foreground contacts** in the scored tiles.
+And only **6.13% of semi-natural reference pixels lie within 8 m of any grassland pixel** — yet
+**39.15% of semi-natural pixels are predicted grassland.**
+
+**Therefore at least 84.3% of the semi-natural-called-grassland pixels are more than 8 m from the
+nearest grassland pixel.** They are not near the other class at all.
+
+The single largest error mode in this study is **bulk regional misclassification** — whole areas of
+semi-natural ground called grassland — and not confusion across a shared edge. That is the same
+conclusion as the distance tables, reached without using distance-to-any-boundary at all.
+
+**It also constrains how the pair ratio may be described.** The 2.10x reported for this pair is a
+CO-AREA null: it asks whether the pair fails more than its share of the scene predicts. An adjacency
+null — how much the two classes actually touch — gives **29.3x**. The co-area figure is the
+conservative of the two and is the one to report, but it must be called a co-area null and not
+"what area predicts", because area is not the mechanism.
+
 ## The stronger evidence: error rate against distance, per class
 
 The trimap gain is one summary of a curve. The curve itself is in the same JSON, thirteen distance
