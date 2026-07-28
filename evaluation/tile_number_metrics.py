@@ -10,11 +10,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, List, Sequence, Set
 
+
+# The untagged split directories belong to the WITHDRAWN random split (1,706 / 219 / 218 tiles).
+SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 REP_SUFFIX_RE = re.compile(r"_rep\d+$", re.IGNORECASE)
 
@@ -226,13 +230,13 @@ def main() -> None:
     )
 
     # ---- D) Biodiversity split (no replication) ----
-    biodiv_split_root = data_root / "biodiversity_split"
+    biodiv_split_root = data_root / f"split_{SPLIT_TAG}"
     biodiv_train = count_paired_dir(name="Biodiversity train", root=biodiv_split_root / "train")
     biodiv_val = count_paired_dir(name="Biodiversity val", root=biodiv_split_root / "val")
     biodiv_test = count_paired_dir(name="Biodiversity test", root=biodiv_split_root / "test")
 
     # ---- E) Combined pretraining pool (Biodiversity + OEM) ----
-    combined_root = data_root / "biodiversity_oem_combined"
+    combined_root = data_root / f"oem_combined_{SPLIT_TAG}"
     combined_train = count_paired_dir(name="Combined pretrain train", root=combined_root / "train")
     combined_val = count_paired_dir(name="Combined pretrain val", root=combined_root / "val")
     combined_test = count_paired_dir(name="Combined pretrain test", root=combined_root / "test")

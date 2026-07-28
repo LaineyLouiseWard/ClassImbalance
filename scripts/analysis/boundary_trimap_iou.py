@@ -39,7 +39,7 @@ from scipy import ndimage
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.analysis.seed_disagreement import (  # noqa: E402
-    STUDENT_CLASSES, C, GSD_M, DIST_BIN_EDGES_PX, DIST_BIN_EDGES_M,
+    STUDENT_CLASSES, C, DIST_BIN_EDGES_PX, DIST_BIN_EDGES_M,
     boundary_distance, load_mask, load_seed_stack, list_val_tiles, seed_dir,
     tile_uncertainty,
 )
@@ -138,12 +138,16 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     biou_inter = np.zeros((nD, len(seeds), C), dtype=np.int64)
     biou_union = np.zeros((nD, len(seeds), C), dtype=np.int64)
 
+    n_scored = 0
     for iid in img_ids:
         stack = load_seed_stack(softmax_root, seeds, cell, iid)   # (N,C,H,W) float32
         mask = load_mask(mask_dir, iid)
         if mask.shape != stack.shape[-2:]:
             raise ValueError(f"shape mismatch {iid}: mask {mask.shape} vs {stack.shape}")
         dist = boundary_distance(mask, iid)
+        if not np.isfinite(dist[mask != 0]).any():
+            continue    # no GT boundary: EXCLUDED, as in boundary_rate_ratio.per_tile_counts
+        n_scored += 1
         ens_pred = stack.mean(axis=0).argmax(axis=0).astype(np.int64)
         seed_preds = stack.argmax(axis=1).astype(np.int64)        # (N,H,W)
         fg = mask != 0
@@ -194,6 +198,15 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     seed_curve = np.array([[ [iou_from_conf(conf_seed[si, ri])[STUDENT_CLASSES[k]]
                               for k in FOREGROUND] for ri in range(nR)]
                             for si in range(len(seeds))])          # (nSeed, nR, 5)
+    # Every tile can be boundary-free -- on a `--mask-dir` subset of ireland2, all of them are.
+    # `list_val_tiles` only guards the dump/mask intersection, so without this the run returns
+    # NaN at every radius and exits 0. `boundary_rate_ratio.py` has the matching guard; this
+    # path did not, which is the shape of defect C7 in the pre-submission ledger.
+    if n_scored == 0:
+        raise SystemExit(
+            f"no scorable tiles for cell {cell}: all {len(img_ids)} tiles lack a GT boundary, "
+            f"so every distance stratum is empty. Check --mask-dir.")
+
     seed_macro = np.nanmean(seed_curve, axis=2)                    # (nSeed, nR)
 
     radii_m = [(-0.5 if N < 0 else N) for N in RADII_M]            # -0.5 marks the 'none' baseline slot
@@ -201,7 +214,8 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     cls_mean = np.nanmean(seed_curve, axis=0)                      # (nR, 5)
     cls_std = np.nanstd(seed_curve, axis=0)                        # (nR, 5)
     recovery = {
-        "cell": cell, "n_seeds": len(seeds), "n_tiles": len(img_ids),
+        "cell": cell, "n_seeds": len(seeds), "n_tiles": n_scored,
+        "n_tiles_boundary_free_excluded": len(img_ids) - n_scored,
         "radii_px": RADII_PX, "radii_m": radii_m,
         "ensemble_iou_per_radius": ens_curve,
         "per_seed_class_iou_mean": {STUDENT_CLASSES[FOREGROUND[j]]: cls_mean[:, j].tolist()
@@ -222,7 +236,12 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
         biou_seed = np.where(biou_union > 0, biou_inter / np.maximum(biou_union, 1), np.nan)  # (nD,nSeed,C)
     biou_fg = biou_seed[:, :, FOREGROUND]                          # (nD, nSeed, 5)
     boundary_iou = {
-        "d_px": BIOU_D_PX, "d_m": [d * GSD_M for d in BIOU_D_PX], "headline_d_px": 3,
+        # PIXELS, not metres. boundary_bands_multi runs an UNSAMPLED EDT, so d is a pixel
+        # radius. A `d_m = d * GSD_M` field was emitted here until 2026-07-28; it is right on
+        # the inland site (0.500 m/px) and wrong on the uplands (0.515 x 0.641 m), where the
+        # band is also anisotropic. Cheng et al. define Boundary IoU in pixels, so pixels are
+        # reported and no ground-distance equivalent is offered.
+        "d_px": BIOU_D_PX, "headline_d_px": 3,
         "standard_iou_mean": {STUDENT_CLASSES[FOREGROUND[j]]: float(np.nanmean(std_iou_seed[:, j]))
                               for j in range(len(FOREGROUND))},
         "standard_iou_std": {STUDENT_CLASSES[FOREGROUND[j]]: float(np.nanstd(std_iou_seed[:, j]))
@@ -273,18 +292,22 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
         "contact_zone_vs_interior": {"statistic": "contact-zone ratio, NOT rho (rho is the 8 m band in boundary_rate_ratio.py)",
                                  "contact_max_m": BND_MAX_M, "interior_min_m": INT_MIN_M,
                                  "per_class": bvi},
-        # PER-SEED boundary and interior rates, and the rho each seed implies. This is what carries
-        # the uncertainty: a spread over training runs, which is the only interval this study
-        # reports (METHODS §7). The ensemble figures above stay as the registered point estimate;
-        # they are NOT the centre of this spread, because rho is a ratio and the ensemble removes
-        # more interior error than boundary error. Report the gap rather than hiding it.
+        # PER-SEED boundary and interior rates, and the CONTACT-ZONE RATIO each seed implies. It is
+        # NOT rho: the near band here is 1.5 m, not the registered 8 m, so this key carried the
+        # wrong statistic's name until 2026-07-28 — exactly what the note above forbids. This is
+        # what carries the uncertainty: a spread over training runs, which is the only interval
+        # this study reports (METHODS §7). The ensemble figures above stay as the registered point
+        # estimate; they are NOT the centre of this spread, because the ratio is a ratio and the
+        # ensemble removes more interior error than boundary error. Report the gap, do not hide it.
         "per_seed": {
             "seeds": list(seeds),
+            "contact_max_m": BND_MAX_M,
+            "interior_min_m": INT_MIN_M,
             "boundary_error_rate": [agg_rate(err_e_seed[si], err_n_seed[si], bnd_bins)[0]
                                     for si in range(len(seeds))],
             "interior_error_rate": [agg_rate(err_e_seed[si], err_n_seed[si], int_bins)[0]
                                     for si in range(len(seeds))],
-            "rho": [
+            "contact_zone_ratio": [
                 (agg_rate(err_e_seed[si], err_n_seed[si], bnd_bins)[0]
                  / agg_rate(err_e_seed[si], err_n_seed[si], int_bins)[0])
                 if agg_rate(err_e_seed[si], err_n_seed[si], int_bins)[0] > 0 else float("nan")
@@ -299,7 +322,8 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
 
     # --- console keystone summary ---
     base = ens_curve[0]            # N=-1, no exclusion
-    print(f"\n[{cell}]  trimap IoU recovery (ensemble argmax, {len(seeds)} seeds, {len(img_ids)} tiles)")
+    print(f"\n[{cell}]  trimap IoU recovery (ensemble argmax, {len(seeds)} seeds, {n_scored} tiles; "
+          f"{len(img_ids) - n_scored} boundary-free tiles excluded)")
     print(f"  {'class':12s} {'baseline':>9s} {'-1px':>7s} {'-2px':>7s} {'-4px':>7s} {'-8px':>7s}  recovery(0->8px)")
     cols = {-1: 0, 1: RADII_M.index(0.5), 2: RADII_M.index(1.0), 4: RADII_M.index(2.0), 8: RADII_M.index(4.0)}
     for name in [STUDENT_CLASSES[k] for k in HARD] + ["macro_fg"]:

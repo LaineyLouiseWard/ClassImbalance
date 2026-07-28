@@ -19,7 +19,7 @@ Two views, mirroring the spatial-autocorrelation caveat (Meyer 2019, Mannel 2011
     actually use to disambiguate the pair.
 
 DEM: data/dem/Copernicus_DSM_COG_10_*.tif (4 one-degree GLO-30 cells covering the SW-Ireland tiles).
-Ireland-only: the 219 Irish validation tiles (data/biodiversity_split/val/{images,masks}).
+Ireland-only: the 173 Irish validation tiles (data/split_$SPLIT_TAG/val/{images,masks}).
 
 Output: analysis/label_ceiling/terrain_separability.json (+ printed summary).
 Run: PYTHONPATH=. python scripts/analysis/terrain_separability.py
@@ -133,8 +133,13 @@ def main() -> None:
     sE, gE = np.concatenate(semi_e), np.concatenate(grass_e)
     sS, gS = np.concatenate(semi_s), np.concatenate(grass_s)
     wt_elev_d = np.array(wt_elev_d); wt_slope_d = np.array(wt_slope_d)
-    # between-tile: one abs-height mean per tile, semi vs grass tile-level
-    bt_d = cohens_d(np.array(tile_mean_semi), np.array(tile_mean_grass))
+    # PAIRED, one pair per tile: the two lists are appended together inside the same `if`, so tile i
+    # contributes both entries. cohens_d treats its arguments as independent samples, which put the
+    # mean within-tile offset in metres over the pooled SD of tile-level ABSOLUTE elevation across
+    # SW Ireland -- neither a between-tile effect nor a within-tile one. Cohen's d for paired data
+    # is the mean difference over the SD of the differences.
+    diffs = np.array(tile_mean_semi) - np.array(tile_mean_grass)
+    paired_d = float(diffs.mean() / diffs.std(ddof=1)) if len(diffs) >= 2 and diffs.std(ddof=1) > 0 else 0.0
 
     out = {
         "dem": [Path(f).name for f in dem_files],
@@ -148,7 +153,7 @@ def main() -> None:
             "within_tile_cohens_d_iqr": [round(float(np.percentile(wt_elev_d, 25)), 3),
                                           round(float(np.percentile(wt_elev_d, 75)), 3)],
             "within_tile_frac_semi_higher": round(float(np.mean(wt_elev_d > 0)), 2),
-            "between_tile_cohens_d": round(bt_d, 3),
+            "paired_tile_mean_offset_d": round(paired_d, 3),
             "semi_mean_m": round(float(sE.mean()), 1), "grass_mean_m": round(float(gE.mean()), 1),
         },
         "slope_deg": {
@@ -157,7 +162,9 @@ def main() -> None:
             "semi_mean_deg": round(float(sS.mean()), 2), "grass_mean_deg": round(float(gS.mean()), 2),
         },
     }
-    (root / "analysis/label_ceiling/terrain_separability.json").write_text(json.dumps(out, indent=2))
+    p = root / "analysis/label_ceiling/terrain_separability.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
 
 

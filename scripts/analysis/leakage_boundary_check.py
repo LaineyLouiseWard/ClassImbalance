@@ -1,5 +1,24 @@
 #!/usr/bin/env python
 """
+================================================================================
+RETIRED 2026-07-28. DO NOT RUN. DO NOT CITE ANY OUTPUT OF THIS SCRIPT.
+================================================================================
+Both of its inputs belong to the WITHDRAWN campaign. The predictions it reads
+(`analysis/test_softmax`) were moved to `_archive/withdrawn_campaign_2026-07-28/`.
+The training footprints it re-stratifies by come from `data/biodiversity_split`,
+which is NOT archived and must not be -- it is the live raster store that
+`data/split_f1` symlinks into. What is withdrawn is that directory's train/val/test
+MEMBERSHIP, which is the old random-by-tile split, so "covered by a training tile"
+here means covered by one of the withdrawn split's 1,706. Its cached exposure maps
+and its `analysis/leakage_check/` JSONs are withdrawn too, and its sanity gate
+silently SKIPS when the reference JSON is absent, so it cannot fail. It is kept
+only as a record of how the leakage was first quantified.
+
+The leakage evidence for the paper comes from `artifacts/spatial_split_manifest_f1.json`
+(the spatially blocked split built by `scripts/data_prep/build_spatial_split.py`),
+not from this file.
+================================================================================
+
 Does the boundary / label-quality-ceiling result survive the train-test tile overlap?
 
 The Biodiversity tiles are chipped on a 50% stride (256 x 256 m footprints on a 128 m grid), and
@@ -392,7 +411,23 @@ def report(res: dict) -> None:
     print("   " + "  ".join(f"{k}m={100*v:.2f}" for k, v in list(tm.items())[:7]))
 
 
+RETIRED_MSG = """\
+leakage_boundary_check.py is RETIRED as of 2026-07-28 and will not run.
+
+Its inputs belong to the withdrawn campaign and are now under _archive/:
+  predictions          analysis/test_softmax
+  training footprints  data/biodiversity_split
+Its outputs (analysis/leakage_check/) must not be cited, and its sanity gate skips
+rather than failing when the reference JSON is missing, so it cannot detect its own
+inputs being wrong.
+
+The leakage evidence for the paper comes from artifacts/spatial_split_manifest_f1.json,
+built by scripts/data_prep/build_spatial_split.py."""
+
+
 def main():
+    raise SystemExit(RETIRED_MSG)
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default=None, help="restrict to one run, e.g. val:stage3_clsbal")
     ap.add_argument("--out-dir", default="analysis/leakage_check")

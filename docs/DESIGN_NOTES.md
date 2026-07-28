@@ -40,6 +40,33 @@ underperformed that control, and no temperature or loss-weight setting recovered
 is therefore not part of the pipeline and is reported as a negative result. Self-distillation was
 tested the same way, with the same outcome.
 
+## Boundary-free tiles are excluded from every boundary analysis, not only from rho
+
+**Decided 2026-07-28, recorded because it widens a pre-registered convention.**
+
+The registration excludes tiles with no ground-truth boundary from rho, on the grounds that the
+near-boundary set is empty by construction there and any error the tile holds can only depress the
+ratio. `boundary_rate_ratio.py` has always done this. `boundary_trimap_iou.py` did not: a
+single-class tile returns an all-infinite distance array, which `np.digitize` places in the deepest
+interior bin, so the tile's entire foreground was counted as interior.
+
+The exclusion is now applied at the top of that script's tile loop, which means it also removes
+those tiles from the trimap IoU recovery curve and from Boundary-IoU — two analyses the registration
+never named. That is deliberate: a tile with no boundary contributes to a boundary-tolerance curve
+only by flattening it, and scoring the same ground under two different tile populations in one paper
+is worse than widening one convention and saying so.
+
+**What it changes.** Test A is unaffected (0 of 294 tiles). Test B loses 19 of 191 tiles, all
+`ireland2`, holding 4,980,736 foreground pixels, or 16.17% of Test B foreground. Its interior (>8 m)
+denominator falls from 23,968,766 to 18,988,030, a factor of 1.2623, so every Test B interior rate
+this script reports rises by that factor. Train loses one tile (`biodiversity_0808`, 0.14%). These
+counts match `artifacts/boundary_band_denominators.json` exactly.
+
+**Also fixed at the same time:** the per-seed JSON key `rho` in that script held the 1.5 m
+contact-zone ratio, not the 8 m registered statistic, and is renamed `contact_zone_ratio`; the
+`d_m` field on the Boundary-IoU block converted a pixel radius at a hard-coded 0.5 m and is dropped,
+since the uplands are 0.515 x 0.641 m and the band there is anisotropic.
+
 ## Conventions
 
 - **Class order:** Background (0), Forest (1), Grassland (2), Cropland (3), Settlement (4),

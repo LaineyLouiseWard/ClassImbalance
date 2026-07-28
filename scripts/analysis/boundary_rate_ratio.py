@@ -175,10 +175,16 @@ def self_test() -> int:
                              ("fine landscape   (band = 40% of area)", 0.40)):
         counts, groups = {}, {}
         for i in range(120):
-            n = 262144
+            # Ten tiles are an order of magnitude smaller AND carry NO boundary concentration.
+            # Pooling weights them by pixels (0.9% of the total) and still recovers TRUE_RHO;
+            # an unweighted mean of per-tile ratios weights them by tile (8.3%) and lands near
+            # 5.58. Without this asymmetry the two estimators agree and the gate cannot fail.
+            small = i < 10
+            n = 26214 if small else 262144
+            rho_i = 1.0 if small else TRUE_RHO
             n_near = int(n * band_frac)
             n_far = n - n_near
-            e_near = rng.binomial(n_near, min(TRUE_RHO * R_FAR, 1.0))
+            e_near = rng.binomial(n_near, min(rho_i * R_FAR, 1.0))
             e_far = rng.binomial(n_far, R_FAR)
             t = f"tile_{i:04d}"
             counts[t] = (e_near, n_near, e_far, n_far)
@@ -229,9 +235,27 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory() as td:
         _I.fromarray(np.full((64, 64), 2, np.uint8)).save(Path(td) / "biodiversity_9001.png")
         _I.fromarray(m).save(Path(td) / "biodiversity_9002.png")
+        _I.fromarray(m).save(Path(td) / "ireland1_9003.png")
         got = per_tile_counts(Path(td), lambda tid: np.full((64, 64), 2, np.uint8))
     good = "biodiversity_9001" not in got and "biodiversity_9002" in got
     print(f"  boundary-free tile excluded, two-class tile kept: {sorted(got)}  "
+          f"[{'ok' if good else 'FAIL'}]")
+    ok &= good
+
+    # (a)-(c) re-evaluate the band expression in this test body, so they check the arithmetic and
+    # not the function the pipeline calls. These go THROUGH per_tile_counts on the same rasters.
+    # Inland, 0.5 m/px: strict `< 8.0 m` keeps 16 columns either side of the one-pixel-wide
+    # boundary pair, so 32 columns x 64 rows. `<=` gives 34 columns, a 16 m band gives all 64.
+    n_near_inland = got["biodiversity_9002"][1]
+    good = n_near_inland == 2048
+    print(f"  per_tile_counts n_near, inland: {n_near_inland} px (expect 2048 = 32 x 64)  "
+          f"[{'ok' if good else 'FAIL'}]")
+    ok &= good
+    # Same raster, upland tile id: 0.641 m/px in x keeps 13 columns either side, 26 x 64. Dropping
+    # the tile id from the boundary_distance call falls back to 0.5 m and gives 2048 here.
+    n_near_upland = got["ireland1_9003"][1]
+    good = n_near_upland == 1664
+    print(f"  per_tile_counts n_near, ireland1: {n_near_upland} px (expect 1664 = 26 x 64)  "
           f"[{'ok' if good else 'FAIL'}]")
     ok &= good
 
