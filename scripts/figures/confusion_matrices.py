@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 import matplotlib as mpl
 
 def find_repo_root(start: Path) -> Path:
@@ -52,7 +53,13 @@ def _refuse_withdrawn(p):
             f"  or pass --skip {_P(__file__).stem} to build_all_figures.py.")
 # ---------------------------------------------------------------------------------------------
 
-EVAL_DIR = repo_root / "analysis/eval_219"
+# RE-POINTED 2026-07-28 at the current campaign. `analysis/confusion/` is written by
+# scripts/analysis/pooled_confusion.py, which sums the per-seed argmax confusion over the ten seeds
+# on the DEDUPLICATED scoring subset -- the same 90 Test A tiles the reported IoU is pooled over, so
+# this figure and the accuracy table are censuses of the same ground. The guard below stays: it is
+# what stops the withdrawn path being reachable again by an edit that looks harmless.
+SPLIT = os.environ.get("FIG_SPLIT", "test")
+EVAL_DIR = repo_root / "analysis/confusion"
 _refuse_withdrawn(EVAL_DIR)
 CELL_BASELINE = "stage1_baseline"
 CELL_FULL = "stage3_clsbal"
@@ -68,11 +75,13 @@ def aggregate_confusion(cell: str):
     Produced by scripts/analysis/eval_on_dumps_219.py from the per-seed softmax dumps with
     the Irish-mask join (ignore_index=0). Run that first if the file is missing."""
     import json
-    cm_path = EVAL_DIR / f"confusion_{cell}.npy"
+    cm_path = EVAL_DIR / f"confusion_{SPLIT}_{cell}.npy"
     if not cm_path.exists():
-        raise FileNotFoundError(f"{cm_path} missing -- run scripts/analysis/eval_on_dumps_219.py")
+        raise FileNotFoundError(
+            f"{cm_path} missing -- run scripts/analysis/pooled_confusion.py "
+            f"--split {SPLIT} --cell {cell}")
     total = np.load(cm_path).astype(np.int64)
-    n_seeds = json.load(open(EVAL_DIR / "per_class_iou.json"))[cell]["n_seeds"]
+    n_seeds = len(json.loads((EVAL_DIR / f"confusion_{SPLIT}_{cell}.json").read_text())["seeds"])
     return total, n_seeds
 
 # ---- style: match your other figs ----

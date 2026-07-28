@@ -241,6 +241,33 @@ contrast if quoted alone.
 falls. But the arm is closer to uninformative than to passed, and it must be reported that way, with
 the seed control printed beside it.
 
+**Reproduced on the deduplicated scoring subset, 2026-07-28 (Slurm 652577), so this no longer rests
+on an ad hoc run.** 160 runs of `boundary_rate_ratio.py`, one per cell x seed x band x tile
+population, through `narrative_numbers.py`:
+
+| band | | across the four CELLS | across the ten SEEDS |
+|---|---|---|---|
+| 8 m | near-boundary rate | CV 3.76% | **CV 3.70%** |
+| 8 m | interior rate | CV 13.89% | **CV 14.21%** |
+| 1 m | near-boundary rate | CV 1.94% | **CV 1.89%** |
+| 1 m | interior rate | CV 9.17% | **CV 9.31%** |
+
+Same conclusion on the 90-tile deduplicated population as on all 294 tiles. The cell spread is seed
+noise on either population.
+
+**rho on the deduplicated subset, per seed, ten seeds:**
+
+| cell | rho at 1 m | rho at 8 m |
+|---|---|---|
+| baseline | 3.692 +/- 0.329 | **2.137** +/- 0.304 |
+| transfer only | 3.624 +/- 0.512 | 2.062 +/- 0.405 |
+| sampler only | 3.681 +/- 0.308 | 2.076 +/- 0.294 |
+| full | 3.436 +/- 0.238 | 1.903 +/- 0.168 |
+
+Against 2.28 at 8 m on all 294 tiles. **rho and the reported IoU are now censuses of the same 90
+tiles**, which resolves the population asymmetry §12 flags. Report the deduplicated figure and say
+which population it is.
+
 **Two things this is not.** The interior rate does not *fall* — the full model has the highest
 interior rate of the four (9.69% against baseline 8.78%). The registered wording is about
 variability, and that is what is claimed. And it is a **necessary condition, not a diagnosis**: every
