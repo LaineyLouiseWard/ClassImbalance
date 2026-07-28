@@ -106,14 +106,15 @@
 }
 
 % Teacher-pixel SHARE badges (HARD array; _gen_mapping_values.py), share > 3%.
-%   Unknown 7.6, Rangeland 10.0, Tree 9.0, Water 3.6, Agriculture 66.8.
+% REGROUNDED 2026-07-26 on the spatially blocked training split; refreshed here 2026-07-28.
+%   Unknown 1.7, Bareland 0.4, Rangeland 7.3, Developed 0.9, Road 1.0, Tree 9.7, Water 1.8,
+%   Agriculture 76.3, Building 1.0.  Only three now clear the 3% rule, so the Unknown and Water
+%   badges are dropped rather than shown below their own threshold.
 % Placed immediately LEFT of each chip, vertically centred on its OWN row, so the share is
 % unambiguously tied to its OEM class (not the chip above) and never hits the arrow start (right side).
-\node[badge, anchor=east] at ([xshift=-4pt]oem0.west) {7.6\%};
-\node[badge, anchor=east] at ([xshift=-4pt]oem2.west) {10.0\%};
-\node[badge, anchor=east] at ([xshift=-4pt]oem5.west) {9.0\%};
-\node[badge, anchor=east] at ([xshift=-4pt]oem6.west) {3.6\%};
-\node[badge, anchor=east, font=\scriptsize\bfseries] at ([xshift=-4pt]oem7.west) {66.8\%};
+\node[badge, anchor=east] at ([xshift=-4pt]oem2.west) {7.3\%};
+\node[badge, anchor=east] at ([xshift=-4pt]oem5.west) {9.7\%};
+\node[badge, anchor=east, font=\scriptsize\bfseries] at ([xshift=-4pt]oem7.west) {76.3\%};
 
 % The three rows whose grounded target differs from naive name-based matching (Bareland,
 % Water, Agriculture) are marked by the thick black arrow outline below; the cryptic
@@ -139,26 +140,28 @@
 
 % --- argmax arrows: OEM i -> student argmax, coloured the TARGET student colour. ---
 % (oem, student-target, target-colour, conf%, changed?)
-%   Unknown->Background 99.1 ; Bareland->Semi 40.7 CHG ; Rangeland->Grass 53.7 ;
-%   Developed->Settle 58.7 ; Road->Settle 56.5 ; Tree->Forest 74.8 ;
-%   Water->Grass 57.6 CHG ; Agriculture->Grass 82.1 CHG ; Building->Settle 84.6.
-% Black halo first for the 3 changed rows, then the coloured arrow on top.
-\foreach \oi/\sj in {1/5, 6/2, 7/2}{
+% REFRESHED 2026-07-28 from _gen_mapping_values.py on the regrounded teacher confusion.
+%   Unknown->Background 98.4 ; Bareland->Grass 55.7 CHG ; Rangeland->Grass 56.7 ;
+%   Developed->Settle 57.9 ; Road->Settle 52.2 ; Tree->Forest 79.9 ;
+%   Water->IGNORED (see below) ; Agriculture->Grass 81.8 CHG ; Building->Settle 88.3.
+% Bareland moved from Semi-natural to Grassland in the 2026-07-26 regrounding, so NO OEM class now
+% maps to Semi-natural or to Cropland.
+% Black halo first for the changed rows, then the coloured arrow on top.
+\foreach \oi/\sj in {1/2, 6/0, 7/2}{
   \draw[->, line width=3.4pt, black, rounded corners]
     (oem\oi.east) to[out=0,in=180] (st\sj.west);
 }
 % Confidence labels are anchored NEAR THE SOURCE (pos=0.16) so each sits beside its own OEM
 % row and they fan out vertically instead of stacking at the convergence point.
 \foreach \oi/\sj/\col/\cf/\chg in {%
-  0/0/cBack/99.1/0,
-  1/5/cSemi/40.7/1,
-  2/2/cGrass/53.7/0,
-  3/4/cSettle/58.7/0,
-  4/4/cSettle/56.5/0,
-  5/1/cForest/74.8/0,
-  6/2/cGrass/57.6/1,
-  7/2/cGrass/82.1/1,
-  8/4/cSettle/84.6/0%
+  0/0/cBack/98.4/0,
+  1/2/cGrass/55.7/1,
+  2/2/cGrass/56.7/0,
+  3/4/cSettle/57.9/0,
+  4/4/cSettle/52.2/0,
+  5/1/cForest/79.9/0,
+  7/2/cGrass/81.8/1,
+  8/4/cSettle/88.3/0%
 }{
   \ifnum\chg=1
     \draw[arrchg, \col, rounded corners] (oem\oi.east) to[out=0,in=180]
@@ -168,6 +171,15 @@
       node[conf, pos=0.16, text=black]{\cf\%} (st\sj.west);
   \fi
 }
+
+% Water is drawn separately because it is the one row where the shipped mapping is NOT the argmax of
+% the teacher confusion. The target taxonomy has no water class, so OEM Water is mapped to Background
+% and IGNORED during pre-training (geoseg/taxonomy.py). Its argmax would have been Grassland at
+% 75.2%, and drawing that arrow -- as this figure did until 2026-07-28 -- shows a mapping the model
+% was never trained with. A confidence percentage would be meaningless here, so the label says what
+% the row actually does.
+\draw[arrchg, cBack, rounded corners, densely dashed] (oem6.east) to[out=0,in=180]
+  node[conf, pos=0.16, text=black]{ignored} (st0.west);
 
 % Panel-A title
 \node[hdr, anchor=south] at ($(oem0.north)!0.5!(st0.north)+(0,0.55)$)
