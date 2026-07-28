@@ -62,7 +62,7 @@ related utilities) remains in the tree for reference but is excluded from the sh
 - **Foreground mIoU:** `np.nanmean(iou[1:])` — the five foreground classes only (Background
   excluded). Used for checkpoint selection and every reported metric (`evaluation/compute_metrics.py`).
 - **Shipped sampler (clsbal):** class-balanced frequency-only sampling (Kang 2020), built by
-  `scripts/data_prep/build_clsbal_sampler.py` → `artifacts/sampler_weights_clsbal.tsv` (q=1.0,
+  `scripts/data_prep/build_clsbal_sampler.py` → `artifacts/sampler_weights_clsbal_f1.tsv` (q=1.0,
   settlement target 1.27; realised on the current split ≈1.27× settlement, ≈2.84× semi-natural).
 - **OEM taxonomy grounding:** an OEM-trained model's confusion on the Biodiversity training set
   grounds the OEM→Biodiversity class mapping (`artifacts/teacher_oem_gt_confusion.npz`, committed).
@@ -70,7 +70,7 @@ related utilities) remains in the tree for reference but is excluded from the sh
 
 ## Figures
 
-**Thirteen figures** (twelve main-text + one appendix), built by
+**Seven figures** (down from thirteen; the cut list and reasons are in `docs/FIGURES.md`), built by
 `python scripts/figures/build_all_figures.py`. The authoritative figure map (content → script →
 output) is **[docs/FIGURES.md](docs/FIGURES.md)** — keep it in sync when figures change. Figures use
 stable **descriptive** names (e.g. `boundary_limited_error.pdf`); LaTeX assigns the printed numbers

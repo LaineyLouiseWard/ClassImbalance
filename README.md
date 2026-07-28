@@ -81,7 +81,7 @@ access should place files as follows:
 | OEM filtered subset | `data/openearthmap_filtered/` |
 | Stage checkpoints | `model_weights/biodiversity/<stage>/` |
 | OEM teacher weights | `pretrain_weights/` |
-| Stage 3 sampler weights (clsbal) | `artifacts/sampler_weights_clsbal.tsv` |
+| Stage 3 sampler weights (clsbal) | `artifacts/sampler_weights_clsbal_f1.tsv` |
 | Pre-computed evaluation outputs | `evaluation/evaluation_results/` |
 
 The RGB+NIR 4-channel ablation (the near-infrared null result discussed in the paper) is kept on the

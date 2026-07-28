@@ -198,7 +198,7 @@ PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage2b_oe
 PYTHONPATH=. python scripts/data_prep/build_clsbal_sampler.py
 ```
 Frequency-only (Kang 2020): no checkpoint needed. Defaults are q=1.0 and settlement_target=1.27.
-**Output:** `artifacts/sampler_weights_clsbal.tsv`
+**Output:** `artifacts/sampler_weights_clsbal_f1.tsv`
 
 ### B5. Stage 3 — Class-balanced sampling (final shipped model)
 ```bash
@@ -252,7 +252,7 @@ python evaluation/export_final_test_table.py
 
 ## D. Supplementary analyses (A1–A6)
 
-All analyses are derived from saved evaluation outputs and `artifacts/sampler_weights_clsbal.tsv`. No retraining.
+All analyses are derived from saved evaluation outputs and `artifacts/sampler_weights_clsbal_f1.tsv`. No retraining.
 
 ```bash
 PYTHONPATH=. python scripts/analysis/a1_minority_recall.py
@@ -261,18 +261,18 @@ PYTHONPATH=. python scripts/analysis/a3_sampler_weight_uplift.py
 PYTHONPATH=. python scripts/analysis/a4_val_test_gap.py
 PYTHONPATH=. python scripts/analysis/a5_majority_stability.py
 PYTHONPATH=. python scripts/analysis/a6_weight_gini.py
-PYTHONPATH=. python scripts/analysis/bootstrap_metrics.py --device cuda --force
 ```
 
-`bootstrap_metrics.py` runs per-tile resampling for the Figure 10 confidence intervals. It requires the
-trained stage checkpoints under `model_weights/biodiversity/` and writes `analysis/bootstrap_results.md`
-plus cached per-tile confusion matrices in `analysis/per_tile_cms/`.
+The block bootstrap was **removed on 2026-07-26**: it existed only to supply a lower bound for a
+pre-registered rho threshold that was itself retired, both test sets are complete enumerations of
+their ground rather than samples, and uncertainty in this study is per-seed and paired. The command
+that used to appear here referenced a script at a path that never existed.
 
 **Inputs:**
 - `evaluation/evaluation_results/val/stage*/confusion_matrix.csv` (A1, A2, A5)
 - `evaluation/evaluation_results/val/stage*/metrics.json` (A4, A5)
 - `evaluation/evaluation_results/test/stage3_clsbal/metrics.json` (A4)
-- `artifacts/sampler_weights_clsbal.tsv` (A3, A6)
+- `artifacts/sampler_weights_clsbal_f1.tsv` (A3, A6)
 - `artifacts/train_augmentation_list.json` (A3)
 
 ---
@@ -317,7 +317,7 @@ Raw data (Biodiversity + OEM)
  |
  +-- B1:     Stage 1 baseline
  +-- B2-B3:  Stage 2 OEM transfer (2a pre-train -> 2b finetune)
- +-- B4:     build sampler weights         -->  artifacts/sampler_weights_clsbal.tsv
+ +-- B4:     build sampler weights         -->  artifacts/sampler_weights_clsbal_f1.tsv
  +-- B5:     Stage 3 sampler
  |
  +-- C1-C2:  evaluation                    -->  evaluation/evaluation_results/
