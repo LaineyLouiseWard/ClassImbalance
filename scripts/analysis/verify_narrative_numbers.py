@@ -174,6 +174,18 @@ MK_ADJ = ("PYTHONPATH=. python scripts/analysis/class_adjacency.py --split test 
           "analysis/confusion/confusion_test_stage1_baseline.npy")
 MK_SUP = "PYTHONPATH=. python scripts/analysis/report_class_support.py"
 
+# Human names for the groups in docs/NUMBERS.md, so the headings are readable.
+CMD_NAMES = {
+    MK_NN: "Class-pair ratios, confusion summary, sampler effect, per-class contrasts",
+    MK_CONF: "Pooled confusion matrices",
+    MK_RHO: "rho and the near/interior error rates",
+    MK_SC: "The seed-only control",
+    MK_INT: "Interior error rate by class",
+    MK_GEOM: "Pair error geometry: distance and component size",
+    MK_ADJ: "Class adjacency and the contact null",
+    MK_SUP: "Class support",
+}
+
 NUMBERS = [
     # (label, quoted, tol, accessor, regenerating command)
     ("pair share of foreground error, %", 46.68, 0.02,
@@ -305,7 +317,48 @@ NUMBERS = [
 ]
 
 
+def emit_markdown() -> int:
+    """Write docs/NUMBERS.md from the ledger, so the map cannot drift from the checker.
+
+    The manuscript quotes these; this says for each one which committed file holds it and which
+    command rebuilds that file. Regenerate with `--markdown` after adding a row.
+    """
+    by_cmd: dict = {}
+    for label, quoted, tol, fn, cmd in NUMBERS:
+        try:
+            got = f"{float(fn()):.6g}"
+        except Exception:                                # noqa: BLE001
+            got = "UNRESOLVED"
+        by_cmd.setdefault(cmd, []).append((label, quoted, got))
+
+    out = ["# Where the paper's numbers come from", "",
+           "**Generated — do not hand-edit.** Rebuild with:", "",
+           "    PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py --markdown", "",
+           "Every number the write-up quotes has a row here, the committed artifact that holds it, and",
+           "the command that regenerates that artifact. To check them all at once, run the same script",
+           "with no arguments; it exits non-zero if any has drifted.", "",
+           f"{len(NUMBERS)} numbers, grouped by the command that produces them.", ""]
+    for i, (cmd, rows) in enumerate(sorted(by_cmd.items()), 1):
+        out += [f"## {i}. {CMD_NAMES.get(cmd, 'Other')}", "",
+                "```", cmd, "```", "",
+                "| number | value |", "|---|---|"]
+        for label, quoted, got in rows:
+            out.append(f"| {label} | {got} |")
+        out.append("")
+    out += ["## Not in this ledger, and why", "",
+            "- **Test B** is covered only where the narrative quotes it. If more Test B figures enter",
+            "  the paper, they need rows.",
+            "- **Per-tile illustrations** (individual parcels in the qualitative panel) come from softmax",
+            "  dumps that are not committed, being ~50 MB. They are illustrative; the component",
+            "  statistics carry the claim and those are here.", ""]
+    (ROOT / "docs/NUMBERS.md").write_text("\n".join(out))
+    print(f"wrote docs/NUMBERS.md ({len(NUMBERS)} numbers)")
+    return 0
+
+
 def main() -> int:
+    if "--markdown" in sys.argv:
+        return emit_markdown()
     ok = True
     missing = []
     print(f"{'number':52s}{'quoted':>14s}{'found':>14s}   status")

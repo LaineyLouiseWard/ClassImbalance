@@ -129,7 +129,8 @@ the only numerical authority; §1-6 of that file are superseded where they confl
 
     PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py
 
-before quoting anything and after any recomputation. It checks 64 numbers against the artifacts under
+before quoting anything and after any recomputation, and `--markdown` regenerates `docs/NUMBERS.md`,
+the readable map of which file holds which number. It checks 64 numbers against the artifacts under
 `analysis/` and `artifacts/`, and for any that cannot be resolved it prints the command that
 regenerates them. A number with no row there is a number nobody can defend — add the row when you add
 the number.

@@ -22,6 +22,7 @@ of itself.
 | **`CORRECTIONS.md`** | sentences currently in the manuscript that are wrong and must change |
 | **`DO_NOT_ADD.md`** | sentences the design forbids, and sources that do not exist or do not say what they are cited for |
 | **`FIGURES.md`** | the figure map |
+| **`NUMBERS.md`** | every number the write-up quotes, the file that holds it, and the command that rebuilds that file |
 
 ## This is the audit trail, not the design
 
