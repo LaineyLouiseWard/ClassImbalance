@@ -263,3 +263,32 @@ kind as rho — boundary error rate divided by interior error rate, dimensionles
 and not a distance. Their models erred 1.14-1.33x as often near boundaries as inside regions.
 `DO_NOT_ADD` records that both figures were recomputed from their Tables I and III and reproduce
 exactly.
+
+### 8a. Retire the contact-zone RATIO. Keep its question, report it as a plain rate.
+
+**Decided 2026-07-28**, once the sweep existed and could be compared against it.
+
+The 1.5 m / 8 m ratio in `boundary_trimap_iou.py` is not a ratio of a set to its complement: the
+1.5-8 m annulus falls in neither side, and that annulus is **71.75% of the 8 m band**. So it is two
+arbitrary slices with a hole between them — indefensible if a referee asks why, and impossible to
+compare with anything published. It is also the statistic that produced the two-things-called-rho
+confusion (interrogation element 13).
+
+**The sweep replaces it and is stronger.** Measured on seed 42, baseline, Test A:
+
+| band | 0.5 m (1 px) | 1.0 (2) | 1.5 (3) | 2.0 (4) | 4.0 (8) | 8.0 (16) |
+|---|---|---|---|---|---|---|
+| rho | 3.67 | 3.44 | **3.17** | 2.99 | 2.42 | 2.00 |
+
+Monotone, needs no chosen width, and the SHAPE is the evidence — widening the band dilutes the
+concentration with interior pixels, which is exactly what boundary-localised error predicts. The 3 px
+column is the pixel-matched comparison to Volpi's 1.24-1.33 / 1.14-1.19. (One seed, baseline cell,
+Test A: directional only, not quotable.)
+
+**Keep the question the contact-zone statistic was asking.** It exists to show that Forest and
+Settlement fall to near-zero error deep inside a region while Semi-natural retains a genuine interior
+floor — some classes are purely boundary-limited, one is not. Report that as the **per-class interior
+error rate beyond 8 m**, a plain rate. No partition to defend, no second number to confuse with rho,
+and panel (c) still makes its point.
+
+**Net:** one boundary statistic instead of two, one figure instead of two.
