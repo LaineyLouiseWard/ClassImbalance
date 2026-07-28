@@ -83,7 +83,10 @@ MIN_SITE_TILES = 4
 
 def find_repo_root() -> Path:
     for parent in Path(__file__).resolve().parents:
-        if (parent / "data").is_dir() and (parent / "artifacts").is_dir():
+        # `artifacts` and `scripts`, NOT `data`: data/ is gitignored, so keying on it made every
+        # one of these scripts raise "repo root not found" in a fresh clone -- including the ledger
+        # a reviewer would run to check the paper's numbers.
+        if (parent / "artifacts").is_dir() and (parent / "scripts").is_dir():
             return parent
     raise RuntimeError("repo root not found")
 

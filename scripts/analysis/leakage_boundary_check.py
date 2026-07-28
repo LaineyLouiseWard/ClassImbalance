@@ -91,7 +91,7 @@ RUNS = [
 
 def find_repo_root() -> Path:
     for parent in Path(__file__).resolve().parents:
-        if (parent / "data").is_dir() and (parent / "analysis").is_dir():
+        if (parent / "artifacts").is_dir() and (parent / "scripts").is_dir():  # not data/: gitignored
             return parent
     raise RuntimeError("repo root not found")
 

@@ -109,7 +109,7 @@ def find_repo_root() -> Path:
         p = p.parent
     p = Path(__file__).resolve()
     for parent in p.parents:
-        if (parent / "data").is_dir() and (parent / "scripts").is_dir():
+        if (parent / "artifacts").is_dir() and (parent / "scripts").is_dir():  # not data/: gitignored
             return parent
     raise RuntimeError("Could not find repo root")
 
