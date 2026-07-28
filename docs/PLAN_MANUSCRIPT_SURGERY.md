@@ -15,6 +15,15 @@ Line numbers are as of 2026-07-28 and will drift. Re-grep after the first edit. 
 
 ---
 
+## 0. The paper in plain words
+
+**The partner's model stays as it is. We asked whether its errors could be fixed by tackling the class
+imbalance in their data. They cannot. The errors come from two things: mistakes pile up at the edges
+between land types, and the model cannot reliably tell the two grassland types apart.**
+
+Everything below serves that. If an edit does not, it is not needed. Full version and its two
+corrections: `CORRECTIONS_PAPER_PT4.md`.
+
 ## 1. Strike the forbidden sentences (30 min, first)
 
 On `DO_NOT_ADD.md`'s list. Fastest possible rejection.
@@ -64,7 +73,7 @@ confident-learning appendix (~1 pp), `mitigation_axes`, the TTA row.
 | R3 | Boundary concentration as a **width sweep**, per seed not ensemble | rewrites §3.4 |
 | R4 | **The across-cell arm**, in relative terms, with the falsifier | new, after R3 |
 | R5 | **Is it the input?** NIR control, spectral probe narrowed, terrain as geographic shortcut | moved up from 461–465 |
-| D3 | Sharp vs gradational boundaries; why the confusion is symmetric. **Labelled interpretation** | Discussion |
+| D3 | Two kinds of boundary - real edges, and transitions with no line on the ground - and why the confusion is symmetric. **Labelled interpretation.** Plain words, not "gradational" | Discussion |
 | D4 | The disjunction, and the conditioned recommendation | Discussion |
 
 ## 5. Sentences owed to §2 and Limitations
@@ -135,3 +144,8 @@ Both in §4.4, from the completed prose pass. Neither can be fixed without chang
 2. The cut in §3 — frees the slot
 3. R1–R3 — needs ten-seed numbers
 4. R4–R5, D3–D4 — R4 needs the arm computed
+
+**Last, and in one pass together: abstract, contributions, conclusions, cover letter.** They are the
+compressed statement of everything else, so drafting them before the body is settled means drafting
+them twice. They are also where the forbidden sentences cluster and where a reviewer looks first, so
+they carry the most risk per word. Lift the abstract freeze at this point, not earlier.

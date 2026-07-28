@@ -7,11 +7,27 @@ Built 2026-07-28 from the argument map and a hostile-reviewer pass over all four
 
 ---
 
-## The one-line version
+## The paper in plain words — write this out before anything else
 
-**The standard aerial benchmarks delete the boundary band before scoring, naming label quality as the
-reason and never justifying the width. We measure it, on operational rural imagery, and find the
-hidden error is concentrated in one class pair whose transition is gradational rather than an edge.**
+**The industrial partner's model stays exactly as it is. We asked whether its errors could be fixed by
+tackling the class imbalance in their data. They cannot. The errors come from two things: mistakes
+pile up at the edges between land types, and the model cannot reliably tell the two grassland types
+apart.**
+
+Say it that way first, then add the machinery. Two corrections to how this was being said:
+
+- **"grade into each other" is jargon.** It means there is no clear line between them on the ground:
+  one field becomes the other gradually, so there is no edge to draw. Write that.
+- **The main confusion is the two grasslands with EACH OTHER**, not with cropland. Improved and
+  semi-natural grassland account for about half of all error, running both ways. Cropland is a
+  separate and much smaller problem - roughly 5% of total error - which only looks dramatic per class
+  because cropland is small and about half of its pixels are called grassland. Do not merge the two
+  into one sentence; they are different problems with different remedies.
+
+## The framing for the literature
+
+The standard aerial benchmarks delete the boundary band before scoring, naming label quality as the
+reason and never justifying the width. We measure what that removes, on operational rural imagery.
 
 ## The arc, in order
 
@@ -50,10 +66,10 @@ majority class. The observed flow runs slightly the other way — the majority c
 pixels, not a net absorber. This is the paper's strongest single result and it is currently absent
 from the manuscript entirely.
 
-**6. That pair has no boundary on the ground.** Improved grassland grades into semi-natural over
-metres: management intensity falls off toward wet corners, rushes encroach. The annotator has to
-impose a line that does not physically exist. Contrast a forest edge, which is real and where error is
-mixed pixels.
+**6. That pair has no clear line between them on the ground.** One field becomes the other gradually -
+management eases off toward wet corners, rushes come in - so there is no edge to draw and the annotator
+had to put one somewhere. A forest edge is different: it is real, and the error there is mixed pixels.
+**Avoid "gradational" and "grades into" in the paper.** Say there is no line on the ground.
 
 **7. So for that pair, "the boundary is diffuse" and "the classes are hard to distinguish" are the
 same fact, not two hypotheses.** This is interpretation and must be labelled as such — but it is what
