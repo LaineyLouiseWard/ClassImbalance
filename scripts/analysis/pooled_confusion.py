@@ -61,6 +61,9 @@ def main() -> int:
         keep = set(sub["splits"][args.split]["tiles"])
 
     tiles = sorted(p for p in mask_dir.glob("*.png") if keep is None or p.stem in keep)
+    if keep is not None and len(tiles) != len(keep):
+        raise SystemExit(f"expected {len(keep)} subset tiles in {mask_dir}, found {len(tiles)}. A "
+                         f"partially staged mask directory would silently score less ground.")
     if not tiles:
         raise SystemExit(f"no tiles to score in {mask_dir} under the "
                          f"{'full split' if keep is None else 'scoring subset'}")
@@ -85,8 +88,10 @@ def main() -> int:
     meta = {"split": args.split, "cell": args.cell, "seeds": args.seeds,
             "n_tiles": len(tiles), "scoring_subset": not args.all_tiles,
             "foreground_px": int(conf.sum()),
-            "foreground_errors": int(conf.sum() - np.trace(conf[1:, 1:]) - conf[1:, 0].sum()
-                                     + conf[1:, 0].sum())}
+            # Foreground reference pixels whose prediction differs. Row 0 is identically zero
+            # because only `m != 0` pixels are counted, so conf.sum() is already foreground-only;
+            # the earlier form added and subtracted conf[1:,0].sum() and reduced to this.
+            "foreground_errors": int(conf[1:, :].sum() - np.trace(conf[1:, 1:]))}
     (out / f"confusion_{args.split}_{args.cell}.json").write_text(json.dumps(meta, indent=2))
     print(json.dumps(meta, indent=2))
     print(f"wrote {out}/confusion_{args.split}_{args.cell}.npy")

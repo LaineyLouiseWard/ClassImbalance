@@ -84,10 +84,16 @@ def pair_ratios(conf: np.ndarray) -> list[dict]:
 
     `conf` is a 6x6 count matrix, rows = reference class, cols = predicted class, row 0 unused.
 
-    The expected share uses the product of the two classes' REFERENCE area shares, normalised over
-    all pairs. Two classes can only be confused where they are both present, so a pair of large
-    classes has more opportunity than a pair of small ones; dividing by that opportunity is what
-    separates "this pair fails" from "this pair is big".
+    The expected share is a CO-AREA null: the product of the two classes' reference area shares,
+    normalised over all pairs. It asks whether a pair fails more than its share of the scene would
+    lead you to expect. Call it that and nothing stronger -- it is not a mechanistic model of how
+    confusion arises, because a pixel has exactly one reference class and "both present" has no
+    per-pixel meaning.
+
+    An adjacency null -- shared boundary contacts between the two reference classes -- is the
+    mechanistically relevant opportunity measure, and on Test A it gives 29.3x for the grassland
+    pair against this null's 2.10x. The co-area null is the CONSERVATIVE choice of the two and that
+    is why it is the one reported.
     """
     fg = list(FG)
     area = np.array([conf[k, :].sum() for k in fg], dtype=float)
@@ -192,20 +198,25 @@ def self_test() -> int:
     # (2) Plant a known per-class effect and confirm recovery, including the halving convention.
     rng = np.random.default_rng(3)
     base = rng.normal(0.60, 0.02, (10, 5))
+    # A NON-ZERO interaction is planted deliberately. The first version of this gate used
+    # b, t, s, f = base, base+0.05, base, base+0.05, which makes (f-s)-(t-b) identically zero -- so
+    # the assertion "interaction is 0" held whether or not the Montgomery halving was applied, and
+    # removing the /2 survived the self-test. Planted here: main effect +5 pp, interaction +1 pp
+    # after halving, so dropping the /2 returns 2.00 and fails.
     iou = {"stage1_baseline": base,
-           "stage2b_oem_finetune": base + 0.05,       # OEM main effect = +5 pp, no interaction
-           "stage_sampler_only": base,
-           "stage3_clsbal": base + 0.05}
+           "stage2b_oem_finetune": base + 0.05,
+           "stage_sampler_only": base + 0.02,
+           "stage3_clsbal": base + 0.09}
     got = per_class_contrasts(iou)["oem_pretraining"]["Forest"]["mean"]
-    good = abs(got - 5.0) < 1e-6
+    good = abs(got - 6.0) < 1e-6
     ok &= good
-    print(f"  planted +5.00 pp OEM main effect recovered as {got:+.4f}  "
+    print(f"  planted +6.00 pp OEM main effect recovered as {got:+.4f}  "
           f"[{'ok' if good else 'FAIL'}]")
     got_i = per_class_contrasts(iou)["interaction"]["Forest"]["mean"]
-    good = abs(got_i) < 1e-6
+    good = abs(got_i - 1.0) < 1e-6
     ok &= good
-    print(f"  ... with no interaction planted, interaction = {got_i:+.4f}  "
-          f"[{'ok' if good else 'FAIL'}]")
+    print(f"  planted +1.00 pp interaction (Montgomery halved) recovered as {got_i:+.4f}; "
+          f"unhalved would give +2.00  [{'ok' if good else 'FAIL'}]")
 
     # (3) The seed control must SEPARATE the two cases, not just report them. Case A: cells really
     # differ. Case B: cells identical, all spread from seeds. If the statistic cannot tell these

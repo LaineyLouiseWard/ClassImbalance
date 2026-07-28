@@ -66,7 +66,12 @@ CELL_FULL = "stage3_clsbal"
 
 OUT_DIR = repo_root / "figures"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
-OUT_PDF = OUT_DIR / "confusion_matrices.pdf"
+# SPLIT is in the filename so a Test B build cannot overwrite the Test A figure and be published
+# under a Test A caption. FIG_SPLIT is whitelisted for the same reason.
+if SPLIT not in ("test", "external_test"):
+    raise SystemExit(f"FIG_SPLIT={SPLIT!r}; expected 'test' or 'external_test'")
+OUT_PDF = OUT_DIR / ("confusion_matrices.pdf" if SPLIT == "test"
+                     else f"confusion_matrices_{SPLIT}.pdf")
 
 
 def aggregate_confusion(cell: str):
