@@ -163,7 +163,11 @@ def main() -> int:
         contacts(m, acc)
         near_counts(m, gsd_for(p.stem), near_n, tot_n)
 
-    total_contacts = int(acc[1:, 1:].sum())
+    # acc is symmetric -- every physical adjacency is written into BOTH acc[a,b] and acc[b,a] -- so
+    # summing the matrix counts each contact twice. The per-pair numerator acc[a,b] counts it once.
+    # Dividing one by the other halved every contact share until 2026-07-28; an independent
+    # re-derivation from the masks gave 1.59% for the grassland pair where this reported 0.80%.
+    total_contacts = int(acc[1:, 1:].sum()) // 2
     out = {"split": args.split, "dedup": bool(args.dedup), "n_tiles": len(tiles),
            "near_m": NEAR_M, "total_fg_contacts": total_contacts, "pairs": []}
 

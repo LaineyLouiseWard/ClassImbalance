@@ -12,7 +12,7 @@
       "contact_share": 0.644538472909866,
       "share_of_a_within_8m_of_b": 0.7034395833421662,
       "a_pixels": 3302086,
-      "rate_a_called_b": 0.10318538039287893,
+      "rate_a_called_b": 0.11304124120328786,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -23,7 +23,7 @@
       "contact_share": 0.013813460126356808,
       "share_of_a_within_8m_of_b": 0.01909005398405735,
       "a_pixels": 3302086,
-      "rate_a_called_b": 0.0005328147116701382,
+      "rate_a_called_b": 0.000606434841491106,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -34,7 +34,7 @@
       "contact_share": 0.08878904422972995,
       "share_of_a_within_8m_of_b": 0.13687983898662845,
       "a_pixels": 3302086,
-      "rate_a_called_b": 0.01844261475927641,
+      "rate_a_called_b": 0.016807860243494566,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -45,7 +45,7 @@
       "contact_share": 0.05914342006732244,
       "share_of_a_within_8m_of_b": 0.08353901140067219,
       "a_pixels": 3302086,
-      "rate_a_called_b": 0.025342616758012967,
+      "rate_a_called_b": 0.023728667272748197,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -56,7 +56,7 @@
       "contact_share": 0.644538472909866,
       "share_of_a_within_8m_of_b": 0.21444235028057698,
       "a_pixels": 14940463,
-      "rate_a_called_b": 0.03278648727285091,
+      "rate_a_called_b": 0.028966900155637746,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -67,7 +67,7 @@
       "contact_share": 0.007876095686080636,
       "share_of_a_within_8m_of_b": 0.0030722608797331113,
       "a_pixels": 14940463,
-      "rate_a_called_b": 0.002470117559275104,
+      "rate_a_called_b": 0.000841566958132422,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -78,7 +78,7 @@
       "contact_share": 0.15799932629089208,
       "share_of_a_within_8m_of_b": 0.05400053532477541,
       "a_pixels": 14940463,
-      "rate_a_called_b": 0.006048226216282588,
+      "rate_a_called_b": 0.005300250735201446,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -89,9 +89,9 @@
       "contact_share": 0.01594121766862721,
       "share_of_a_within_8m_of_b": 0.005992585370346287,
       "a_pixels": 14940463,
-      "rate_a_called_b": 0.04815782482778479,
-      "max_share_of_those_errors_near_b": 0.12443637958682986,
-      "min_share_far_from_b": 0.8755636204131702
+      "rate_a_called_b": 0.06005682688682406,
+      "max_share_of_those_errors_near_b": 0.09978191790983562,
+      "min_share_far_from_b": 0.9002180820901644
     },
     {
       "a": "Cropland",
@@ -100,7 +100,7 @@
       "contact_share": 0.013813460126356808,
       "share_of_a_within_8m_of_b": 0.24254160033000713,
       "a_pixels": 293327,
-      "rate_a_called_b": 0.02107545503823378,
+      "rate_a_called_b": 0.01085341615330331,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -111,9 +111,9 @@
       "contact_share": 0.007876095686080636,
       "share_of_a_within_8m_of_b": 0.12416518083913175,
       "a_pixels": 293327,
-      "rate_a_called_b": 0.5553559679129436,
-      "max_share_of_those_errors_near_b": 0.22357764751453182,
-      "min_share_far_from_b": 0.7764223524854682
+      "rate_a_called_b": 0.5997828362203275,
+      "max_share_of_those_errors_near_b": 0.2070168956844244,
+      "min_share_far_from_b": 0.7929831043155756
     },
     {
       "a": "Cropland",
@@ -122,9 +122,9 @@
       "contact_share": 0.00039259307727540407,
       "share_of_a_within_8m_of_b": 0.014690089899668288,
       "a_pixels": 293327,
-      "rate_a_called_b": 0.023988927033651863,
-      "max_share_of_those_errors_near_b": 0.6123696103231674,
-      "min_share_far_from_b": 0.3876303896768326
+      "rate_a_called_b": 0.01682354505381366,
+      "max_share_of_those_errors_near_b": 0.8731863500040529,
+      "min_share_far_from_b": 0.12681364999594713
     },
     {
       "a": "Cropland",
@@ -133,7 +133,7 @@
       "contact_share": 0.003138321204145977,
       "share_of_a_within_8m_of_b": 0.05397048345362002,
       "a_pixels": 293327,
-      "rate_a_called_b": 0.0065258227166268366,
+      "rate_a_called_b": 0.011072625431685457,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -144,7 +144,7 @@
       "contact_share": 0.08878904422972995,
       "share_of_a_within_8m_of_b": 0.4172568960747398,
       "a_pixels": 816914,
-      "rate_a_called_b": 0.054738564891775636,
+      "rate_a_called_b": 0.04922598951664435,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -155,7 +155,7 @@
       "contact_share": 0.15799932629089208,
       "share_of_a_within_8m_of_b": 0.6895903363144713,
       "a_pixels": 816914,
-      "rate_a_called_b": 0.08620221957268452,
+      "rate_a_called_b": 0.1015869479529057,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -166,7 +166,7 @@
       "contact_share": 0.00039259307727540407,
       "share_of_a_within_8m_of_b": 0.005269832564994602,
       "a_pixels": 816914,
-      "rate_a_called_b": 0.004585794832748612,
+      "rate_a_called_b": 0.0006365419126125884,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -177,7 +177,7 @@
       "contact_share": 0.00836804873970352,
       "share_of_a_within_8m_of_b": 0.03957576929762496,
       "a_pixels": 816914,
-      "rate_a_called_b": 0.0023418621788829667,
+      "rate_a_called_b": 0.0015172955782371217,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -188,7 +188,7 @@
       "contact_share": 0.05914342006732244,
       "share_of_a_within_8m_of_b": 0.2000485969684552,
       "a_pixels": 1456881,
-      "rate_a_called_b": 0.044064408829547506,
+      "rate_a_called_b": 0.03427562031490561,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -199,9 +199,9 @@
       "contact_share": 0.01594121766862721,
       "share_of_a_within_8m_of_b": 0.06126306815724826,
       "a_pixels": 1456881,
-      "rate_a_called_b": 0.39153877358548844,
-      "max_share_of_those_errors_near_b": 0.15646743640798605,
-      "min_share_far_from_b": 0.8435325635920139
+      "rate_a_called_b": 0.3979586527657372,
+      "max_share_of_those_errors_near_b": 0.15394329971589146,
+      "min_share_far_from_b": 0.8460567002841085
     },
     {
       "a": "Seminatural",
@@ -210,7 +210,7 @@
       "contact_share": 0.003138321204145977,
       "share_of_a_within_8m_of_b": 0.011687982752194586,
       "a_pixels": 1456881,
-      "rate_a_called_b": 0.00123167231915304,
+      "rate_a_called_b": 0.001955410222248763,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     },
@@ -221,7 +221,7 @@
       "contact_share": 0.00836804873970352,
       "share_of_a_within_8m_of_b": 0.03211724224559178,
       "a_pixels": 1456881,
-      "rate_a_called_b": 0.00289399065537954,
+      "rate_a_called_b": 0.0018081778813780946,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
     }
