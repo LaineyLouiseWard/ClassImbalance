@@ -5,10 +5,12 @@ scripts/analysis/factorial_normality_check.py
 Validation check for the 2x2 factorial inference: are the per-seed effect
 contrasts (and the model residuals) normally distributed?
 
-The factorial main effects and interaction (Table 3 / scripts/figures/factorial_effects.py)
+The factorial main effects and interaction (contrast definitions now in
+scripts/analysis/narrative_numbers.py; the figure that used to draw them is retired to
+_archive/cut_figures/factorial_effects.py)
 are reported as 95% *paired-t* confidence intervals over the ten seeds. The paired-t
 relies on the ten per-seed contrast values being approximately normal. This script tests
-that assumption directly, using the same contrast definitions as factorial_effects.py:
+that assumption directly, using the same contrast definitions as narrative_numbers.per_class_contrasts:
 
   * OEM transfer main effect       = mean[ (transfer-only - baseline) + (full - sampler-only) ] / 2
   * clsbal sampler main effect     = mean[ (sampler-only - baseline) + (full - transfer-only) ] / 2

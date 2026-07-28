@@ -269,7 +269,7 @@ def load_metrics_file(path: Path, folder: str, expect_split: str) -> dict:
 
     The file must say which checkpoint produced it, and that checkpoint must be this cell's, for
     this SPLIT_TAG. Resolving by path alone is not enough: the flat campaign drops are named
-    `seed<N>_<cell>.json` with no tag in them at all, so `--results-dir sonic/results/final_results`
+    `seed<N>_<cell>.json` with no tag in them at all, so `--results-dir <an untagged results dir>`
     reads the WITHDRAWN leaking campaign's forty files and produces a complete factorial with
     p-values and manuscript-ready tables, exit 0. Every metrics.json already records its own
     checkpoint; this reads it instead of discarding it.

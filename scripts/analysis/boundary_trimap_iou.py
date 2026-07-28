@@ -23,7 +23,7 @@ reproduces the compute_metrics non-TTA per-class IoU exactly.
 
 Usage:
     PYTHONPATH=. python scripts/analysis/boundary_trimap_iou.py \
-        --softmax-root sonic/results --mask-dir data/biodiversity_split/val/masks \
+        --softmax-root <per-seed softmax dump root> --mask-dir data/biodiversity_split/val/masks \
         --cell stage1_baseline --cell stage3_clsbal --seeds 42 43 44 45 46 47 48 49 50 51 \
         --out-dir analysis/label_ceiling
 """
@@ -378,7 +378,7 @@ def make_figure(results: dict, out_path: Path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--softmax-root", default="sonic/results",
+    ap.add_argument("--softmax-root", default=None,
                     help="root holding seed<N>/analysis/seed_softmax/<cell>/seed<N>/")
     ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/test/masks",
                     help="masks to score against. Defaults to Test A. The withdrawn split's "

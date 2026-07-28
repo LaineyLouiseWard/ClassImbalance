@@ -11,7 +11,6 @@ Figures use stable DESCRIPTIVE names (the printed numbers are assigned by LaTeX)
   - workflow_pipeline, mitigation_axes, oem_mapping are TikZ (.tex), compiled with
     pdflatex and copied to figures/.
   - study_area, class_distributions, ablation_qualitative, confusion_matrices,
-    frequency_vs_difficulty, reliability_ece, uncertainty_quality,
     boundary_limited_error are Python scripts that write directly to figures/.
   - All figures read saved outputs/artifacts (no GPU required).
 

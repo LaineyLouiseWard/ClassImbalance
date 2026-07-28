@@ -13,7 +13,7 @@ Panels (saved to figures/graphical_abstract/):
 
 All three use REAL current-model outputs: the prediction is the 10-seed ensemble argmax
 of the final ADE20K shipped model (stage3_clsbal), reconstructed from the per-seed softmax
-dumps (sonic/results/seed*/analysis/seed_softmax/stage3_clsbal). Tile biodiversity_0957 is
+dumps (<softmax root>/stage3_clsbal/seed<N>/<tile>.npy). Tile biodiversity_0957 is
 chosen: it contains all five land classes in a balanced, visually clean scene, and ~95% of
 its error lies within 8 px (~4 m) of a class boundary. The ensemble prediction + GT are
 cached to figures/graphical_abstract/ga_source_maps.npz so the figure rebuilds without the

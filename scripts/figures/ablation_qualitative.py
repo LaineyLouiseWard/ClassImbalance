@@ -261,7 +261,7 @@ def main() -> None:
     ap.add_argument("--img-ids", default="biodiversity_1382,biodiversity_0259,biodiversity_2193,biodiversity_1366")
     ap.add_argument("--data-root", default="data/biodiversity_split")
     ap.add_argument("--split-order", default="val,test")
-    ap.add_argument("--softmax-root", default="sonic/results",
+    ap.add_argument("--softmax-root", default=None,
                     help="root holding seed<seed>/analysis/seed_softmax/<cell>/seed<seed>/<tile>.npy")
     ap.add_argument("--seed", type=int, default=44, help="median seed used for the paper figures")
     ap.add_argument("--out-path", default="figures/ablation_qualitative.pdf")

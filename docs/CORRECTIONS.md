@@ -312,15 +312,15 @@ recorded, so the paper must describe it, not justify it.
 
 **(a) The split has no citation, and it is the most distinctive thing in the methods.** Nothing in
 `manuscript/Bibliography.bib` supports spatially blocked validation. Three converted papers in
-`papers-md/` cover it and none is cited:
+`papers-md/` cover it and none is cited (that directory is a private sibling checkout, so the references below are given by name rather than linked):
 
 | paper | what it gives us |
 |---|---|
-| [Roberts et al. 2017](../../papers-md/roberts-2017-cross-validation-strategies-temporal-spatial-hierarchical.md), *Ecography* | the canonical statement that random CV on structured data causes *"serious underestimation of predictive error"* |
-| [Kattenborn et al. 2022](../../papers-md/kattenborn-2022-spatially-autocorrelated-training-validation-cnn.md), *ISPRS Open J.* | the same result for **CNNs on remote sensing imagery**, random vs spatially blocked hold-outs — our exact case |
+| Roberts et al. 2017, *Ecography* | the canonical statement that random CV on structured data causes *"serious underestimation of predictive error"* |
+| Kattenborn et al. 2022, *ISPRS Open J.* | the same result for **CNNs on remote sensing imagery**, random vs spatially blocked hold-outs — our exact case |
 
 Both are converted and linked above; read the conversion before quoting either.
-[Wadoux et al. 2021](../../papers-md/wadoux-2021-spatial-cross-validation-not-right-way-evaluate-map-accuracy.md),
+Wadoux et al. 2021,
 *"Spatial cross-validation is not the right way to evaluate map accuracy"*, was considered and does
 **not** apply: it disputes spatial CV as a way to estimate map accuracy over a target population,
 which is not claimed here, and says nothing about held-out tiles containing the same pixels as

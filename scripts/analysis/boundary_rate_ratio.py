@@ -56,7 +56,7 @@ Run:
     PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py --self-test
     PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py \\
         --split-root data/split_f1 --split test \\
-        --softmax-root sonic/results --cell stage3_clsbal --seeds 42 43 44 45 46 47 48 49 50 51
+        --softmax-root <per-seed softmax dump root> --cell stage3_clsbal --seeds 42 43 44 45 46 47 48 49 50 51
 """
 from __future__ import annotations
 

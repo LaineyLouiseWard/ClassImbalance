@@ -292,7 +292,8 @@ def main() -> int:
     ap.add_argument("--confusion-dir", help="per-cell pooled confusion .npy, 6x6 int counts")
     ap.add_argument("--rho-dir", help="per-cell per-seed rho JSONs from boundary_rate_ratio.py")
     ap.add_argument("--band-m", type=float, default=8.0)
-    ap.add_argument("--out", default="artifacts/narrative_numbers.json")
+    ap.add_argument("--out", default="artifacts/narrative_numbers_test.json",
+                    help="the ledger in verify_narrative_numbers.py reads this exact path")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 

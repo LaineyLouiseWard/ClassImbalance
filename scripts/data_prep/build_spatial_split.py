@@ -35,7 +35,7 @@ each found stranded on that path, enforced in code the shipped design never reac
 directly, the grid also lost 44.3% of tiles to buffers against 18% for two cuts, so it was never
 going to be adopted. Keeping it only produced defects one at a time.
 
-Output: artifacts/spatial_split_manifest.json (tile -> split or 'dropped', plus the audit).
+Output: artifacts/spatial_split_manifest_$SPLIT_TAG.json (tile -> split or 'dropped', plus the audit).
 Materialising the directories is a separate step (--materialise).
 
 Run:
@@ -553,7 +553,10 @@ def main() -> None:
                     help="hold these sites out WHOLE as a fixed external test set, and block the "
                          "remaining sites three ways. Use when a site's extent is under twice its "
                          "autocorrelation range, so no independent internal split exists.")
-    ap.add_argument("--out", default="artifacts/spatial_split_manifest.json")
+    ap.add_argument("--out", default=None,
+                    help="defaults to artifacts/spatial_split_manifest_<SPLIT_TAG>.json; the "
+                         "untagged name is read by nothing and every downstream reader "
+                         "expects the tag")
     ap.add_argument("--materialise", action="store_true",
                     help="write data/biodiversity_split_spatial/{train,val,test}")
     ap.add_argument("--mode", choices=["symlink", "copy"], default="symlink")
@@ -749,9 +752,13 @@ def main() -> None:
                             "of the band arithmetic that produced the split",
             "assignment": kept, "dropped_buffer": sorted(dropped),
         }
-        (root / args.out).parent.mkdir(parents=True, exist_ok=True)
-        (root / args.out).write_text(json.dumps(manifest, indent=2))
-        print(f"wrote {args.out}")
+        # SPLIT_TAG gates every downstream reader, so the manifest carries it. The old untagged
+        # default wrote a file nothing reads.
+        tag = os.environ.get("SPLIT_TAG", "f1")
+        out = args.out or f"artifacts/spatial_split_manifest_{tag}.json"
+        (root / out).parent.mkdir(parents=True, exist_ok=True)
+        (root / out).write_text(json.dumps(manifest, indent=2))
+        print(f"wrote {out}")
         if args.materialise:
             materialise(kept, pool, root, split_root, args.out_root, args.mode)
             print(f"materialised {args.out_root} ({args.mode})")

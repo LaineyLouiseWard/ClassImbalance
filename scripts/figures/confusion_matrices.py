@@ -32,10 +32,11 @@ repo_root = find_repo_root(Path.cwd())
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-# 10-seed confusion: read the CANONICAL summed 6x6 count confusion recomputed on the clean
-# 219-tile Irish val set (eval_on_dumps_219.py), then (in main) drop Background and
-# row-normalise. NOT the Sonic seed*/val/<cell>/confusion_matrix.npy artefacts -- those were
-# scored on 231 tiles (12 foreign tiles with no Irish mask).
+# 10-seed confusion: the summed 6x6 count matrix from scripts/analysis/pooled_confusion.py, built on
+# the DEDUPLICATED 90-tile Test A subset so this figure and the accuracy table are censuses of the
+# same ground. Background is dropped and rows normalised in main(), which gives per-class recall --
+# the correction RESULTS_TEN_SEED §12 asks for, since absolute counts mislead between classes that
+# differ in size by an order of magnitude.
 
 # --- WITHDRAWN-DATA GUARD, added 2026-07-27 ---------------------------------------------------
 # analysis/eval_219/ is the WITHDRAWN campaign's output: 219 val tiles of the random-by-tile split,

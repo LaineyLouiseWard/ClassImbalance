@@ -23,7 +23,7 @@ rendering lives in figure_label_ceiling.py so the numbers are reusable headless.
 
 Usage (defaults match the on-disk layout):
     PYTHONPATH=. python scripts/analysis/seed_disagreement.py \
-        --softmax-root sonic/results \
+        --softmax-root <per-seed softmax dump root> \
         --mask-dir data/biodiversity_split/val/masks \
         --cell stage3_clsbal --cell stage1_baseline \
         --seeds 42 43 44 45 46 47 48 49 50 51 \
@@ -386,7 +386,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir, save_maps_for=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--softmax-root", default="sonic/results")
+    ap.add_argument("--softmax-root", default=None)
     ap.add_argument("--mask-dir", default=f"data/split_{SPLIT_TAG}/test/masks",
                     help="masks to score against; defaults to Test A, not the withdrawn split")
     ap.add_argument("--cell", action="append", dest="cells",
