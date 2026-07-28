@@ -27,27 +27,69 @@ exclude-the-band direction.
 
 ## The result
 
-IoU with no exclusion, and after excluding 8 px (4 m) around every boundary:
+IoU with no exclusion, and after excluding 8 px (4 m) around every boundary. **Per seed, not from
+the ensemble**, read out of the JSON rather than the console table:
 
 | class | baseline IoU | boundaries excluded | gain |
 |---|---|---|---|
-| Settlement | 0.723 | 0.895 | **+17.2 pp** |
-| Forest | 0.721 | 0.854 | **+13.3 pp** |
-| **Seminatural** | 0.421 | 0.455 | **+3.4 pp** |
-| macro foreground | 0.632 | 0.716 | +8.3 pp |
+| Settlement | 0.717 | 0.890 | **+17.3 pp** |
+| Forest | 0.716 | 0.847 | **+13.2 pp** |
+| Grassland | 0.844 | 0.889 | +4.6 pp |
+| Cropland | 0.460 | 0.505 | +4.5 pp |
+| **Seminatural** | 0.414 | 0.449 | **+3.5 pp** |
+| macro foreground | 0.630 | 0.716 | +8.6 pp |
 
-Grassland and Cropland are not in the printed table — the script prints only the three classes
-flagged as narrative-focus in `HARD`. **The full run must print all five**, and that is a change to
-make before quoting any of this.
+**Two of the four caveats below are already discharged by this table.** The console prints only three
+classes, but the JSON carries all five at every radius, per seed, with standard deviations — so no
+rerun is needed to see grassland and cropland. And the per-seed figures match the ensemble ones to
+within 0.1 pp (13.2 against 13.3, 17.3 against 17.2, 3.5 against 3.4), so the ensemble was not
+inflating this particular comparison.
 
 ## What it means
 
-**Forest and settlement fail at their edges. Semi-natural grassland does not.** Remove every pixel
-within 4 m of a class boundary and semi-natural still scores 0.455. Its error is inside parcels.
+**Two classes fail at their edges. Three do not.** Settlement and forest recover 13 to 17 points once
+the boundary band is removed. Grassland, cropland and semi-natural recover 3 to 5 points and stay
+where they were — semi-natural still scores 0.449 with every pixel within 4 m of a boundary thrown
+away.
+
+The split is not "the weak classes versus the strong ones". It is **the classes with a physical edge
+versus the classes without one.** A settlement or a forest has a real perimeter you can trace. A field
+boundary between improved and semi-natural grassland is a management gradient, and cropland against
+grassland is a decision about what a field currently holds. For those three the error is inside the
+parcel.
 
 That is whole-parcel misassignment: the outline was drawn correctly and the field was called the
 wrong type — or the field genuinely could be either. It is not an edge-precision problem, and no
 amount of more careful tracing addresses it.
+
+## The stronger evidence: error rate against distance, per class
+
+The trimap gain is one summary of a curve. The curve itself is in the same JSON, thirteen distance
+bins per class. Error rate, with foreground pixel support beside it:
+
+| class | 0-0.5 m | 1-2 m | 4-6 m | 8-12 m | 16-24 m | 32 m+ |
+|---|---|---|---|---|---|---|
+| Forest | 39.1% *0.8M* | 20.7% *1.0M* | 5.7% *1.5M* | 4.9% *0.8M* | 7.9% *0.4M* | **0.9%** *0.5M* |
+| Settlement | 44.5% *0.3M* | 21.9% *0.3M* | 4.8% *0.3M* | 5.4% *0.3M* | 2.8% *58k* | **0.0%** *2k* |
+| Grassland | 55.9% *0.9M* | 29.4% *1.1M* | 11.2% *3.1M* | 9.1% *5.1M* | 8.2% *7.2M* | **7.1%** *14.0M* |
+| Seminatural | 58.8% *86k* | 52.0% *0.1M* | 36.9% *0.3M* | 28.6% *0.5M* | 24.3% *0.6M* | **13.5%** *1.7M* |
+| Cropland | 77.1% *25k* | 61.7% *32k* | 47.5% *82k* | 41.5% *0.1M* | 36.5% *0.2M* | **77.5%** *98k* |
+
+**Read the last column.** Forest falls to 0.9% and settlement to 0.0% — those two really do collapse
+to a near-zero interior. Grassland holds a 7.1% floor across fourteen million pixels. Semi-natural
+holds **13.5%** across 1.7 million. Cropland has no boundary structure at all: 77% at the edge, 37%
+in the middle distance, 77% again deep inside.
+
+**And for semi-natural the interior is where the pixels are.** Only 86,000 of its pixels sit in the
+first half-metre; 1.7 million sit beyond 32 m. So most of its error is interior error by mass, not
+just by rate.
+
+This is the same conclusion as the trimap table, measured a different way, and it is the version to
+put in the paper because it shows the shape rather than one summary of it.
+
+**It also settles a sentence `DO_NOT_ADD.md` already forbids.** "Every class collapses to a near-zero
+interior rate" is now not merely unsupported but demonstrably false for three of the five classes.
+The honest version is that two classes collapse and three do not, and which is which is the finding.
 
 ## Why this is uncomfortable, stated plainly
 
@@ -80,13 +122,14 @@ a ceiling set by parcel-level class ambiguity. That note called N2 "most likely 
 ## What has to happen before any of this is written into the manuscript
 
 1. **The ten-seed, four-cell, both-test-set run** now in progress. Two seeds is not a result.
-2. **Print all five classes**, not the three in `HARD`. Grassland and cropland are missing and
-   cropland is the other weak class.
-3. **Per-seed rather than ensemble.** The printed table is the ensemble argmax, which removes interior
-   error preferentially and therefore flatters exactly the quantity being compared here. The script
-   already computes a per-seed version; that is the one to quote.
+2. ~~Print all five classes~~ — **DISCHARGED.** The JSON already carries all five per seed at every
+   radius. Only the console table is limited to three, which is cosmetic.
+3. ~~Per-seed rather than ensemble~~ — **DISCHARGED.** The two agree to 0.1 pp on this comparison.
 4. **Restate Q3 as a per-class result.** "Error concentrates at class boundaries" as a global claim
    does not survive this if it holds.
+5. **Check the per-class error-versus-distance curves**, which the same JSON carries at thirteen
+   distance bins per class. The trimap gain is one summary of those curves; the curves themselves say
+   whether semi-natural's error is flat with distance or merely less steep.
 
 ## What does not change either way
 
