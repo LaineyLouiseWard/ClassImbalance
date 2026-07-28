@@ -1,0 +1,229 @@
+{
+  "split": "test",
+  "dedup": true,
+  "n_tiles": 90,
+  "near_m": 8.0,
+  "total_fg_contacts": 825282,
+  "pairs": [
+    {
+      "a": "Forest",
+      "b": "Grassland",
+      "contacts": 265963,
+      "contact_share": 0.322269236454933,
+      "share_of_a_within_8m_of_b": 0.7034395833421662,
+      "a_pixels": 3302086,
+      "rate_a_called_b": 0.10318538039287893,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Forest",
+      "b": "Cropland",
+      "contacts": 5700,
+      "contact_share": 0.006906730063178404,
+      "share_of_a_within_8m_of_b": 0.01909005398405735,
+      "a_pixels": 3302086,
+      "rate_a_called_b": 0.0005328147116701382,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Forest",
+      "b": "Settlement",
+      "contacts": 36638,
+      "contact_share": 0.04439452211486498,
+      "share_of_a_within_8m_of_b": 0.13687983898662845,
+      "a_pixels": 3302086,
+      "rate_a_called_b": 0.01844261475927641,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Forest",
+      "b": "Seminatural",
+      "contacts": 24405,
+      "contact_share": 0.02957171003366122,
+      "share_of_a_within_8m_of_b": 0.08353901140067219,
+      "a_pixels": 3302086,
+      "rate_a_called_b": 0.025342616758012967,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Grassland",
+      "b": "Forest",
+      "contacts": 265963,
+      "contact_share": 0.322269236454933,
+      "share_of_a_within_8m_of_b": 0.21444235028057698,
+      "a_pixels": 14940463,
+      "rate_a_called_b": 0.03278648727285091,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Grassland",
+      "b": "Cropland",
+      "contacts": 3250,
+      "contact_share": 0.003938047843040318,
+      "share_of_a_within_8m_of_b": 0.0030722608797331113,
+      "a_pixels": 14940463,
+      "rate_a_called_b": 0.002470117559275104,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Grassland",
+      "b": "Settlement",
+      "contacts": 65197,
+      "contact_share": 0.07899966314544604,
+      "share_of_a_within_8m_of_b": 0.05400053532477541,
+      "a_pixels": 14940463,
+      "rate_a_called_b": 0.006048226216282588,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Grassland",
+      "b": "Seminatural",
+      "contacts": 6578,
+      "contact_share": 0.007970608834313605,
+      "share_of_a_within_8m_of_b": 0.005992585370346287,
+      "a_pixels": 14940463,
+      "rate_a_called_b": 0.04815782482778479,
+      "max_share_of_those_errors_near_b": 0.12443637958682986,
+      "min_share_far_from_b": 0.8755636204131702
+    },
+    {
+      "a": "Cropland",
+      "b": "Forest",
+      "contacts": 5700,
+      "contact_share": 0.006906730063178404,
+      "share_of_a_within_8m_of_b": 0.24254160033000713,
+      "a_pixels": 293327,
+      "rate_a_called_b": 0.02107545503823378,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Cropland",
+      "b": "Grassland",
+      "contacts": 3250,
+      "contact_share": 0.003938047843040318,
+      "share_of_a_within_8m_of_b": 0.12416518083913175,
+      "a_pixels": 293327,
+      "rate_a_called_b": 0.5553559679129436,
+      "max_share_of_those_errors_near_b": 0.22357764751453182,
+      "min_share_far_from_b": 0.7764223524854682
+    },
+    {
+      "a": "Cropland",
+      "b": "Settlement",
+      "contacts": 162,
+      "contact_share": 0.00019629653863770203,
+      "share_of_a_within_8m_of_b": 0.014690089899668288,
+      "a_pixels": 293327,
+      "rate_a_called_b": 0.023988927033651863,
+      "max_share_of_those_errors_near_b": 0.6123696103231674,
+      "min_share_far_from_b": 0.3876303896768326
+    },
+    {
+      "a": "Cropland",
+      "b": "Seminatural",
+      "contacts": 1295,
+      "contact_share": 0.0015691606020729885,
+      "share_of_a_within_8m_of_b": 0.05397048345362002,
+      "a_pixels": 293327,
+      "rate_a_called_b": 0.0065258227166268366,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Settlement",
+      "b": "Forest",
+      "contacts": 36638,
+      "contact_share": 0.04439452211486498,
+      "share_of_a_within_8m_of_b": 0.4172568960747398,
+      "a_pixels": 816914,
+      "rate_a_called_b": 0.054738564891775636,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Settlement",
+      "b": "Grassland",
+      "contacts": 65197,
+      "contact_share": 0.07899966314544604,
+      "share_of_a_within_8m_of_b": 0.6895903363144713,
+      "a_pixels": 816914,
+      "rate_a_called_b": 0.08620221957268452,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Settlement",
+      "b": "Cropland",
+      "contacts": 162,
+      "contact_share": 0.00019629653863770203,
+      "share_of_a_within_8m_of_b": 0.005269832564994602,
+      "a_pixels": 816914,
+      "rate_a_called_b": 0.004585794832748612,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Settlement",
+      "b": "Seminatural",
+      "contacts": 3453,
+      "contact_share": 0.00418402436985176,
+      "share_of_a_within_8m_of_b": 0.03957576929762496,
+      "a_pixels": 816914,
+      "rate_a_called_b": 0.0023418621788829667,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Seminatural",
+      "b": "Forest",
+      "contacts": 24405,
+      "contact_share": 0.02957171003366122,
+      "share_of_a_within_8m_of_b": 0.2000485969684552,
+      "a_pixels": 1456881,
+      "rate_a_called_b": 0.044064408829547506,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Seminatural",
+      "b": "Grassland",
+      "contacts": 6578,
+      "contact_share": 0.007970608834313605,
+      "share_of_a_within_8m_of_b": 0.06126306815724826,
+      "a_pixels": 1456881,
+      "rate_a_called_b": 0.39153877358548844,
+      "max_share_of_those_errors_near_b": 0.15646743640798605,
+      "min_share_far_from_b": 0.8435325635920139
+    },
+    {
+      "a": "Seminatural",
+      "b": "Cropland",
+      "contacts": 1295,
+      "contact_share": 0.0015691606020729885,
+      "share_of_a_within_8m_of_b": 0.011687982752194586,
+      "a_pixels": 1456881,
+      "rate_a_called_b": 0.00123167231915304,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    },
+    {
+      "a": "Seminatural",
+      "b": "Settlement",
+      "contacts": 3453,
+      "contact_share": 0.00418402436985176,
+      "share_of_a_within_8m_of_b": 0.03211724224559178,
+      "a_pixels": 1456881,
+      "rate_a_called_b": 0.00289399065537954,
+      "max_share_of_those_errors_near_b": 1.0,
+      "min_share_far_from_b": 0.0
+    }
+  ]
+}
