@@ -27,6 +27,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 import argparse
+import os
 from typing import Dict, List, Tuple
 
 def find_repo_root_for_imports() -> Path:
@@ -258,10 +259,17 @@ def make_grid_figure(
 # -----------------------------------------------------------------------------
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--img-ids", default="biodiversity_1382,biodiversity_0259,biodiversity_2193,biodiversity_1366")
-    ap.add_argument("--data-root", default="data/biodiversity_split")
-    ap.add_argument("--split-order", default="val,test")
-    ap.add_argument("--softmax-root", default=None,
+    # VERIFIED TEST A, 2026-07-28. The previous defaults were four tiles of the WITHDRAWN split's
+    # validation set; under the current split one of them is in train and one in test, so a bare run
+    # put a training tile in a manuscript figure. These four are all `test` in
+    # artifacts/spatial_split_manifest_f1.json AND in the deduplicated 90-tile scoring subset, and
+    # they were chosen to show the range rather than only failures: 0513 has 97.1% of its
+    # semi-natural called grassland, 0985 88.4%, 1969 55.3%, and 2155 the model gets right (0.3%).
+    ap.add_argument("--img-ids",
+                    default="biodiversity_0513,biodiversity_1969,biodiversity_0985,biodiversity_2155")
+    ap.add_argument("--data-root", default=f"data/split_{os.environ.get('SPLIT_TAG', 'f1')}")
+    ap.add_argument("--split-order", default="test")
+    ap.add_argument("--softmax-root", default="analysis/panel_root",
                     help="root holding seed<seed>/analysis/seed_softmax/<cell>/seed<seed>/<tile>.npy")
     ap.add_argument("--seed", type=int, default=44, help="median seed used for the paper figures")
     ap.add_argument("--out-path", default="figures/ablation_qualitative.pdf")
