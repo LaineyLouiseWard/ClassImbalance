@@ -1,8 +1,54 @@
-# The boundary result is per-class, and the weak classes do not take part
+# The weak classes fail inside parcels, not at boundaries
 
-**Provisional, 2026-07-28. Two seeds, one cell, Test A. The ten-seed run over four cells and both
-test sets is in progress and will confirm or kill this.** Written now because if it holds it changes
-which claim the paper leads on.
+**CONFIRMED 2026-07-28 on ten seeds, four cells, both test sets** (Slurm 652544). The provisional
+two-seed version below stands, with one correction that matters: **the cross-class comparison it
+originally made is confounded by object size and has been withdrawn.** What survives is a set of
+within-class statements, and they are stronger than what was originally claimed.
+
+## The confirmed result
+
+Error rate on pixels lying **more than 32 m from any class boundary**, ten-seed ensemble, with pixel
+support:
+
+**Test A** — 294 tiles, no boundary-free tiles
+
+| cell | Forest | Grassland | Cropland | Seminatural |
+|---|---|---|---|---|
+| baseline | 0.6% *0.5M* | 5.1% *14.0M* | 78.8% *98k* | **18.8%** *1.7M* |
+| transfer only | 0.9% *0.5M* | 5.0% *14.0M* | 76.0% *98k* | **25.7%** *1.7M* |
+| sampler only | 0.9% *0.5M* | 5.0% *14.0M* | 78.0% *98k* | **28.9%** *1.7M* |
+| full | 0.9% *0.5M* | 6.1% *14.0M* | 81.2% *98k* | **24.3%** *1.7M* |
+
+**Test B** — 172 tiles after excluding 19 boundary-free
+
+| cell | Forest | Grassland | Cropland | Seminatural |
+|---|---|---|---|---|
+| baseline | 25.9% *0.1M* | 1.4% *1.1M* | 0.1% *0.4M* | **26.0%** *10.1M* |
+| transfer only | 24.4% *0.1M* | 2.0% *1.1M* | 63.1% *0.4M* | **42.8%** *10.1M* |
+| sampler only | 22.5% *0.1M* | 2.0% *1.1M* | 0.3% *0.4M* | **29.8%** *10.1M* |
+| full | 28.8% *0.1M* | 0.9% *1.1M* | 44.1% *0.4M* | **22.8%** *10.1M* |
+
+**Settlement is omitted from both tables.** It has 2,000 pixels beyond 32 m on Test A and fewer on
+Test B — see the object-size confound below. Any number computed there is noise.
+
+**Three things this says.**
+
+1. **Semi-natural grassland fails deep inside parcels.** 18.8% of its pixels more than 32 m from any
+   boundary are wrong on Test A, across 1.7 million pixels; 26.0% across 10.1 million on Test B. This
+   cannot be a boundary-placement problem, because these pixels are nowhere near a boundary.
+2. **Cropland does the same, worse.** 78.8% beyond 32 m on Test A. It has no boundary structure at
+   all.
+3. **Neither intervention improves it, and both make it worse.** Semi-natural's interior error rises
+   from 18.8% at baseline to 25.7%, 28.9% and 24.3%. On Test B pre-training takes it from 26.0% to
+   42.8%. This is the same conclusion the aggregate reached, measured on the pixels that carry the
+   error.
+
+Forest and grassland do hold low interior floors — 0.6% and 5.1% on Test A — so for those two the
+error genuinely is concentrated near boundaries.
+
+---
+
+## The original two-seed write-up, and the confound it contained
 
 ## Nothing is wrong with anything already computed
 
