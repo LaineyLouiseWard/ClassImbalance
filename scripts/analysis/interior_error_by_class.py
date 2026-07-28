@@ -124,6 +124,22 @@ def self_test() -> int:
     print(f"  interior support forest {int_n[1]}, semi-natural {int_n[5]} (both must be non-trivial)"
           f"  [{'ok' if good else 'FAIL'}]")
 
+    # accumulate_bins had NO test at all: dropping its per-class restriction made every class's
+    # curve identical to the whole-tile total and the self-test still passed. The bin edges include
+    # 8.0 and 32.0 exactly, so the binned counts must reproduce the two-band summary term for term.
+    from scripts.analysis.seed_disagreement import DIST_BIN_EDGES_M as EDGES
+    nb = len(EDGES) - 1
+    bn = {k: np.zeros(nb, np.int64) for k in FG}
+    be = {k: np.zeros(nb, np.int64) for k in FG}
+    accumulate_bins(mask, dist, pred, bn, be, EDGES)
+    i8 = int(np.where(EDGES == NEAR_M)[0][0])
+    i32 = int(np.where(EDGES == INTERIOR_M)[0][0])
+    agree = all(bn[k][:i8].sum() == near_n[k] and be[k][:i8].sum() == near_e[k]
+                and bn[k][i32:].sum() == int_n[k] and be[k][i32:].sum() == int_e[k] for k in FG)
+    ok &= agree
+    print(f"  binned counts reproduce the two-band summary for all five classes  "
+          f"[{'ok' if agree else 'FAIL'}]")
+
     # And a tile with no boundary must be skipped, not counted as all-interior.
     flat = np.full((64, 64), 2, np.uint8)
     d2 = boundary_distance(flat, "biodiversity_0001")

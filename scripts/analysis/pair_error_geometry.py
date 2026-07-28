@@ -62,6 +62,25 @@ def edge_distance(shape, sampling) -> np.ndarray:
     return np.minimum(yy, xx)
 
 
+def pair_counts(e, d, ed, bands, widest):
+    """Per-band raw / per-band-guarded / common-guarded counts for one error mask on one tile.
+
+    Extracted from main() on 2026-07-28 because it lived there and `self_test` never called `main`,
+    so deleting the guard entirely (`ed > w` -> `ed > 0`) left the self-test passing. On the 90
+    deduped test tiles that mutation moves Grassland->Seminatural's beyond-8 m share from 0.00% to
+    45.42% on a synthetic shifted prediction whose true share is zero.
+    """
+    out = {"n": int(e.sum()), "common_n": int((e & (ed > widest)).sum())}
+    common = e & (ed > widest)
+    for w in bands:
+        g = e & (ed > w)
+        out[f"beyond{w:g}"] = int((e & (d >= w)).sum())
+        out[f"guard_n{w:g}"] = int(g.sum())
+        out[f"guard_beyond{w:g}"] = int((g & (d >= w)).sum())
+        out[f"common_beyond{w:g}"] = int((common & (d >= w)).sum())
+    return out
+
+
 def component_sizes(err_mask: np.ndarray, px_area_m2: float) -> np.ndarray:
     """Areas in m2 of the 8-connected components of an error mask, largest first."""
     if not err_mask.any():
@@ -100,7 +119,7 @@ def self_test() -> int:
     m[30:40, 30:40] = True               # 10x10, and
     m[40:45, 40:45] = True               # 5x5 touching it corner-to-corner -> one component of 125
     sizes = component_sizes(m, 0.25)     # 0.5 m px -> 0.25 m2
-    good = np.allclose(sizes, [125 * 0.25, 100 * 0.25])
+    good = sizes.size == 2 and np.allclose(sizes, [125 * 0.25, 100 * 0.25])
     ok &= good
     print(f"  component areas {sizes.tolist()} m2 (expect [31.25, 25.0]; the diagonal pair merges "
           f"under 8-connectivity)  [{'ok' if good else 'FAIL'}]")
@@ -116,6 +135,36 @@ def self_test() -> int:
     ok &= good
     print(f"  mass in 5 largest components: one block {100*share_b:.1f}%, scattered "
           f"{100*share_s:.2f}%  [{'ok' if good else 'FAIL'}]")
+
+    # (4) THE GUARD ITSELF, on a two-tile scene. The left tile is one class throughout, so scored
+    # alone every pixel in it is infinitely far from a boundary. The scene has a boundary at the
+    # seam, so pixels near the right edge of that tile are in truth CLOSE to one. An unguarded
+    # count therefore reports them as beyond 8 m; the guard must exclude every one of them.
+    W = 8.0
+    scene = np.ones((64, 128), np.uint8); scene[:, 64:] = 2
+    left = scene[:, :64]                                   # the tile as the pipeline sees it
+    d_alone = np.full(left.shape, np.inf)                  # single-class tile: no in-tile boundary
+    # EDT measures distance to the ZEROS of its input, so to get "distance to the class-2 region"
+    # the input must be `!= 2`, not `!= 1`. Writing it the other way round made d_scene zero
+    # everywhere and the gate reported 900 spurious flips -- a fault in the fixture, caught by the
+    # fixture, which is the behaviour wanted.
+    d_scene = ndimage.distance_transform_edt(
+        np.pad(left, ((0, 0), (0, 1)), constant_values=2) != 2, sampling=(0.5, 0.5))[:, :64]
+    ed = edge_distance(left.shape, (0.5, 0.5))
+    e = np.ones(left.shape, bool)
+    raw = pair_counts(e, d_alone, ed, (W,), W)
+    truth = pair_counts(e, d_scene, ed, (W,), W)
+    flipped_raw = raw["beyond8"] - truth["beyond8"]
+    flipped_guarded = raw["guard_beyond8"] - int((e & (ed > W) & (d_scene >= W)).sum())
+    good = flipped_raw > 0 and flipped_guarded == 0
+    ok &= good
+    print(f"  guard: {flipped_raw} pixels wrongly 'beyond 8 m' without it, {flipped_guarded} with it "
+          f"(must be >0 then 0)  [{'ok' if good else 'FAIL'}]")
+    # and the guard must actually discard something, or it is vacuous
+    good = raw["guard_n8"] < raw["n"]
+    ok &= good
+    print(f"  guard drops {raw['n'] - raw['guard_n8']:,} of {raw['n']:,} pixels "
+          f"(must be non-zero)  [{'ok' if good else 'FAIL'}]")
 
     print("\nSELF-TEST PASSED" if ok else "\nSELF-TEST FAILED")
     return 0 if ok else 1
@@ -188,15 +237,9 @@ def main() -> int:
                 if not e.any():
                     continue
                 c = acc[(a, b)][s]
-                c["n"] += int(e.sum())
-                common = e & (ed > WIDEST)
-                c["common_n"] += int(common.sum())
-                for w in BANDS:
-                    c[f"beyond{w:g}"] += int((e & (d >= w)).sum())
-                    g = e & (ed > w)          # cannot be changed by anything outside the tile
-                    c[f"guard_n{w:g}"] += int(g.sum())
-                    c[f"guard_beyond{w:g}"] += int((g & (d >= w)).sum())
-                    c[f"common_beyond{w:g}"] += int((common & (d >= w)).sum())
+                pc = pair_counts(e, d, ed, BANDS, WIDEST)
+                for k, v in pc.items():
+                    c[k] += v
                 c["sizes"].extend(component_sizes(e, px_area).tolist())
 
     out = {"split": args.split, "cell": args.cell, "seeds": args.seeds, "bands_m": list(BANDS),

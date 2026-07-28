@@ -60,6 +60,18 @@ def contacts(mask: np.ndarray, acc: np.ndarray) -> None:
             np.add.at(acc, (b[sel].ravel(), a[sel].ravel()), 1)
 
 
+def physical_contacts(acc: np.ndarray) -> int:
+    """Number of distinct foreground adjacencies in a symmetric contact matrix.
+
+    `contacts` writes every adjacency into BOTH acc[a,b] and acc[b,a], so the matrix sum is twice
+    the number of physical contacts while each per-pair numerator counts it once. Dividing one by
+    the other halved every reported share until 2026-07-28. This lives in a function so the
+    self-test exercises the same code main() does -- an earlier gate recomputed the halving inline
+    and therefore passed when main()'s copy was reverted.
+    """
+    return int(acc[1:, 1:].sum()) // 2
+
+
 def near_counts(mask: np.ndarray, sampling, near_n: np.ndarray, tot_n: np.ndarray) -> None:
     """near_n[a, b] += pixels of class a within NEAR_M of any pixel of class b."""
     present = [k for k in FG if (mask == k).any()]
@@ -94,10 +106,26 @@ def self_test() -> int:
     ok &= good
     print(f"  forest-grassland contacts {acc[1,2]} (expect 200, symmetric)  [{'ok' if good else 'FAIL'}]")
     # The island touches only forest, never grassland.
-    good = acc[5, 2] == 0 and acc[5, 1] > 0
+    # EXACT count, not `> 0`. The 20x20 island has 40 horizontal and 40 vertical adjacencies with
+    # the surrounding forest, so dropping either axis of `contacts` halves it. A bare `> 0` survived
+    # exactly that mutation, and the fixture's only class seam is vertical, so nothing else in this
+    # test looked at the horizontal pass.
+    good = acc[5, 2] == 0 and acc[5, 1] == 80
     ok &= good
-    print(f"  island touches grassland {acc[5,2]} (expect 0) and forest {acc[5,1]} (expect >0)  "
+    print(f"  island touches grassland {acc[5,2]} (expect 0) and forest {acc[5,1]} (expect 80: "
+          f"40 horizontal + 40 vertical)  [{'ok' if good else 'FAIL'}]")
+    # The denominator counts PHYSICAL contacts, so it is half the symmetric matrix sum. Without
+    # this, reverting that division leaves every reported contact share exactly halved and the
+    # self-test silent.
+    total = physical_contacts(acc)
+    good = total == 280
+    ok &= good
+    print(f"  physical contacts {total} (expect 280 = 200 seam + 80 island)  "
           f"[{'ok' if good else 'FAIL'}]")
+    shares = sum(acc[a, b] for a in FG for b in FG if a < b) / total
+    good = abs(shares - 1.0) < 1e-9
+    ok &= good
+    print(f"  unordered shares sum to {shares:.6f} (expect 1.000000)  [{'ok' if good else 'FAIL'}]")
 
     near_n = np.zeros((6, 6), np.int64)
     tot_n = np.zeros(6, np.int64)
@@ -167,7 +195,7 @@ def main() -> int:
     # summing the matrix counts each contact twice. The per-pair numerator acc[a,b] counts it once.
     # Dividing one by the other halved every contact share until 2026-07-28; an independent
     # re-derivation from the masks gave 1.59% for the grassland pair where this reported 0.80%.
-    total_contacts = int(acc[1:, 1:].sum()) // 2
+    total_contacts = physical_contacts(acc)
     out = {"split": args.split, "dedup": bool(args.dedup), "n_tiles": len(tiles),
            "near_m": NEAR_M, "total_fg_contacts": total_contacts, "pairs": []}
 
