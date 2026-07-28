@@ -7,7 +7,7 @@ contrasts (and the model residuals) normally distributed?
 
 The factorial main effects and interaction (contrast definitions now in
 scripts/analysis/narrative_numbers.py; the figure that used to draw them is retired to
-_archive/cut_figures/factorial_effects.py)
+../_archive-lqc/cut_figures/factorial_effects.py)
 are reported as 95% *paired-t* confidence intervals over the ten seeds. The paired-t
 relies on the ten per-seed contrast values being approximately normal. This script tests
 that assumption directly, using the same contrast definitions as narrative_numbers.per_class_contrasts:

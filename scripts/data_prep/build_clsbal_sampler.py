@@ -35,7 +35,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "analysis"))
 from utils import load_augmentation_list  # noqa: E402
 
-# The untagged artefacts belong to the withdrawn split and now live under _archive/.
+# The untagged artefacts belong to the withdrawn split and now live under ../_archive-lqc/.
 SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 DEFAULT_AUG_LIST = f"artifacts/train_augmentation_list_{SPLIT_TAG}.json"
 

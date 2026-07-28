@@ -417,7 +417,7 @@ fi
 CELLS=(stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal)
 
 # Path of one cell's selected checkpoint. Every checkpoint path is tagged; an untagged one is the
-# withdrawn campaign's, still on disk under _archive/stale_checkpoints_pre_rebuild/.
+# withdrawn campaign's, still on disk under ../_archive-lqc/stale_checkpoints_pre_rebuild/.
 cell_ckpt() { echo "model_weights/biodiversity/${1}_${SPLIT_TAG}/${1}_${SPLIT_TAG}.ckpt"; }
 
 if run_stage C1; then

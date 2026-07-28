@@ -40,7 +40,7 @@ from geoseg.datasets.biodiversity_dataset import BiodiversityTrainDataset, val_a
 from geoseg.models.unet import TeacherUNet
 from geoseg.taxonomy import OEM_NATIVE_CLASSES, STUDENT_CLASSES, OEM_TO_STUDENT_PRETRAIN
 
-# The untagged artefacts belong to the withdrawn split and now live under _archive/.
+# The untagged artefacts belong to the withdrawn split and now live under ../_archive-lqc/.
 SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 TEACHER_CKPT = "pretrain_weights/u-efficientnet-b4_s0_CELoss_pretrained.pth"

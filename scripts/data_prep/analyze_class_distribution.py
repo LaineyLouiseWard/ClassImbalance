@@ -21,7 +21,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from PIL import Image
 
-# The untagged artefacts belong to the withdrawn split and now live under _archive/.
+# The untagged artefacts belong to the withdrawn split and now live under ../_archive-lqc/.
 SPLIT_TAG = os.environ.get("SPLIT_TAG", "f1")
 
 

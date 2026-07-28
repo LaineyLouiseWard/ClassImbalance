@@ -38,7 +38,7 @@ Build a single figure by running its script directly, or skip figures with
 
 Six figures were removed from the build. Their scripts remain and can still be run by hand; they are
 out of `build_all_figures.py` because four of them read inputs that moved to
-`_archive/withdrawn_campaign_2026-07-28/`, so the build raised `SystemExit` and refused to sync even
+`../_archive-lqc/withdrawn_campaign_2026-07-28/`, so the build raised `SystemExit` and refused to sync even
 the figures that had succeeded.
 
 | figure | why |

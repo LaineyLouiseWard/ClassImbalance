@@ -118,7 +118,7 @@ def main() -> None:
     ]
     # CUT 2026-07-28, six figures. Five no longer support a surviving conclusion and one is refuted
     # by the study's own data. They were not merely unused: four read inputs that moved to
-    # `_archive/withdrawn_campaign_2026-07-28/` when the withdrawn campaign was cleared away, so this
+    # `../_archive-lqc/withdrawn_campaign_2026-07-28/` when the withdrawn campaign was cleared away, so this
     # list raised SystemExit and refused to sync even the seven figures that had built.
     #   mitigation_axes           schematic of a data-vs-model split the fixed architecture cannot test
     #   frequency_vs_difficulty   five classes cannot support the claim in either direction
