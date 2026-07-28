@@ -116,6 +116,31 @@ def pair_ratios(conf: np.ndarray) -> list[dict]:
     return sorted(out, key=lambda d: -d["share_of_error"])
 
 
+def confusion_summary(conf: np.ndarray) -> dict:
+    """Recall, precision, predicted-vs-reference area, and the ordered pair rates.
+
+    These were computed inline during a chat session and quoted in the narrative -- the sampler's
+    24% over-claim, the 39.2% against 4.8% pair asymmetry, the predicted-area table. Nothing
+    produced them, so nobody else could check them. They come from one matrix and belong here.
+    """
+    fg = list(FG)
+    out = {}
+    for k in fg:
+        ref = float(conf[k, :].sum())
+        pred = float(conf[1:, k].sum())
+        out[FG[k]] = {
+            "reference_px": int(ref), "predicted_px": int(pred),
+            "predicted_over_reference_pct": 100 * (pred - ref) / ref if ref else float("nan"),
+            "recall": float(conf[k, k] / ref) if ref else float("nan"),
+            "precision": float(conf[k, k] / pred) if pred else float("nan"),
+        }
+    out["pair_rates"] = {
+        f"{FG[a]}->{FG[b]}": float(conf[a, b] / conf[a, :].sum())
+        for a in fg for b in fg if a != b and conf[a, :].sum()
+    }
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 2. Per-class paired contrasts
 # ---------------------------------------------------------------------------
@@ -280,6 +305,25 @@ def main() -> int:
         if conf.shape != (6, 6):
             raise SystemExit(f"{cpath}: expected a 6x6 confusion, got {conf.shape}")
         out["pair_ratios"] = pair_ratios(conf)
+        out["confusion_summary"] = confusion_summary(conf)
+        alt = Path(args.confusion_dir) / f"confusion_{args.split}_stage3_clsbal.npy"
+        if alt.exists():
+            # The sampler's effect on what the model CLAIMS, which is the point of §12(b): it acted
+            # as designed and bought almost nothing. Expressed as the extra predicted pixels and how
+            # many of them were right, so the "3 in 100" is derived rather than asserted.
+            c2 = np.load(alt)
+            out["sampler_effect"] = {}
+            for k in FG:
+                p0, p1 = float(conf[1:, k].sum()), float(c2[1:, k].sum())
+                t0, t1 = float(conf[k, k]), float(c2[k, k])
+                out["sampler_effect"][FG[k]] = {
+                    "predicted_px_baseline": int(p0), "predicted_px_full": int(p1),
+                    "extra_predicted": int(p1 - p0), "extra_correct": int(t1 - t0),
+                    "share_of_extra_that_was_correct":
+                        float((t1 - t0) / (p1 - p0)) if p1 != p0 else float("nan"),
+                    "recall_baseline": float(t0 / conf[k, :].sum()),
+                    "recall_full": float(t1 / c2[k, :].sum()),
+                }
 
     if args.metrics_dir:
         iou = {}

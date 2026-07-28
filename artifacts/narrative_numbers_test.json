@@ -91,6 +91,112 @@
       "ratio": 0.30786244949589747
     }
   ],
+  "confusion_summary": {
+    "Forest": {
+      "reference_px": 33020860,
+      "predicted_px": 34199576,
+      "predicted_over_reference_pct": 3.5696102403147587,
+      "recall": 0.8524965733781615,
+      "precision": 0.8231145906604223
+    },
+    "Grassland": {
+      "reference_px": 149404630,
+      "predicted_px": 147483226,
+      "predicted_over_reference_pct": -1.2860404660819413,
+      "recall": 0.9105373441238066,
+      "precision": 0.9223997785348145
+    },
+    "Cropland": {
+      "reference_px": 2933270,
+      "predicted_px": 1594980,
+      "predicted_over_reference_pct": -45.624507801872994,
+      "recall": 0.39305382729854393,
+      "precision": 0.7228510702328556
+    },
+    "Settlement": {
+      "reference_px": 8169140,
+      "predicted_px": 8586334,
+      "predicted_over_reference_pct": 5.1069512825095424,
+      "recall": 0.8521315585239083,
+      "precision": 0.8107280709089584
+    },
+    "Seminatural": {
+      "reference_px": 14568810,
+      "predicted_px": 16232594,
+      "predicted_over_reference_pct": 11.420177763317662,
+      "recall": 0.5602711546104314,
+      "precision": 0.5028453246597555
+    },
+    "pair_rates": {
+      "Forest->Grassland": 0.10318538039287893,
+      "Forest->Cropland": 0.0005328147116701382,
+      "Forest->Settlement": 0.01844261475927641,
+      "Forest->Seminatural": 0.025342616758012967,
+      "Grassland->Forest": 0.03278648727285091,
+      "Grassland->Cropland": 0.002470117559275104,
+      "Grassland->Settlement": 0.006048226216282588,
+      "Grassland->Seminatural": 0.04815782482778479,
+      "Cropland->Forest": 0.02107545503823378,
+      "Cropland->Grassland": 0.5553559679129436,
+      "Cropland->Settlement": 0.023988927033651863,
+      "Cropland->Seminatural": 0.0065258227166268366,
+      "Settlement->Forest": 0.054738564891775636,
+      "Settlement->Grassland": 0.08620221957268452,
+      "Settlement->Cropland": 0.004585794832748612,
+      "Settlement->Seminatural": 0.0023418621788829667,
+      "Seminatural->Forest": 0.044064408829547506,
+      "Seminatural->Grassland": 0.39153877358548844,
+      "Seminatural->Cropland": 0.00123167231915304,
+      "Seminatural->Settlement": 0.00289399065537954
+    }
+  },
+  "sampler_effect": {
+    "Forest": {
+      "predicted_px_baseline": 34199576,
+      "predicted_px_full": 33190679,
+      "extra_predicted": -1008897,
+      "extra_correct": -220605,
+      "share_of_extra_that_was_correct": 0.21865958566632668,
+      "recall_baseline": 0.8524965733781615,
+      "recall_full": 0.8458157964389783
+    },
+    "Grassland": {
+      "predicted_px_baseline": 147483226,
+      "predicted_px_full": 147306163,
+      "extra_predicted": -177063,
+      "extra_correct": -852038,
+      "share_of_extra_that_was_correct": 4.812061243738104,
+      "recall_baseline": 0.9105373441238066,
+      "recall_full": 0.9048344552642044
+    },
+    "Cropland": {
+      "predicted_px_baseline": 1594980,
+      "predicted_px_full": 1239729,
+      "extra_predicted": -355251,
+      "extra_correct": -92651,
+      "share_of_extra_that_was_correct": 0.260804332711238,
+      "recall_baseline": 0.39305382729854393,
+      "recall_full": 0.3614675771408701
+    },
+    "Settlement": {
+      "predicted_px_baseline": 8586334,
+      "predicted_px_full": 8342116,
+      "extra_predicted": -244218,
+      "extra_correct": -41649,
+      "share_of_extra_that_was_correct": 0.17054025501805764,
+      "recall_baseline": 0.8521315585239083,
+      "recall_full": 0.8470332250396002
+    },
+    "Seminatural": {
+      "predicted_px_baseline": 16232594,
+      "predicted_px_full": 18018023,
+      "extra_predicted": 1785429,
+      "extra_correct": 54356,
+      "share_of_extra_that_was_correct": 0.030444223769189364,
+      "recall_baseline": 0.5602711546104314,
+      "recall_full": 0.5640021388157304
+    }
+  },
   "per_class_contrasts": {
     "oem_pretraining": {
       "Forest": {
