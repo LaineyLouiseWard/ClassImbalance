@@ -143,8 +143,10 @@ def report(name: str, counts: dict, groups: dict) -> dict:
     en = sum(c[0] for c in counts.values()); nn = sum(c[1] for c in counts.values())
     ef = sum(c[2] for c in counts.values()); nf = sum(c[3] for c in counts.values())
     print(f"\n{name}")
-    print(f"  near-boundary error rate  {100*en/max(nn,1):7.4f}%   ({en:,} / {nn:,} px)")
-    print(f"  beyond-8 m error rate     {100*ef/max(nf,1):7.4f}%   ({ef:,} / {nf:,} px)")
+    # Both labels MUST name the band actually used. They read "beyond-8 m" unconditionally until
+    # 2026-07-28, so a run swept to another width printed the right number under the wrong label.
+    print(f"  within-{BAND_M:g} m error rate  {100*en/max(nn,1):7.4f}%   ({en:,} / {nn:,} px)")
+    print(f"  beyond-{BAND_M:g} m error rate  {100*ef/max(nf,1):7.4f}%   ({ef:,} / {nf:,} px)")
     print(f"  rho = {point:.3f}   over {len(counts)} tiles spanning {n_cells} grid cells "
           f"of 950 m (cells touched, NOT independent parcels)")
     print(f"  descriptive: no threshold (D18) and no interval. This is a census of the ground "
