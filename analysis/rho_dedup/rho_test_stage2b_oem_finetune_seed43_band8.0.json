@@ -1,0 +1,24 @@
+{
+  "split_root": "/home/people/18365881/scratch/lqc/dedup_root",
+  "split": "test",
+  "cell": "stage2b_oem_finetune",
+  "seeds": [
+    43
+  ],
+  "band_m": 8.0,
+  "grid_cells_touched_at_m": 950.0,
+  "interval": null,
+  "pooled": {
+    "rho": 2.0558700432677375,
+    "n_cells_touched": 15,
+    "n_tiles": 90,
+    "err_near": 1664421,
+    "n_near": 7986896,
+    "err_far": 1299785,
+    "n_far": 12822775,
+    "rate_near": 0.20839397432995246,
+    "rate_far": 0.1013653440850362,
+    "threshold": null,
+    "interval": null
+  }
+}

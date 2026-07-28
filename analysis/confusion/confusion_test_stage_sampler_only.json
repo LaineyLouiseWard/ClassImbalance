@@ -1,0 +1,20 @@
+{
+  "split": "test",
+  "cell": "stage_sampler_only",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "n_tiles": 90,
+  "scoring_subset": true,
+  "foreground_px": 208096710,
+  "foreground_errors": 27420085
+}

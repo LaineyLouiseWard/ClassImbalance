@@ -99,7 +99,20 @@ config/biodiversity/_archive/
 # Regenerable analysis outputs (drafts, stale KD, imagery-derived previews) — not shared.
 # Leading slash matters: unanchored, this also matched scripts/analysis/ and silently kept
 # seven analysis scripts out of the repo.
-/analysis/
+#
+# CHANGED 2026-07-28. This was a blanket /analysis/ and it meant every derived number the paper
+# quotes lived only on one machine. The bulky per-tile outputs stay out; the small derived JSON that
+# backs a reported number is now TRACKED, because a number with no committed artifact behind it
+# cannot be defended by anyone who was not in the room.
+/analysis/*
+!/analysis/confusion/
+!/analysis/interior/
+!/analysis/label_ceiling/
+!/analysis/metrics/
+!/analysis/pair_geometry/
+!/analysis/pairdist/
+!/analysis/rho_dedup/
+!/analysis/rho_full/
 evaluation/bakeoff_gates/
 
 # Archived cut-figure outputs (kept locally, out of git)
@@ -111,3 +124,12 @@ artifacts/_cache/
 
 # Pre-rewrite manuscript snapshots (2026-07-27), kept out of the repo like _archive/
 _archived_new/
+
+# Raw per-tile softmax fetched for one figure. Large, regenerable from the cluster, and not a
+# result. The DERIVED json under analysis/ IS tracked -- every number in the narrative must have a
+# committed artifact behind it.
+analysis/panel_root/
+analysis/seed_softmax_panel/
+# and never the raw dumps, wherever they land
+analysis/**/*.npy
+!analysis/confusion/*.npy

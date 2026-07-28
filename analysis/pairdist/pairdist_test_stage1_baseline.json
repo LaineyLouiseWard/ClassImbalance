@@ -1,0 +1,160 @@
+{
+  "split": "test",
+  "cell": "stage1_baseline",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "n_tiles": 90,
+  "skipped": 0,
+  "pairs": [
+    {
+      "a": "Forest",
+      "b": "Grassland",
+      "n": 3407270,
+      "beyond8": 173819,
+      "beyond32": 3699
+    },
+    {
+      "a": "Forest",
+      "b": "Cropland",
+      "n": 17594,
+      "beyond8": 40,
+      "beyond32": 0
+    },
+    {
+      "a": "Forest",
+      "b": "Settlement",
+      "n": 608991,
+      "beyond8": 33811,
+      "beyond32": 1677
+    },
+    {
+      "a": "Forest",
+      "b": "Seminatural",
+      "n": 836835,
+      "beyond8": 123515,
+      "beyond32": 5283
+    },
+    {
+      "a": "Grassland",
+      "b": "Forest",
+      "n": 4898453,
+      "beyond8": 735327,
+      "beyond32": 242666
+    },
+    {
+      "a": "Grassland",
+      "b": "Cropland",
+      "n": 369047,
+      "beyond8": 246838,
+      "beyond32": 97465
+    },
+    {
+      "a": "Grassland",
+      "b": "Settlement",
+      "n": 903633,
+      "beyond8": 78310,
+      "beyond32": 32100
+    },
+    {
+      "a": "Grassland",
+      "b": "Seminatural",
+      "n": 7195002,
+      "beyond8": 5458567,
+      "beyond32": 1901403
+    },
+    {
+      "a": "Cropland",
+      "b": "Forest",
+      "n": 61820,
+      "beyond8": 1093,
+      "beyond32": 0
+    },
+    {
+      "a": "Cropland",
+      "b": "Grassland",
+      "n": 1629009,
+      "beyond8": 1046374,
+      "beyond32": 280802
+    },
+    {
+      "a": "Cropland",
+      "b": "Settlement",
+      "n": 70366,
+      "beyond8": 2994,
+      "beyond32": 0
+    },
+    {
+      "a": "Cropland",
+      "b": "Seminatural",
+      "n": 19142,
+      "beyond8": 2295,
+      "beyond32": 0
+    },
+    {
+      "a": "Settlement",
+      "b": "Forest",
+      "n": 447167,
+      "beyond8": 9205,
+      "beyond32": 0
+    },
+    {
+      "a": "Settlement",
+      "b": "Grassland",
+      "n": 704198,
+      "beyond8": 28820,
+      "beyond32": 0
+    },
+    {
+      "a": "Settlement",
+      "b": "Cropland",
+      "n": 37462,
+      "beyond8": 10588,
+      "beyond32": 0
+    },
+    {
+      "a": "Settlement",
+      "b": "Seminatural",
+      "n": 19131,
+      "beyond8": 229,
+      "beyond32": 0
+    },
+    {
+      "a": "Seminatural",
+      "b": "Forest",
+      "n": 641966,
+      "beyond8": 78127,
+      "beyond32": 1144
+    },
+    {
+      "a": "Seminatural",
+      "b": "Grassland",
+      "n": 5704254,
+      "beyond8": 3932443,
+      "beyond32": 1529953
+    },
+    {
+      "a": "Seminatural",
+      "b": "Cropland",
+      "n": 17944,
+      "beyond8": 3374,
+      "beyond32": 0
+    },
+    {
+      "a": "Seminatural",
+      "b": "Settlement",
+      "n": 42162,
+      "beyond8": 575,
+      "beyond32": 86
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "split": "external_test",
+  "cell": "stage3_clsbal",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "n_tiles": 51,
+  "scoring_subset": true,
+  "foreground_px": 74535230,
+  "foreground_errors": 22144930
+}

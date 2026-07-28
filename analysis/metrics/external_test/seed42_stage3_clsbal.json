@@ -1,0 +1,29 @@
+{
+  "checkpoint": "/scratch/18365881/lqc/seed42/model_weights/biodiversity/stage3_clsbal_f1/stage3_clsbal_f1.ckpt",
+  "split": "test",
+  "data_root": "/scratch/18365881/lqc/data_stage/data/split_f1/external_test",
+  "date": "2026-07-28T01:35:47",
+  "ignore_index": 0,
+  "tta": false,
+  "tta_scales": null,
+  "tta_flips": null,
+  "OA": 0.5303682567290655,
+  "mIoU_excluding_bg": 0.4080849134716897,
+  "mF1_excluding_bg": 0.5639203385695484,
+  "per_class_iou": {
+    "Background": NaN,
+    "Forest land": 0.5907979815680975,
+    "Grassland": 0.3900500996539677,
+    "Cropland": 0.18788640118402938,
+    "Settlement": 0.5405456973859538,
+    "Seminatural Grassland": 0.3311443875664001
+  },
+  "per_class_f1": {
+    "Background": NaN,
+    "Forest land": 0.7427693326912586,
+    "Grassland": 0.5612029332154681,
+    "Cropland": 0.3163373177262552,
+    "Settlement": 0.70175872679053,
+    "Seminatural Grassland": 0.49753338242422973
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "split_root": "/home/people/18365881/scratch/lqc/dedup_root",
+  "split": "test",
+  "cell": "stage3_clsbal",
+  "seeds": [
+    48
+  ],
+  "band_m": 8.0,
+  "grid_cells_touched_at_m": 950.0,
+  "interval": null,
+  "pooled": {
+    "rho": 1.9664182340569498,
+    "n_cells_touched": 15,
+    "n_tiles": 90,
+    "err_near": 1571101,
+    "n_near": 7986896,
+    "err_far": 1282721,
+    "n_far": 12822775,
+    "rate_near": 0.19670983571089445,
+    "rate_far": 0.100034586897142,
+    "threshold": null,
+    "interval": null
+  }
+}

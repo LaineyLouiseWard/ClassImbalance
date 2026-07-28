@@ -1,0 +1,343 @@
+{
+  "split": "external_test",
+  "cell": "stage_sampler_only",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "dedup": false,
+  "near_m": 8.0,
+  "interior_m": 32.0,
+  "n_tiles_scored": 172,
+  "n_tiles_boundary_free_skipped": 19,
+  "per_seed": {
+    "42": {
+      "Forest": {
+        "near_rate": 0.30400246856161567,
+        "near_n": 2236120,
+        "interior_rate": 0.1852749089775738,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.24622752271567364,
+        "near_n": 2784311,
+        "interior_rate": 0.006859257016332015,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.08847775055573256,
+        "near_n": 273063,
+        "interior_rate": 0.0018313751767587043,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.3932703596968727,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.21970473564255277,
+        "near_n": 1170612,
+        "interior_rate": 0.30899987771070475,
+        "interior_n": 10090826
+      }
+    },
+    "43": {
+      "Forest": {
+        "near_rate": 0.3841488828864283,
+        "near_n": 2236120,
+        "interior_rate": 0.346175641407058,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.29982246954453007,
+        "near_n": 2784311,
+        "interior_rate": 0.03139323631271172,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.04022881166617227,
+        "near_n": 273063,
+        "interior_rate": 1.907682475790317e-05,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.3033834987725478,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.16732871352762488,
+        "near_n": 1170612,
+        "interior_rate": 0.18481985518331204,
+        "interior_n": 10090826
+      }
+    },
+    "44": {
+      "Forest": {
+        "near_rate": 0.29722152657281364,
+        "near_n": 2236120,
+        "interior_rate": 0.1535764375876578,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.21775764273459394,
+        "near_n": 2784311,
+        "interior_rate": 0.005968849946064609,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.2284198152074796,
+        "near_n": 273063,
+        "interior_rate": 0.7388358844612108,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.34559985057103215,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.3305484652472382,
+        "near_n": 1170612,
+        "interior_rate": 0.5980662038964898,
+        "interior_n": 10090826
+      }
+    },
+    "45": {
+      "Forest": {
+        "near_rate": 0.2898735309375168,
+        "near_n": 2236120,
+        "interior_rate": 0.3104821001034185,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.27973742875706054,
+        "near_n": 2784311,
+        "interior_rate": 0.01721485210348025,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.2963382076663627,
+        "near_n": 273063,
+        "interior_rate": 0.6078567902765424,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.36083893691962854,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.23743904897609114,
+        "near_n": 1170612,
+        "interior_rate": 0.276406212930438,
+        "interior_n": 10090826
+      }
+    },
+    "46": {
+      "Forest": {
+        "near_rate": 0.3224706187503354,
+        "near_n": 2236120,
+        "interior_rate": 0.1965588564466545,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.2654556190023313,
+        "near_n": 2784311,
+        "interior_rate": 0.03395090933176889,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.5465039203407273,
+        "near_n": 273063,
+        "interior_rate": 0.4497266052551883,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.2745864019639236,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.39898019155792014,
+        "near_n": 1170612,
+        "interior_rate": 0.6153920402551784,
+        "interior_n": 10090826
+      }
+    },
+    "47": {
+      "Forest": {
+        "near_rate": 0.2930021644634456,
+        "near_n": 2236120,
+        "interior_rate": 0.25853202431042543,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.3255523538857549,
+        "near_n": 2784311,
+        "interior_rate": 0.0673388088794686,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.16426245957892502,
+        "near_n": 273063,
+        "interior_rate": 0.1963172189804868,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.43564948233536127,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.19945037296730259,
+        "near_n": 1170612,
+        "interior_rate": 0.2151610779930206,
+        "interior_n": 10090826
+      }
+    },
+    "48": {
+      "Forest": {
+        "near_rate": 0.400376992290217,
+        "near_n": 2236120,
+        "interior_rate": 0.33670505900519926,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.26681107103337237,
+        "near_n": 2784311,
+        "interior_rate": 0.006793020571147405,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.020270047571439558,
+        "near_n": 273063,
+        "interior_rate": 9.776872688425375e-05,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.46561799551713096,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.31966099783702884,
+        "near_n": 1170612,
+        "interior_rate": 0.6020563628785196,
+        "interior_n": 10090826
+      }
+    },
+    "49": {
+      "Forest": {
+        "near_rate": 0.24405219755648178,
+        "near_n": 2236120,
+        "interior_rate": 0.2803986569764971,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.30436542469573263,
+        "near_n": 2784311,
+        "interior_rate": 0.03566737949698151,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.10883202777381044,
+        "near_n": 273063,
+        "interior_rate": 0.00020984507233693487,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.3230147294268332,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.3226167167259519,
+        "near_n": 1170612,
+        "interior_rate": 0.20433322306816112,
+        "interior_n": 10090826
+      }
+    },
+    "50": {
+      "Forest": {
+        "near_rate": 0.2797989374452176,
+        "near_n": 2236120,
+        "interior_rate": 0.12583053536770228,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.2604317549296756,
+        "near_n": 2784311,
+        "interior_rate": 0.03387804924206582,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.20975013092216815,
+        "near_n": 273063,
+        "interior_rate": 0.33859933183421287,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.35757017824741166,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.37388306287651246,
+        "near_n": 1170612,
+        "interior_rate": 0.636863622462621,
+        "interior_n": 10090826
+      }
+    },
+    "51": {
+      "Forest": {
+        "near_rate": 0.3091913671895963,
+        "near_n": 2236120,
+        "interior_rate": 0.10387181775681074,
+        "interior_n": 141174
+      },
+      "Grassland": {
+        "near_rate": 0.2401527702903878,
+        "near_n": 2784311,
+        "interior_rate": 0.026626104729282188,
+        "interior_n": 1056820
+      },
+      "Cropland": {
+        "near_rate": 0.07858626031355402,
+        "near_n": 273063,
+        "interior_rate": 0.009841256971983299,
+        "interior_n": 419357
+      },
+      "Settlement": {
+        "near_rate": 0.3621544455117942,
+        "near_n": 374760,
+        "interior_rate": 1.0,
+        "interior_n": 855
+      },
+      "Seminatural": {
+        "near_rate": 0.25018366461304004,
+        "near_n": 1170612,
+        "interior_rate": 0.22580024667950868,
+        "interior_n": 10090826
+      }
+    }
+  }
+}

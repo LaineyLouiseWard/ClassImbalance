@@ -1,0 +1,24 @@
+{
+  "split_root": "data/split_f1",
+  "split": "test",
+  "cell": "stage3_clsbal",
+  "seeds": [
+    50
+  ],
+  "band_m": 1.0,
+  "grid_cells_touched_at_m": 950.0,
+  "interval": null,
+  "pooled": {
+    "rho": 3.6499608525507994,
+    "n_cells_touched": 16,
+    "n_tiles": 294,
+    "err_near": 1949836,
+    "n_near": 4799216,
+    "err_far": 7208473,
+    "n_far": 64759531,
+    "rate_near": 0.4062821927581505,
+    "rate_far": 0.11131138364791432,
+    "threshold": null,
+    "interval": null
+  }
+}
