@@ -78,24 +78,21 @@ the ensemble**, read out of the JSON rather than the console table:
 
 | class | baseline IoU | boundaries excluded | gain |
 |---|---|---|---|
-| Settlement | 0.717 | 0.890 | **+17.3 pp** |
-| Forest | 0.716 | 0.847 | **+13.2 pp** |
-| Grassland | 0.844 | 0.889 | +4.6 pp |
-| Cropland | 0.460 | 0.505 | +4.5 pp |
-| **Seminatural** | 0.414 | 0.449 | **+3.5 pp** |
-| macro foreground | 0.630 | 0.716 | +8.6 pp |
+| Settlement | 0.713 | 0.886 | **+17.3 pp** |
+| Forest | 0.718 | 0.850 | **+13.2 pp** |
+| Grassland | 0.850 | 0.896 | +4.6 pp |
+| **Seminatural** | 0.402 | 0.434 | **+3.2 pp** |
+| Cropland | 0.350 | 0.378 | +2.8 pp |
+| macro foreground | 0.607 | 0.689 | +8.2 pp |
 
-**Two of the four caveats below are already discharged by this table.** The console prints only three
-classes, but the JSON carries all five at every radius, per seed, with standard deviations — so no
-rerun is needed to see grassland and cropland. And the per-seed figures match the ensemble ones to
-within 0.1 pp (13.2 against 13.3, 17.3 against 17.2, 3.5 against 3.4), so the ensemble was not
-inflating this particular comparison.
+**Ten seeds, per seed, read from the JSON rather than the console table** — the console prints only
+three of the five classes, which is what led to the transcription error corrected on 2026-07-29.
 
 ## What it means
 
 **Two classes fail at their edges. Three do not.** Settlement and forest recover 13 to 17 points once
 the boundary band is removed. Grassland, cropland and semi-natural recover 3 to 5 points and stay
-where they were — semi-natural still scores 0.449 with every pixel within 4 m of a boundary thrown
+where they were — semi-natural still scores 0.434 with every pixel within 4 m of a boundary thrown
 away.
 
 The split is not "the weak classes versus the strong ones". It is **the classes with a physical edge
@@ -176,20 +173,24 @@ conservative of the two and is the one to report, but it must be called a co-are
 ## The stronger evidence: error rate against distance, per class
 
 The trimap gain is one summary of a curve. The curve itself is in the same JSON, thirteen distance
-bins per class. Error rate, with foreground pixel support beside it:
+bins per class. **Both tables in this section are the ten-seed values from
+`analysis/label_ceiling/test/boundary_trimap_stage1_baseline.json`.** They were transcribed from a
+two-seed probe until 2026-07-29 and two rows had been swapped in the process — the figures given for
+Forest were Settlement's. Support counts are dropped rather than re-transcribed; they are in the
+artifact.
 
 | class | 0-0.5 m | 1-2 m | 4-6 m | 8-12 m | 16-24 m | 32 m+ |
 |---|---|---|---|---|---|---|
-| Forest | 39.1% *0.8M* | 20.7% *1.0M* | 5.7% *1.5M* | 4.9% *0.8M* | 7.9% *0.4M* | **0.9%** *0.5M* |
-| Settlement | 44.5% *0.3M* | 21.9% *0.3M* | 4.8% *0.3M* | 5.4% *0.3M* | 2.8% *58k* | **0.0%** *2k* |
-| Grassland | 55.9% *0.9M* | 29.4% *1.1M* | 11.2% *3.1M* | 9.1% *5.1M* | 8.2% *7.2M* | **7.1%** *14.0M* |
-| Seminatural | 58.8% *86k* | 52.0% *0.1M* | 36.9% *0.3M* | 28.6% *0.5M* | 24.3% *0.6M* | **13.5%** *1.7M* |
-| Cropland | 77.1% *25k* | 61.7% *32k* | 47.5% *82k* | 41.5% *0.1M* | 36.5% *0.2M* | **77.5%** *98k* |
+| Forest | 41.7% | 22.2% | 5.6% | 4.6% | 7.4% | **0.6%** |
+| Settlement | 39.1% | 18.5% | 4.3% | 5.1% | 2.4% | **0.0%** |
+| Grassland | 51.7% | 24.7% | 7.9% | 6.2% | 5.6% | **5.1%** |
+| Seminatural | 66.8% | 61.5% | 48.6% | 40.0% | 35.0% | **18.8%** |
+| Cropland | 81.3% | 71.6% | 57.6% | 51.9% | 46.3% | **78.8%** |
 
-**Read the last column.** Forest falls to 0.9% and settlement to 0.0% — those two really do collapse
+**Read the last column.** Forest falls to 0.6% and settlement to 0.0% — those two really do collapse
 to a near-zero interior. Grassland holds a 7.1% floor across fourteen million pixels. Semi-natural
-holds **13.5%** across 1.7 million. Cropland has no boundary structure at all: 77% at the edge, 37%
-in the middle distance, 77% again deep inside.
+holds **13.5%** across 1.7 million. Cropland has no boundary structure at all: 81% at the edge, 46%
+in the middle distance, 79% again deep inside.
 
 **And for semi-natural the interior is where the pixels are.** Only 86,000 of its pixels sit in the
 first half-metre; 1.7 million sit beyond 32 m. So most of its error is interior error by mass, not
