@@ -5,10 +5,17 @@ means this directory contains two very different kinds of document, and reading 
 order gives entirely the wrong impression of the project. **Read the first group. The second group is
 the record of how the first group was arrived at.**
 
+**Before quoting any number:** `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py`.
+It checks every figure the narrative uses against the committed artifact that produced it, and names
+the regenerating command for any that is missing.
+
 ## Read these — they state the design as it now is
 
 | file | what it is |
 |---|---|
+| **`NARRATIVE_FINAL.md`** | what the paper claims, on the four diagnostic questions |
+| **`RESULTS_TEN_SEED.md`** | the numbers. §7-§13 supersede §1-6 |
+| **`FINDING_BOUNDARY_IS_PER_CLASS.md`** | the per-class boundary result and its confounds |
 | **`METHODOLOGICAL_CHOICES.md`** | every deliberate choice in plain language, with what it costs. **Start here.** |
 | **`METHODS_STATED_LIMITATIONS.md`** | eleven properties the methods section must state, each with the measurement behind it |
 | **`CORRECTIONS.md`** | sentences currently in the manuscript that are wrong and must change |

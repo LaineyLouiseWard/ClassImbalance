@@ -12,6 +12,9 @@
       "contact_share": 0.644538472909866,
       "share_of_a_within_8m_of_b": 0.7034395833421662,
       "a_pixels": 3302086,
+      "pair_share_of_error": 0.3073784417517305,
+      "expected_share_from_contacts": 0.644538472909866,
+      "contact_null_ratio": 0.4768969653029776,
       "rate_a_called_b": 0.10476383716232708,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -23,6 +26,9 @@
       "contact_share": 0.013813460126356808,
       "share_of_a_within_8m_of_b": 0.01909005398405735,
       "a_pixels": 3302086,
+      "pair_share_of_error": 0.003172273171290315,
+      "expected_share_from_contacts": 0.013813460126356808,
+      "contact_null_ratio": 0.22965087257445735,
       "rate_a_called_b": 0.0010587549809423498,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -34,6 +40,9 @@
       "contact_share": 0.08878904422972995,
       "share_of_a_within_8m_of_b": 0.13687983898662845,
       "a_pixels": 3302086,
+      "pair_share_of_error": 0.03764397521014249,
+      "expected_share_from_contacts": 0.08878904422972995,
+      "contact_null_ratio": 0.42397094750500597,
       "rate_a_called_b": 0.01676712841518967,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -45,6 +54,9 @@
       "contact_share": 0.05914342006732244,
       "share_of_a_within_8m_of_b": 0.08353901140067219,
       "a_pixels": 3302086,
+      "pair_share_of_error": 0.04704547779483543,
+      "expected_share_from_contacts": 0.05914342006732244,
+      "contact_null_ratio": 0.7954473674549759,
       "rate_a_called_b": 0.019592493956850306,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -56,6 +68,9 @@
       "contact_share": 0.644538472909866,
       "share_of_a_within_8m_of_b": 0.21444235028057698,
       "a_pixels": 14940463,
+      "pair_share_of_error": 0.3073784417517305,
+      "expected_share_from_contacts": 0.644538472909866,
+      "contact_null_ratio": 0.4768969653029776,
       "rate_a_called_b": 0.03325834681294683,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -67,6 +82,9 @@
       "contact_share": 0.007876095686080636,
       "share_of_a_within_8m_of_b": 0.0030722608797331113,
       "a_pixels": 14940463,
+      "pair_share_of_error": 0.05747283423811414,
+      "expected_share_from_contacts": 0.007876095686080636,
+      "contact_null_ratio": 7.297122397799895,
       "rate_a_called_b": 0.0015988326466187827,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -78,6 +96,9 @@
       "contact_share": 0.15799932629089208,
       "share_of_a_within_8m_of_b": 0.05400053532477541,
       "a_pixels": 14940463,
+      "pair_share_of_error": 0.06003449661078731,
+      "expected_share_from_contacts": 0.15799932629089208,
+      "contact_null_ratio": 0.379966788594136,
       "rate_a_called_b": 0.005992478278618273,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -89,6 +110,9 @@
       "contact_share": 0.01594121766862721,
       "share_of_a_within_8m_of_b": 0.005992585370346287,
       "a_pixels": 14940463,
+      "pair_share_of_error": 0.481381476388567,
+      "expected_share_from_contacts": 0.01594121766862721,
+      "contact_null_ratio": 30.197283946253368,
       "rate_a_called_b": 0.04837161338306584,
       "max_share_of_those_errors_near_b": 0.12388640674210383,
       "min_share_far_from_b": 0.8761135932578962
@@ -100,6 +124,9 @@
       "contact_share": 0.013813460126356808,
       "share_of_a_within_8m_of_b": 0.24254160033000713,
       "a_pixels": 293327,
+      "pair_share_of_error": 0.003172273171290315,
+      "expected_share_from_contacts": 0.013813460126356808,
+      "contact_null_ratio": 0.22965087257445735,
       "rate_a_called_b": 0.017735496561857585,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -111,6 +138,9 @@
       "contact_share": 0.007876095686080636,
       "share_of_a_within_8m_of_b": 0.12416518083913175,
       "a_pixels": 293327,
+      "pair_share_of_error": 0.05747283423811414,
+      "expected_share_from_contacts": 0.007876095686080636,
+      "contact_null_ratio": 7.297122397799895,
       "rate_a_called_b": 0.45581790970486863,
       "max_share_of_those_errors_near_b": 0.27240083857066033,
       "min_share_far_from_b": 0.7275991614293397
@@ -122,6 +152,9 @@
       "contact_share": 0.00039259307727540407,
       "share_of_a_within_8m_of_b": 0.014690089899668288,
       "a_pixels": 293327,
+      "pair_share_of_error": 0.0029345277376054816,
+      "expected_share_from_contacts": 0.00039259307727540407,
+      "contact_null_ratio": 7.474731235637429,
       "rate_a_called_b": 0.019823268911487862,
       "max_share_of_those_errors_near_b": 0.7410528488142122,
       "min_share_far_from_b": 0.2589471511857878
@@ -133,6 +166,9 @@
       "contact_share": 0.003138321204145977,
       "share_of_a_within_8m_of_b": 0.05397048345362002,
       "a_pixels": 293327,
+      "pair_share_of_error": 0.000893213861299117,
+      "expected_share_from_contacts": 0.003138321204145977,
+      "contact_null_ratio": 0.2846151821933042,
       "rate_a_called_b": 0.0023659601741401236,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -144,6 +180,9 @@
       "contact_share": 0.08878904422972995,
       "share_of_a_within_8m_of_b": 0.4172568960747398,
       "a_pixels": 816914,
+      "pair_share_of_error": 0.03764397521014249,
+      "expected_share_from_contacts": 0.08878904422972995,
+      "contact_null_ratio": 0.42397094750500597,
       "rate_a_called_b": 0.05857850397961107,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -155,6 +194,9 @@
       "contact_share": 0.15799932629089208,
       "share_of_a_within_8m_of_b": 0.6895903363144713,
       "a_pixels": 816914,
+      "pair_share_of_error": 0.06003449661078731,
+      "expected_share_from_contacts": 0.15799932629089208,
+      "contact_null_ratio": 0.379966788594136,
       "rate_a_called_b": 0.09191261258835079,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -166,6 +208,9 @@
       "contact_share": 0.00039259307727540407,
       "share_of_a_within_8m_of_b": 0.005269832564994602,
       "a_pixels": 816914,
+      "pair_share_of_error": 0.0029345277376054816,
+      "expected_share_from_contacts": 0.00039259307727540407,
+      "contact_null_ratio": 7.474731235637429,
       "rate_a_called_b": 0.0027319889241707207,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -177,6 +222,9 @@
       "contact_share": 0.00836804873970352,
       "share_of_a_within_8m_of_b": 0.03957576929762496,
       "a_pixels": 816914,
+      "pair_share_of_error": 0.00204328323562819,
+      "expected_share_from_contacts": 0.00836804873970352,
+      "contact_null_ratio": 0.24417678471846277,
       "rate_a_called_b": 0.0018791451731761239,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -188,6 +236,9 @@
       "contact_share": 0.05914342006732244,
       "share_of_a_within_8m_of_b": 0.2000485969684552,
       "a_pixels": 1456881,
+      "pair_share_of_error": 0.04704547779483543,
+      "expected_share_from_contacts": 0.05914342006732244,
+      "contact_null_ratio": 0.7954473674549759,
       "rate_a_called_b": 0.044137441561802236,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -199,6 +250,9 @@
       "contact_share": 0.01594121766862721,
       "share_of_a_within_8m_of_b": 0.06126306815724826,
       "a_pixels": 1456881,
+      "pair_share_of_error": 0.481381476388567,
+      "expected_share_from_contacts": 0.01594121766862721,
+      "contact_null_ratio": 30.197283946253368,
       "rate_a_called_b": 0.40995647551172676,
       "max_share_of_those_errors_near_b": 0.1494379813876018,
       "min_share_far_from_b": 0.8505620186123982
@@ -210,6 +264,9 @@
       "contact_share": 0.003138321204145977,
       "share_of_a_within_8m_of_b": 0.011687982752194586,
       "a_pixels": 1456881,
+      "pair_share_of_error": 0.000893213861299117,
+      "expected_share_from_contacts": 0.003138321204145977,
+      "contact_null_ratio": 0.2846151821933042,
       "rate_a_called_b": 0.001204765523059193,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0
@@ -221,6 +278,9 @@
       "contact_share": 0.00836804873970352,
       "share_of_a_within_8m_of_b": 0.03211724224559178,
       "a_pixels": 1456881,
+      "pair_share_of_error": 0.00204328323562819,
+      "expected_share_from_contacts": 0.00836804873970352,
+      "contact_null_ratio": 0.24417678471846277,
       "rate_a_called_b": 0.0027919919334523547,
       "max_share_of_those_errors_near_b": 1.0,
       "min_share_far_from_b": 0.0

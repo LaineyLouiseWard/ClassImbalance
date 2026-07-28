@@ -125,6 +125,26 @@ def support(split, cls):
     return f
 
 
+def rho_rate(tag, band, which, cell="stage1_baseline"):
+    def f():
+        v = [load(f"analysis/{tag}/rho_test_{cell}_seed{s}_band{band}.json")["pooled"][which]
+             for s in SEEDS]
+        return 100 * float(np.mean(v))
+    return f
+
+
+def rho_cv_all_runs(tag, band, which):
+    """CV of the rate over all forty runs -- four cells x ten seeds -- which is what the stability
+    claim in the narrative is about, not the four-cell spread the registered arm uses."""
+    cells = ["stage1_baseline", "stage2b_oem_finetune", "stage_sampler_only", "stage3_clsbal"]
+    def f():
+        v = [load(f"analysis/{tag}/rho_test_{c}_seed{s}_band{band}.json")["pooled"][which]
+             for c in cells for s in SEEDS]
+        a = np.array(v)
+        return 100 * float(a.std(ddof=1) / a.mean())
+    return f
+
+
 def conf_total(field):
     def f():
         return load("analysis/confusion/confusion_test_stage1_baseline.json")[field]
@@ -211,6 +231,54 @@ NUMBERS = [
      lambda: 100 * geom("Forest->Grassland", "share_mass_in_components_over_1000m2")(), MK_GEOM),
     ("F->G median component, m2", 1.0, 0.1,
      geom("Forest->Grassland", "median_component_m2"), MK_GEOM),
+
+    # rho on ALL 294 tiles -- the narrative quotes these beside the deduplicated pair, so both need
+    # rows or a reader cannot tell which population a figure belongs to.
+    ("rho, all tiles, 8 m", 2.282, 0.003, rho_mean("rho_full", "8.0"), MK_RHO),
+    ("rho, all tiles, 1 m", 3.848, 0.003, rho_mean("rho_full", "1.0"), MK_RHO),
+    ("near-boundary rate, all tiles, 8 m, %", 19.63, 0.02,
+     rho_rate("rho_full", "8.0", "rate_near"), MK_RHO),
+    ("near-boundary rate, all tiles, 1 m, %", 41.18, 0.02,
+     rho_rate("rho_full", "1.0", "rate_near"), MK_RHO),
+    ("near-boundary rate CV over 40 runs, 8 m, %", 3.5, 0.3,
+     rho_cv_all_runs("rho_full", "8.0", "rate_near"), MK_RHO),
+    ("near-boundary rate CV over 40 runs, 1 m, %", 1.9, 0.3,
+     rho_cv_all_runs("rho_full", "1.0", "rate_near"), MK_RHO),
+
+    # Adjacency bounds, superseded as a headline by the direct distance figures but still quoted.
+    ("S->G bound: share not at a shared edge, %", 84.4, 0.1,
+     lambda: 100 * adjacency("min_share_far_from_b", a="Seminatural", b="Grassland")(), MK_ADJ),
+    ("G->S bound: share not at a shared edge, %", 87.6, 0.1,
+     lambda: 100 * adjacency("min_share_far_from_b", a="Grassland", b="Seminatural")(), MK_ADJ),
+    ("C->G bound: share not at a shared edge, %", 77.6, 0.1,
+     lambda: 100 * adjacency("min_share_far_from_b", a="Cropland", b="Grassland")(), MK_ADJ),
+    ("contact-null ratio, grassland pair", 29.28, 0.05, adjacency("contact_null_ratio"), MK_ADJ),
+    ("total foreground contacts", 412641, 1,
+     lambda: load("artifacts/class_adjacency_test.json")["total_fg_contacts"], MK_ADJ),
+
+    # Unguarded distance shares, quoted beside the guarded ones to show the size of the artefact.
+    ("S->G beyond 8 m, unguarded, %", 68.4, 0.1,
+     geom("Seminatural->Grassland", "beyond8_pct"), MK_GEOM),
+    ("G->S beyond 8 m, unguarded, %", 76.2, 0.1,
+     geom("Grassland->Seminatural", "beyond8_pct"), MK_GEOM),
+    ("S->G mass in components >0.1 ha, %", 90.6, 0.1,
+     lambda: 100 * geom("Seminatural->Grassland", "share_mass_in_components_over_1000m2")(), MK_GEOM),
+    ("G->S mass in components >0.1 ha, %", 92.9, 0.1,
+     lambda: 100 * geom("Grassland->Seminatural", "share_mass_in_components_over_1000m2")(), MK_GEOM),
+    ("S->G error px per seed", 570425, 200, geom("Seminatural->Grassland", "n"), MK_GEOM),
+    ("G->S error px per seed", 719500, 200, geom("Grassland->Seminatural", "n"), MK_GEOM),
+
+    # Test B. Thin by design -- the narrative leads on Test A -- but every figure it does quote.
+    ("interior error, forest, Test B, %", 23.48, 0.02,
+     interior("Forest", split="external_test"), MK_INT),
+    ("interior error, grassland, Test B, %", 2.28, 0.02,
+     interior("Grassland", split="external_test"), MK_INT),
+    ("interior error, cropland, Test B, %", 6.38, 0.02,
+     interior("Cropland", split="external_test"), MK_INT),
+    ("interior support, semi-natural, Test B, px", 10090826, 1,
+     interior_n("Seminatural", split="external_test"), MK_INT),
+    ("interior support, settlement, Test B, px", 855, 1,
+     interior_n("Settlement", split="external_test"), MK_INT),
 
     ("grassland pair contact share, %", 1.594, 0.005,
      lambda: 100 * adjacency("contact_share")(), MK_ADJ),

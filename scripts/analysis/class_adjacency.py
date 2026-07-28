@@ -210,6 +210,17 @@ def main() -> int:
                "share_of_a_within_8m_of_b": near_frac,
                "a_pixels": int(tot_n[a])}
         if conf is not None:
+            # Contact-based null: what share of foreground error would this pair carry if error fell
+            # in proportion to how much the two classes actually TOUCH? The co-area null in
+            # narrative_numbers.py asks the same question of area instead. Reported here so the
+            # 29x figure has a script behind it; the co-area figure stays the one quoted, being
+            # roughly fourteenfold more conservative.
+            tot_err = float(conf[1:, :].sum() - np.trace(conf[1:, 1:]))
+            pair_err = float(conf[a, b] + conf[b, a])
+            rec["pair_share_of_error"] = pair_err / tot_err if tot_err else float("nan")
+            rec["expected_share_from_contacts"] = (acc[a, b] / total_contacts) if total_contacts else float("nan")
+            rec["contact_null_ratio"] = (rec["pair_share_of_error"] / rec["expected_share_from_contacts"]
+                                         if rec["expected_share_from_contacts"] else float("nan"))
             r = conf[a, b] / max(conf[a, :].sum(), 1)
             rec["rate_a_called_b"] = float(r)
             rec["max_share_of_those_errors_near_b"] = float(min(1.0, near_frac / r)) if r > 0 else None
