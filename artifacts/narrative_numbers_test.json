@@ -1,0 +1,246 @@
+{
+  "split": "test",
+  "band_m": 8.0,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "cells": [
+    "stage1_baseline",
+    "stage2b_oem_finetune",
+    "stage_sampler_only",
+    "stage3_clsbal"
+  ],
+  "pair_ratios": [
+    {
+      "pair": "Grassland-Seminatural",
+      "pixels": 12899256,
+      "share_of_error": 0.466832463273909,
+      "expected_share_from_area": 0.22205557256175296,
+      "ratio": 2.1023226658456604
+    },
+    {
+      "pair": "Forest-Grassland",
+      "pixels": 8305723,
+      "share_of_error": 0.3005895167411796,
+      "expected_share_from_area": 0.5032988949530871,
+      "ratio": 0.5972385788154727
+    },
+    {
+      "pair": "Grassland-Cropland",
+      "pixels": 1998056,
+      "share_of_error": 0.07231094601418978,
+      "expected_share_from_area": 0.04470845246305038,
+      "ratio": 1.6173887046068454
+    },
+    {
+      "pair": "Grassland-Settlement",
+      "pixels": 1607831,
+      "share_of_error": 0.058188449493377946,
+      "expected_share_from_area": 0.12451278176028917,
+      "ratio": 0.46732912614065436
+    },
+    {
+      "pair": "Forest-Seminatural",
+      "pixels": 1478801,
+      "share_of_error": 0.0535187698826909,
+      "expected_share_from_area": 0.04907790323353089,
+      "ratio": 1.0904860712575417
+    },
+    {
+      "pair": "Forest-Settlement",
+      "pixels": 1056158,
+      "share_of_error": 0.03822304485983108,
+      "expected_share_from_area": 0.0275193555562305,
+      "ratio": 1.388951306716818
+    },
+    {
+      "pair": "Cropland-Settlement",
+      "pixels": 107828,
+      "share_of_error": 0.0039023654426192534,
+      "expected_share_from_area": 0.0024445668608396097,
+      "ratio": 1.5963422826074591
+    },
+    {
+      "pair": "Forest-Cropland",
+      "pixels": 79414,
+      "share_of_error": 0.002874044304449358,
+      "expected_share_from_area": 0.00988129718335397,
+      "ratio": 0.29085698477837224
+    },
+    {
+      "pair": "Settlement-Seminatural",
+      "pixels": 61293,
+      "share_of_error": 0.0022182335300150414,
+      "expected_share_from_area": 0.012141545145134516,
+      "ratio": 0.18269779533817856
+    },
+    {
+      "pair": "Cropland-Seminatural",
+      "pixels": 37086,
+      "share_of_error": 0.0013421664577380425,
+      "expected_share_from_area": 0.00435963028273095,
+      "ratio": 0.30786244949589747
+    }
+  ],
+  "per_class_contrasts": {
+    "oem_pretraining": {
+      "Forest": {
+        "mean": 0.6329608201672077,
+        "sd": 0.8926210855921197,
+        "ci_low": -0.005537475236069733,
+        "ci_high": 1.271459115570485,
+        "n": 10,
+        "positive_in": 8
+      },
+      "Grassland": {
+        "mean": -0.5953076768066989,
+        "sd": 1.4408391339502522,
+        "ci_low": -1.625950293060052,
+        "ci_high": 0.43533493944665413,
+        "n": 10,
+        "positive_in": 3
+      },
+      "Cropland": {
+        "mean": -1.306314214520563,
+        "sd": 20.051650905054025,
+        "ci_low": -15.649404613741586,
+        "ci_high": 13.036776184700459,
+        "n": 10,
+        "positive_in": 5
+      },
+      "Settlement": {
+        "mean": 1.1658724634160678,
+        "sd": 1.4738698310864407,
+        "ci_low": 0.11160275145788012,
+        "ci_high": 2.2201421753742556,
+        "n": 10,
+        "positive_in": 9
+      },
+      "Seminatural": {
+        "mean": -1.7320347482784704,
+        "sd": 5.600932837903837,
+        "ci_low": -5.738422371642285,
+        "ci_high": 2.2743528750853446,
+        "n": 10,
+        "positive_in": 4
+      },
+      "foreground_mIoU": {
+        "mean": -0.3669646712044913,
+        "sd": 4.622695416601388,
+        "ci_low": -3.673612017217608,
+        "ci_high": 2.9396826748086253,
+        "n": 10,
+        "positive_in": 5
+      }
+    },
+    "class_balanced_sampler": {
+      "Forest": {
+        "mean": 0.26586278854263234,
+        "sd": 0.4711852651738707,
+        "ci_low": -0.07117942734126459,
+        "ci_high": 0.6029050044265293,
+        "n": 10,
+        "positive_in": 7
+      },
+      "Grassland": {
+        "mean": -0.28973508389052327,
+        "sd": 1.3338255217914863,
+        "ci_low": -1.2438300921484926,
+        "ci_high": 0.6643599243674461,
+        "n": 10,
+        "positive_in": 4
+      },
+      "Cropland": {
+        "mean": 1.5523865592633037,
+        "sd": 12.358563525873448,
+        "ci_low": -7.287782995625572,
+        "ci_high": 10.39255611415218,
+        "n": 10,
+        "positive_in": 6
+      },
+      "Settlement": {
+        "mean": -0.1465818224053006,
+        "sd": 1.519805993393434,
+        "ci_low": -1.2337100023112035,
+        "ci_high": 0.9405463575006023,
+        "n": 10,
+        "positive_in": 5
+      },
+      "Seminatural": {
+        "mean": -0.4309837960361735,
+        "sd": 4.817163274887322,
+        "ci_low": -3.8767354025585834,
+        "ci_high": 3.0147678104862368,
+        "n": 10,
+        "positive_in": 4
+      },
+      "foreground_mIoU": {
+        "mean": 0.19018972909478787,
+        "sd": 3.032596403882052,
+        "ci_low": -1.9790483337057907,
+        "ci_high": 2.3594277918953663,
+        "n": 10,
+        "positive_in": 5
+      }
+    },
+    "interaction": {
+      "Forest": {
+        "mean": 0.0023401873919831617,
+        "sd": 0.5602038953434917,
+        "ci_low": -0.3983776961854841,
+        "ci_high": 0.4030580709694504,
+        "n": 10,
+        "positive_in": 5
+      },
+      "Grassland": {
+        "mean": -0.27474739651079716,
+        "sd": 1.0781502280153947,
+        "ci_low": -1.045956024547896,
+        "ci_high": 0.4964612315263017,
+        "n": 10,
+        "positive_in": 3
+      },
+      "Cropland": {
+        "mean": -10.44373542824099,
+        "sd": 11.650579926015782,
+        "ci_low": -18.777479211904968,
+        "ci_high": -2.109991644577013,
+        "n": 10,
+        "positive_in": 2
+      },
+      "Settlement": {
+        "mean": -0.13500828953237456,
+        "sd": 1.0049784905434114,
+        "ci_low": -0.8538766464268016,
+        "ci_high": 0.5838600673620525,
+        "n": 10,
+        "positive_in": 5
+      },
+      "Seminatural": {
+        "mean": 0.4422372920302144,
+        "sd": 4.072059165801025,
+        "ci_low": -2.4705359754985667,
+        "ci_high": 3.355010559558995,
+        "n": 10,
+        "positive_in": 4
+      },
+      "foreground_mIoU": {
+        "mean": -2.081782726972393,
+        "sd": 2.4162428034319396,
+        "ci_low": -3.8101386174769694,
+        "ci_high": -0.3534268364678166,
+        "n": 10,
+        "positive_in": 1
+      }
+    }
+  }
+}
