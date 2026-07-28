@@ -108,6 +108,48 @@ That is whole-parcel misassignment: the outline was drawn correctly and the fiel
 wrong type — or the field genuinely could be either. It is not an edge-precision problem, and no
 amount of more careful tracing addresses it.
 
+## THE SEED CONTROL ON THE INTERIOR EFFECT — run 2026-07-28 (Slurm 652598)
+
+Per class **and** per seed, which neither existing output provided. Interior means at least 32 m from
+any ground-truth boundary; boundary-free tiles excluded. Rates are the mean over ten seeds of the
+per-seed rate, so they are not ensemble figures.
+
+**Test A** — 294 tiles, none boundary-free
+
+| class | interior error, baseline | support | across-cell CV | across-seed CV |
+|---|---|---|---|---|
+| Seminatural | **26.98% +/- 18.78** | 1,704,635 | 34.3% | 46.8% |
+| Cropland | **76.97% +/- 17.13** | 98,059 | 22.4% | 25.1% |
+| Grassland | 5.15% +/- 1.70 | 14,006,571 | 29.2% | 27.4% |
+| Forest | 0.75% +/- 0.21 | 475,555 | 52.4% | 58.0% |
+| Settlement | *unsupported* | 2,907 | — | — |
+
+**Test B** — 172 tiles after excluding 19 boundary-free
+
+| class | interior error, baseline | support | across-cell CV | across-seed CV |
+|---|---|---|---|---|
+| Seminatural | **38.73% +/- 17.14** | 10,090,826 | 35.8% | 47.5% |
+| Forest | 23.48% +/- 10.00 | 141,174 | 37.8% | 42.3% |
+| Cropland | 6.38% +/- 14.89 | 419,357 | 114.2% | 119.8% |
+| Grassland | 2.28% +/- 1.90 | 1,056,820 | 76.7% | 80.8% |
+| Settlement | *unsupported* | 855 | — | — |
+
+**The verdict, and it goes both ways.**
+
+**The level survives, and it is the finding.** Semi-natural grassland is wrong on 27% of its pixels
+more than 32 m from any boundary on Test A, across 1.7 million pixels, and 39% across 10.1 million on
+Test B. Cropland is wrong on 77% of its interior pixels on Test A. Neither is a boundary problem.
+
+**The directional claim dies. Do not write it.** For every class on both test sets the spread across
+the four cells is no larger than the spread across the ten seeds — in the two classes that matter it
+is smaller. So "both interventions make semi-natural's interior error worse" is seed noise, exactly
+as the boundary-rate version of this comparison was. The earlier 18.8 -> 25.7 / 28.9 / 24.3 sequence
+came from ensemble figures with no seed spread attached and must not be quoted.
+
+**One consequence for the wording.** The per-seed baseline is 26.98% where the ten-seed ensemble gave
+18.8%. The ensemble is far better than the average member, which is expected and is why per-seed is
+the honest reporting unit here.
+
 ## Independent confirmation, from adjacency rather than distance
 
 Found 2026-07-28 by a verifier auditing a different script, so it is arrived at from a direction that
