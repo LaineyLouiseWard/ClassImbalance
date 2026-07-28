@@ -14,7 +14,7 @@ the conclusions. Everything below is anchored to them and to nothing else.
 | 3 | **24%, and 3 in 100** | how much extra semi-natural the sampler claims, and how much of it is right |
 | 4 | **47%** | share of foreground error that is the grassland pair, both directions |
 | 5 | **3.85** | error rate within 1 m of a boundary over the rate beyond it |
-| 6 | **10 of 10** | seeds in which the registered across-cell condition holds |
+| 6 | **19.5%, CV 3.5%** | near-boundary error rate across all forty runs |
 
 ---
 
@@ -38,14 +38,20 @@ Use these words and no others. Several are forbidden alternatives, not stylistic
 
 ## Q1 — Is this an imbalance problem?
 
-**Everything observable says yes, before any intervention.** The two weak classes are minorities
-against a grassland majority that holds 70% of training pixels, and their errors run toward that
-majority: **semi-natural grassland is predicted as grassland 39% of the time, and grassland is
-predicted as semi-natural 5%.** That asymmetry is what class imbalance predicts.
+**The most-cited signature is present.** The two weak classes are minorities against a grassland
+majority holding 70% of training pixels, and their errors run toward that majority: **semi-natural
+grassland is predicted as grassland 39% of the time, grassland as semi-natural 5%.** State the
+qualification in the same breath — grassland outnumbers semi-natural about 10:1 on the scored pixels,
+so that asymmetry is no larger than prevalence alone predicts. It is consistent with imbalance; it is
+not evidence of a bias beyond prevalence.
 
-**So we tested it.** The two standard responses are to add examples or to reweight the examples you
-have. OpenEarthMap pre-training and class-balanced sampling, crossed in a 2x2 over ten seeds, on a
-fixed architecture, with contrasts paired within each seed.
+**So we tested it, with one asymmetry declared up front.** Class-balanced sampling reweights the
+examples we hold. OpenEarthMap pre-training adds examples — but no OpenEarthMap class maps to cropland
+or to semi-natural grassland (`geoseg/taxonomy.py:67-91`), so for those two classes it is not an
+imbalance remedy and cannot be read as one. **The imbalance test for the two weak classes rests on the
+sampler.** Pre-training is in the design as the other lever a practitioner would pull, and its effect
+on those two classes is representation transfer, not label transfer. Both crossed in a 2x2 over ten
+seeds, architecture fixed, contrasts paired within each seed.
 
 **Neither moves foreground mIoU. The design can exclude a gain larger than about 3 percentage
 points**, and neither comes close to it.
@@ -70,60 +76,50 @@ nothing to it.
 ## Q2 — Where is the error, by class?
 
 **Not spread across classes. Concentrated in one pair.** Grassland and semi-natural grassland confused
-with each other, in both directions, is **47% of all foreground error**. No other pair is close.
+with each other, in both directions, is **47% of all foreground error** on Test A at baseline. The next
+largest pair, forest and grassland, is about 30% — so say "the largest pair", never "no other pair is
+close".
 
-This is invisible in a per-class table, because it is a property of a pair rather than of a class.
-Read the confusion matrix on absolute pixel volumes, never row-normalised — row percentages make a
-small class look dominant, and absolute counts make a large one look like a donor. Both mislead on
-their own.
+**Weight each pair by the area it could occupy, because grassland covers most of the scene and any
+pair containing it starts large.** On that basis the grassland pair runs at **2.1 times** what area
+predicts and forest-grassland at 0.6 times. That is the statistic that carries the claim.
+
+A per-class table hides this, because it is a property of a pair. Read the confusion matrix on
+absolute pixel volumes as well as rates — row percentages make a small class look dominant, absolute
+counts make a large one look like a donor, and either alone misleads.
 
 ## Q3 — Where is the error, in space?
 
 **At the lines between parcels.** The foreground error rate within 1 m of a reference boundary is
 **3.85 times** the rate beyond it, and 2.28 times at 8 m.
 
-**Report it as a curve across band widths, not at one width.** The ratio rises as the band narrows,
-and that shape is the evidence. No single width can be justified, and the aerial benchmarks that
-erode a boundary band away before scoring never justify theirs either.
+**Report it at more than one width, not at one.** The ratio rises as the band narrows. Where a single
+width has been justified in the literature it has been justified by annotation consistency across
+repeat passes (Cheng et al. 2021), which a single-pass dataset cannot supply.
 
-## Q4 — Are those boundaries a property of the labels or of a weak model?
+## Q4 — How stable is that boundary error?
 
-**One model cannot answer this**, because the ratio rises as any model improves — a better model
-removes interior error first.
+**Very.** The foreground error rate within 8 m of a reference boundary is **19.49%, coefficient of
+variation 3.5%, across all forty runs** — four curation configurations and ten initialisations. At
+1 m it is 40.82%, CV 1.9%.
 
-**So compare models.** Across the four factorial cells, the error rate away from boundaries varies
-substantially more than the error rate at boundaries does, in **10 of 10 seeds**, at both band widths.
+**This is a stability result and nothing more.** Holding the cell fixed and varying only the seed
+gives the same spreads as varying the cell, so the across-cell comparison carries no information
+about the interventions. The registered falsifier did not fire, because neither rate falls. Report
+the arm as uninformative, with the seed control printed beside it.
 
-**What that implies, spelled out.** If the error at boundaries were simply the hardest part of a job
-the model is not yet good enough at, then changing the model's training data would move it, along with
-everything else. The four cells are not four copies of one model — the interior error rate genuinely
-responds to which cell you train. So the interventions do reach the model. They just do not reach the
-boundaries.
-
-**The licensed conclusion:** the error at class boundaries is not something data curation moves. It is
-insensitive to the two levers that demonstrably move error elsewhere in the same images. What remains
-as its cause is the reference labels, or the architecture — and this design cannot separate those two,
-because the architecture is held constant in every contrast it computes. That is the open disjunction
-in the Limitations, and it is why the paper locates the error rather than diagnosing it.
-
-**Three things that travel with it, always.**
-
-- It was **registered before any model was trained**, with a stated falsifier, and this is the first
-  time it has been computed.
-- It is a **necessary condition, not a diagnosis.** Anything that is constant across the four cells —
-  including the architecture's own tendency to blur edges — predicts the same flat boundary rate, and
-  the architecture is constant in every contrast this design computes.
-- Report absolute spreads beside the relative ones. The relative form is what was registered, but it
-  is measured against a near-boundary rate that is roughly twice the interior rate, so the relative
-  number overstates the effect if quoted alone.
+**What it does not license.** Not that curation moves interior error but not boundary error — it
+moves neither. Not that the labels are the cause. The paper locates the error and stops.
 
 ---
 
 ## The take-home
 
-**The error looks like an imbalance problem by every measure available without intervening, and
-imbalance-targeted curation does not move it. What is left is one class pair, concentrated where the
-classes meet.**
+**The residual error is one class pair, concentrated where the classes meet, at a rate that does not
+respond to either standard curation lever within the +/-3 percentage points this design can resolve.**
+
+Before spending on more data or on rebalancing, measure where your errors sit relative to your class
+boundaries. That measurement costs nothing and it is available before the money is spent.
 
 ## What the paper is
 
