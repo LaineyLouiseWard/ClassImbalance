@@ -289,10 +289,17 @@ def main() -> int:
         far = np.zeros_like(near)
         for ci, c in enumerate(CELLS):
             for si, s in enumerate(SEEDS):
-                p = Path(args.rho_dir) / f"rho_{args.split}_{c}_seed{s}_band{args.band_m:g}.json"
-                if not p.exists():
-                    raise SystemExit(f"missing {p}; the seed control needs every cell x seed cell "
-                                     f"filled, otherwise the two spreads are over different sets")
+                # `8` and `8.0` are both in circulation: %g drops the trailing zero, the shell
+                # loop that produced these did not. Accept either rather than making a filename
+                # convention load-bearing.
+                stem = f"rho_{args.split}_{c}_seed{s}_band"
+                cands = [Path(args.rho_dir) / f"{stem}{args.band_m:g}.json",
+                         Path(args.rho_dir) / f"{stem}{args.band_m}.json"]
+                p = next((q for q in cands if q.exists()), None)
+                if p is None:
+                    raise SystemExit(f"missing {cands[0]} (or {cands[1].name}); the seed control "
+                                     f"needs every cell x seed filled, otherwise the two spreads "
+                                     f"are over different sets")
                 j = json.loads(p.read_text())["pooled"]
                 near[si, ci] = 100 * j["rate_near"]
                 far[si, ci] = 100 * j["rate_far"]

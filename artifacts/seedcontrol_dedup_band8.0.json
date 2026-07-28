@@ -1,0 +1,40 @@
+{
+  "split": "test",
+  "band_m": 8.0,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "cells": [
+    "stage1_baseline",
+    "stage2b_oem_finetune",
+    "stage_sampler_only",
+    "stage3_clsbal"
+  ],
+  "seed_control": {
+    "across_cells_within_seed": {
+      "near_cv_pct": 3.7608069077683766,
+      "interior_cv_pct": 13.886020940513296
+    },
+    "across_seeds_within_cell": {
+      "near_cv_pct": 3.69598490723147,
+      "interior_cv_pct": 14.20613593777758
+    },
+    "absolute_range_across_cells_pp": {
+      "near": 1.6265229946652622,
+      "interior": 2.975905761428396
+    },
+    "mean_rate_pct": {
+      "near": 19.43674457511404,
+      "interior": 9.702402950999296
+    }
+  }
+}
