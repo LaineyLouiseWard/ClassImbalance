@@ -110,19 +110,24 @@ def main() -> None:
     # _gen_mapping_values.py from the frozen teacher confusion.
     figures: list[tuple[str, callable]] = [
         ("workflow_pipeline",      lambda: run_tex(SCRIPTS_DIR / "workflow_pipeline.tex")),
-        ("mitigation_axes",        lambda: run_tex(SCRIPTS_DIR / "mitigation_axes.tex")),
         ("oem_mapping",            lambda: run_tex(SCRIPTS_DIR / "oem_mapping.tex")),
         ("study_area",             lambda: run_py_no_device(SCRIPTS_DIR / "study_area.py")),
         ("class_distributions",    lambda: run_py_no_device(SCRIPTS_DIR / "class_distributions.py")),
         ("ablation_qualitative",   lambda: run_py_no_device(SCRIPTS_DIR / "ablation_qualitative.py")),
         ("confusion_matrices",     lambda: run_py_no_device(SCRIPTS_DIR / "confusion_matrices.py")),
-        ("frequency_vs_difficulty",lambda: run_py_no_device(SCRIPTS_DIR / "frequency_vs_difficulty.py")),
-        ("reliability_ece",        lambda: run_py_no_device(SCRIPTS_DIR / "reliability_ece.py")),
-        ("uncertainty_quality",    lambda: run_py_no_device(SCRIPTS_DIR / "uncertainty_quality.py")),
         ("boundary_limited_error", lambda: run_py_no_device(SCRIPTS_DIR / "boundary_limited_error.py")),
-        ("uncertainty_overlay",    lambda: run_analysis("draft_boundary_overlay.py", "draft_boundary_overlay.pdf", "uncertainty_overlay.pdf")),
-        ("confident_learning_overlay", lambda: run_analysis("confident_learning_overlay.py", "confident_learning_overlay.pdf", "confident_learning_overlay.pdf")),
     ]
+    # CUT 2026-07-28, six figures. Five no longer support a surviving conclusion and one is refuted
+    # by the study's own data. They were not merely unused: four read inputs that moved to
+    # `_archive/withdrawn_campaign_2026-07-28/` when the withdrawn campaign was cleared away, so this
+    # list raised SystemExit and refused to sync even the seven figures that had built.
+    #   mitigation_axes           schematic of a data-vs-model split the fixed architecture cannot test
+    #   frequency_vs_difficulty   five classes cannot support the claim in either direction
+    #   reliability_ece           residual-uncertainty section, cut
+    #   uncertainty_quality       same
+    #   uncertainty_overlay       same
+    #   confident_learning_overlay  appendix cut; its headline was a retracted statistic
+    # Their scripts remain under scripts/ and scripts/analysis/ and can still be run by hand.
 
     results: dict[str, bool | str] = {}
     for fig_num, runner in figures:
