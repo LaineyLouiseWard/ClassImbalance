@@ -1,334 +1,162 @@
-# The final narrative
+# The narrative
 
-Written 2026-07-28 after the ten-seed campaign finished, the per-class decomposition was computed,
-the registered second arm was run for the first time, and three review agents attacked the previous
-version. **This supersedes `CORRECTIONS_PAPER_PT4.md` wherever the two disagree.** Numbers live in
-`RESULTS_TEN_SEED.md`; nothing here introduces a number that is not in that file.
+Rewritten 2026-07-28 on the four-question spine. This replaces the earlier version of this file,
+which led on per-class pre-training effects — those turned out to rest on Test B, which is not the
+reporting surface, and are demoted to support.
 
-The old narrative was built on a null result. It said: we tried the two standard fixes, neither
-worked, so the problem must be the labels. Three separate reviews broke that, and they were right to.
-Ruling out one cause does not select another one, and the aggregate numbers were too noisy to rule
-out much of anything. This version does not rest on a null.
+**Six numbers carry the whole paper.** Nothing else needs to be in the abstract, the introduction or
+the conclusions. Everything below is anchored to them and to nothing else.
+
+| | number | what it is |
+|---|---|---|
+| 1 | **39% against 5%** | semi-natural grassland predicted as grassland, against the reverse |
+| 2 | **±3 pp** | the most either intervention could have moved foreground mIoU |
+| 3 | **24%, and 3 in 100** | how much extra semi-natural the sampler claims, and how much of it is right |
+| 4 | **47%** | share of foreground error that is the grassland pair, both directions |
+| 5 | **3.85** | error rate within 1 m of a boundary over the rate beyond it |
+| 6 | **10 of 10** | seeds in which the registered across-cell condition holds |
 
 ---
 
-## 1. The paper in plain words
+## Terminology, fixed
 
-A company maps Irish farmland from half-metre aerial photographs. Their model is good at forest,
-grassland and built-up land, and poor at two classes: cropland, and semi-natural grassland (rough
-grazing, rushy ground, the unimproved fields). Those two classes are also the rarest in their
-training data, so the obvious diagnosis is class imbalance and the obvious fixes are to add more data
-or to show the model more of the rare classes.
+Use these words and no others. Several are forbidden alternatives, not stylistic preferences.
 
-We tested both fixes properly and found something more useful than "they don't work".
-
-**Adding a large public dataset does a lot. It just does not do what people assume, and the headline
-number hides it completely.** Pre-training on OpenEarthMap changes each of our five classes by a
-different amount and in different directions, and the sizes and the signs are set by one decision
-made long before any model was trained: how the public dataset's classes were matched to ours. The
-classes with a clean, dedicated match improved a great deal and in nearly every run. The class that
-three different public classes were all folded into got dramatically worse, in every single run. The
-two classes with no match at all did nothing. Averaged into one score, a large gain and a large loss
-cancel, and the summary reads "no effect".
-
-**Showing the model more of a rare class does very little, and we can show it is not because the
-method failed to act.** Rebalancing made the model claim 24% more semi-natural ground than actually
-exists. It moved the decision exactly as designed. Of every hundred extra pixels it claimed, three
-were right.
-
-**And the error that is left does not sit where either fix could reach.** Just under half of all
-mistakes are the two grassland types being confused with each other, in both directions. The error
-concentrates tightly at the lines between classes, and it stays there no matter which of the four
-configurations we train. Across the four, the error away from boundaries moves around four times as
-much as the error at boundaries does.
-
-So the finding is about curation, and it is a positive finding, not an absence:
-
-> **The curation decision that determined the outcome was the class definitions and how they were
-> matched to the public data. Both decisions were made before any model existed, and neither of the
-> two levers a practitioner reaches for afterwards can reach back and undo them.**
-
-## 2. Why this replaces the old story
-
-The old story was "two things failed, so it must be the labels". Four problems with it, all raised
-independently by reviewers, all fair:
-
-- **You cannot name a cause by eliminating one other cause.** Architecture, training budget, input
-  bands, loss and resolution were never excluded, and the architecture was held fixed *by design*, so
-  a limit caused by the architecture could not show up in any contrast we compute.
-- **The nulls were not tight enough to be informative.** The confidence interval on either main
-  effect is about plus or minus three points, and the whole spread between our four configurations is
-  2.45 points. The intervals are wider than the thing being discussed.
-- **One of the two "tests" could not have worked.** OpenEarthMap supplies no labels for the two weak
-  classes. Claiming the null as evidence while explaining in the next paragraph why the test was
-  incapable is not an argument.
-- **The strongest stated result pointed the other way once class sizes were accounted for.** See §4.
-
-The new story fixes all four, because it rests on effects that are large, consistent across seeds,
-consistent across two independent landscapes, and explained by a mechanism we can point at in a table.
-
-## 3. The three findings, in order
-
-### Finding 1 — the class mapping decides what pre-training does, and the average hides it
-
-Pre-training on OpenEarthMap, measured on the upland test set, paired within each seed:
-
-| our class | what the public data contributes to it | effect |
+| write | never write | why |
 |---|---|---|
-| Settlement | three source classes, matched at 52-88% | **+11.3 points, in 10 of 10 runs** |
-| Forest | one source class, matched at 80% | **+8.5 points, in 9 of 10 runs** |
-| Grassland | three very different source classes all folded in | **-19.4 points, in 0 of 10 runs** |
-| Cropland | nothing | -2.7, in 5 of 10 — no effect |
-| Semi-natural | nothing | -2.3, in 3 of 10 — no effect |
+| OpenEarthMap pre-training | cross-dataset transfer *(as the name of factor A)* | the arm gets 2.00x the in-domain gradient steps, so the effect cannot be attributed to transfer as a mechanism (`DO_NOT_ADD.md`) |
+| class-balanced sampling (clsbal) | rebalancing, resampling | the shipped method has a name |
+| foreground mIoU | accuracy, mIoU | background is excluded from every reported metric |
+| Test A, Test B | the test set, held-out data | there are two and they are never pooled |
+| reference labels, ground-truth boundary | truth, the truth | the reference is not truth |
+| semi-natural grassland, grassland | the grasslands, rough grazing *(in the paper)* | these are class names; plain synonyms belong in the cover letter, not the manuscript |
+| paired per-seed contrast | improvement, gain | contrasts carry intervals; levels do not |
+| *(describe the disjunction)* | label-quality ceiling, diagnosing | forbidden claim, and the paper declines to diagnose |
+| there is no line on the ground | gradational, grades into | jargon |
 
-The inland test set gives the same ordering of signs at smaller sizes, so this is not one landscape's
-quirk.
+---
 
-Overall score: **-0.9 points. "No effect."**
+## Q1 — Is this an imbalance problem?
 
-That is the paper's central object lesson, and it needs no proprietary data to be useful to a reader:
-the mapping table is publishable, OpenEarthMap is public, and any practitioner planning to pre-train
-on a public land-cover dataset has a mapping table of their own sitting in front of them.
+**Everything observable says yes, before any intervention.** The two weak classes are minorities
+against a grassland majority that holds 70% of training pixels, and their errors run toward that
+majority: **semi-natural grassland is predicted as grassland 39% of the time, and grassland is
+predicted as semi-natural 5%.** That asymmetry is what class imbalance predicts.
 
-Two things this also settles:
+**So we tested it.** The two standard responses are to add examples or to reweight the examples you
+have. OpenEarthMap pre-training and class-balanced sampling, crossed in a 2x2 over ten seeds, on a
+fixed architecture, with contrasts paired within each seed.
 
-- **It answers the obvious methodological objection.** Our pre-training arm gets exactly twice as
-  many training steps on the company's own data, so a reader can say any gain is just extra training.
-  Extra training makes every class better. This made one class worse in every single run.
-- **It ends the "neither intervention did anything" framing.** Pre-training did a great deal. It is
-  the summary metric that did nothing.
+**Neither moves foreground mIoU. The design can exclude a gain larger than about 3 percentage
+points**, and neither comes close to it.
 
-### Finding 2 — rebalancing acts, and buys almost nothing
+**And the sampler is not inert — this is the part that matters.** It does exactly what it is built to
+do: the model goes on to claim **24% more semi-natural grassland than the reference holds**. Of every
+hundred extra pixels it claims, **three are right**. Recall moves by less than half a point.
 
-The class-balanced sampler shows the model semi-natural ground about 2.8 times more often than its
-share of the data. The effect on the model's behaviour is exactly what it should be: the model goes
-from claiming 16.2 million semi-natural pixels to 18.0 million, against 14.6 million that are really
-there. It over-claims the rare class by 24%.
+> **The claim, stated as it must be:** the standard signature of class imbalance is present, and
+> imbalance-targeted curation does not shift it. Not "imbalance is not the cause", and not "the
+> sampler has no effect" — both are forbidden, and neither is what was measured.
 
-What that bought:
+**Why this belongs in the paper at all.** Without it, every later claim about where the error sits is
+unlicensed, because the obvious explanation has not been ruled out. The factorial is the control that
+makes the rest of the paper possible. It is not the headline.
 
-- semi-natural recall 56.03% to **56.40%**
-- semi-natural precision 50.3% to **45.6%**
-- semi-natural pixels wrongly called grassland: 39.15% to **39.80%**
-- of every 100 extra pixels claimed, **3 were right**
+**One thing not to claim.** Rarity does not order difficulty here — settlement is the rarest class in
+training and among the best segmented, while cropland has more than twice its pixels and is the worst.
+Five classes cannot support a claim in either direction. State the ordering if it is useful; fit
+nothing to it.
 
-**The model is not reluctant to say "semi-natural". It cannot tell which pixels are semi-natural.**
-That distinction is the whole finding, and it is only visible because the intervention demonstrably
-did its job.
+## Q2 — Where is the error, by class?
 
-**Report this as an observation and attach no explanation to it.** A draft of this document explained
-the null by arguing that per-class accuracy is ordered by how many distinct places a class occupies
-rather than by pixel count. That was checked adversarially on 2026-07-28 and **it fails** — the
-p-values were wrong at n=5, the three predictors are one variable, the whole thing reduces to a single
-settlement-versus-cropland comparison, and the same ordering is reproduced perfectly by *test*-set
-instance counts that involve no training exposure at all. `RESULTS_TEN_SEED.md` §12(c) records the
-full autopsy.
+**Not spread across classes. Concentrated in one pair.** Grassland and semi-natural grassland confused
+with each other, in both directions, is **47% of all foreground error**. No other pair is close.
 
-Two facts about the interventions do survive, because they are properties of the code rather than
-statistics. The sampler draws with replacement from the same 1,072 training tiles, so it cannot
-introduce ground the training set does not already hold. And no OpenEarthMap class maps to cropland or
-semi-natural, so pre-training cannot supply labelled examples of either — though OEM does add 2,118
-new scenes overall, so the honest wording is that it adds no labelled examples of *these two classes*,
-not that it adds nothing.
+This is invisible in a per-class table, because it is a property of a pair rather than of a class.
+Read the confusion matrix on absolute pixel volumes, never row-normalised — row percentages make a
+small class look dominant, and absolute counts make a large one look like a donor. Both mislead on
+their own.
 
-### Finding 3 — the error that is left sits at the lines between classes, and stays there
+## Q3 — Where is the error, in space?
 
-Just under half of all mistakes — **46.68%** — are improved grassland and semi-natural grassland
-being confused with each other, in both directions.
+**At the lines between parcels.** The foreground error rate within 1 m of a reference boundary is
+**3.85 times** the rate beyond it, and 2.28 times at 8 m.
 
-Error rate close to a boundary against error rate away from it, ten seeds, baseline:
+**Report it as a curve across band widths, not at one width.** The ratio rises as the band narrows,
+and that shape is the evidence. No single width can be justified, and the aerial benchmarks that
+erode a boundary band away before scoring never justify theirs either.
 
-| how close | error rate near | error rate away | ratio |
-|---|---|---|---|
-| within 1 m | 41.2% | 10.8% | **3.85** |
-| within 8 m | 19.6% | 8.8% | **2.28** |
+## Q4 — Are those boundaries a property of the labels or of a weak model?
 
-The ratio climbs as the band narrows. That shape is the evidence, and reporting one width would hide
-it.
+**One model cannot answer this**, because the ratio rises as any model improves — a better model
+removes interior error first.
 
-**The registered check, run for the first time on 2026-07-28, and it passes.** We committed in advance
-to a necessary condition: across the four training configurations, the error rate near boundaries must
-move less than the error rate away from them, in relative terms. It does, in every seed, at both
-widths. At 8 m the near-boundary rate varies by 3.5% across the four configurations and the interior
-rate by 14.1%, a gap of 10.6 points with a confidence interval of [8.3, 12.9] and **10 of 10 seeds
-agreeing**.
+**So compare models.** Across the four factorial cells, the error rate away from boundaries varies
+substantially more than the error rate at boundaries does, in **10 of 10 seeds**, at both band widths.
 
-Two honest qualifications that travel with it. The interior rate does not *fall* across the four — the
-full model has the highest interior rate of the four. What is claimed is that boundary error is
-immovable while interior error is not, which is the registered wording. And this is a necessary
-condition, not a diagnosis: anything that is constant across the four configurations, including the
-architecture's own tendency to blur edges, predicts the same flat boundary rate.
+**What that implies, spelled out.** If the error at boundaries were simply the hardest part of a job
+the model is not yet good enough at, then changing the model's training data would move it, along with
+everything else. The four cells are not four copies of one model — the interior error rate genuinely
+responds to which cell you train. So the interventions do reach the model. They just do not reach the
+boundaries.
 
-## 4. Four things that must not be written
+**The licensed conclusion:** the error at class boundaries is not something data curation moves. It is
+insensitive to the two levers that demonstrably move error elsewhere in the same images. What remains
+as its cause is the reference labels, or the architecture — and this design cannot separate those two,
+because the architecture is held constant in every contrast it computes. That is the open disjunction
+in the Limitations, and it is why the paper locates the error rather than diagnosing it.
 
-**"The confusion runs against the majority class."** This was called the paper's strongest result in
-the previous draft and it is wrong. It compared raw pixel counts between two classes that differ in
-size by a factor of ten. Per pixel, a semi-natural pixel is called grassland 39.2% of the time and a
-grassland pixel is called semi-natural 4.8% of the time. That is 8:1 toward the majority, which is
-exactly what class imbalance predicts. Delete the claim.
+**Three things that travel with it, always.**
 
-What survives, and is enough:
+- It was **registered before any model was trained**, with a stated falsifier, and this is the first
+  time it has been computed.
+- It is a **necessary condition, not a diagnosis.** Anything that is constant across the four cells —
+  including the architecture's own tendency to blur edges — predicts the same flat boundary rate, and
+  the architecture is constant in every contrast this design computes.
+- Report absolute spreads beside the relative ones. The relative form is what was registered, but it
+  is measured against a near-boundary rate that is roughly twice the interior rate, so the relative
+  number overstates the effect if quoted alone.
 
-- The classes predicted over their true extent are the two *rarest* in training. The class badly
-  under-predicted, cropland, has nearly twice the training pixels of either. So under-prediction is
-  not a function of rarity here.
-- The confusion is imbalance-shaped, and rebalancing does not shift it (39.15% to 39.80%). **Error
-  that looks like an imbalance problem, and that an imbalance remedy does not fix, is the finding** —
-  it does not need to be re-described as something other than imbalance-shaped.
+---
 
-**"Near-symmetric."** The ratio is 1.26 on raw counts and 8:1 on rates. Neither is symmetry.
+## The take-home
 
-**"Rarity does not predict difficulty" — and equally, "rarity does predict difficulty".** With five
-classes there is not enough to support a claim in either direction, and this project has now asserted
-both. State the ordering and fit no line. This is a change from the earlier plan, which cut the
-frequency-versus-difficulty figure on the grounds that its claim was refuted. The better reason is
-that five points license nothing either way.
+**The error looks like an imbalance problem by every measure available without intervening, and
+imbalance-targeted curation does not move it. What is left is one class pair, concentrated where the
+classes meet.**
 
-**Anything crediting pre-training with an overall gain.** On the inland test set it is -0.37 points,
-positive in 5 of 10. Every sentence in the manuscript giving it +2.10 or +1.88 comes from the
-withdrawn split and must go.
+## What the paper is
 
-## 5. The one result that needs quarantining
+A worked diagnosis, demonstrated end to end on operational imagery. The four questions above are the
+contribution, in that order. The company's dataset is the case; the reader is a practitioner facing
+the same situation.
 
-The only contrast that clears significance on the inland test set is the interaction between the two
-interventions: -2.08 points, negative in 9 of 10 seeds, p = 0.023. It is entirely a cropland effect.
-Cropland alone accounts for -2.09 of the -2.08. Every other class is flat.
+The contribution is **quantification and procedure, not a new concept**. Say so in one sentence in the
+Introduction. Taxonomy alignment being lossy, and boundary error being hard, are both already cited on
+the paper's own second page. Claiming discovery invites a one-line rejection quoting the manuscript
+against itself.
 
-Cropland is 1.35% of that test set, in 52 of 294 tiles and 8 grid cells, which is the split's minimum
-acceptance floor, with a between-seed spread of 0.195 IoU against a mean of 0.340. The sign also
-reverses on the upland test set.
+## What stays open, and is said so
 
-**So it is reported as a cropland effect with its support stated, or not at all.** Reporting it as a
-general property of the two interventions while the per-class table says no cropland claim is
-supportable is a contradiction a referee finds in one reading.
-
-## 6. How this traces through the paper
-
-The trace below assumes the section structure of the current `manuscript/main.tex`. Line numbers
-drift; re-grep after the first edit.
-
-**Title.** Drop "Diagnosing" — the paper declines to diagnose. Recommended:
-
-> **The Taxonomy Mapping Decides the Outcome: Per-Class Effects of Cross-Dataset Pre-Training and
-> Class Rebalancing in Rural Land-Cover Segmentation**
-
-Alternative if that reads too strong: *"What Cross-Dataset Pre-Training Actually Changes: ..."*.
-
-**Abstract.** Currently frozen by the author. Lift the freeze last, and rewrite around Finding 1. It
-must contain the +11.3 / -19.4 / -0.9 triple, because that is the sentence a reader remembers. Strike
-the three forbidden sentences it carries.
-
-**Introduction §1.4 — the contributions.** All three are replaced.
-
-1. Pre-training's effect on a fixed architecture is per-class, and its sign and size are predicted by
-   the taxonomy mapping. Aggregate metrics hide this.
-2. Class-balanced sampling is shown to act as designed and to buy almost nothing, with the arithmetic
-   of what it bought.
-3. The residual error is located: one class pair, concentrated at boundaries, and unmoved across all
-   four configurations by a pre-registered test.
-
-The current contribution 1 ("we introduce a proprietary dataset") goes. The paper concedes later that
-the numbers cannot be replicated externally, so the dataset gives a reader nothing.
-
-**§2 Methods — protect entirely.** The spatially blocked split, the buffer distances, the 950 m
-support criterion, the deduplicated scoring subset, and the openly declared withdrawn campaign are
-better than the field norm and are the reason a referee will believe any of the results. Do not
-compress a word. The one addition owed here is a plain sentence saying that the mapping was grounded
-on where the public model's predictions landed rather than on what the classes mean.
-
-**§3 Results — rebuilt, in this order.**
-
-1. Per-class factorial contrasts on both test sets, with the mapping table beside them. This is the
-   new §3.2 and it is the paper's centre of gravity.
-2. Aggregate contrasts with intervals, stated as bounds, with the sentence saying the intervals are
-   wider than the spread between cells.
-3. The sampler's mechanical effect: predicted area, recall, precision, and the three-in-a-hundred
-   arithmetic.
-4. The class pair, on absolute volumes *and* rates, with both stated.
-5. The boundary curve per seed per cell at both widths, and the registered across-cell test.
-6. The interaction, quarantined as in §5 above.
-
-**§4 Discussion.** Two subsections carry the weight. First, why the mapping produced that pattern, and
-what a practitioner should do about it — look at the mapping before pre-training, and read per-class
-effects rather than the aggregate. Second, the conditional recommendation: annotation effort helps
-where there is a real edge to trace and recovers nothing where there is no line on the ground, because
-no placement is correct. The unconditioned version of that sentence is what sent the industrial
-partner off to fund annotation of an entire 8 m buffer.
-
-Keep the terrain result, which is clean: elevation appears to separate the two grasslands but the
-separation reverses inside a single tile containing both, so it identifies where a tile is, not what a
-pixel is.
-
-**§4 Limitations.** One annotator, one protocol, one acquisition year, so what is characterised is the
-ceiling imposed by *that* annotation process. Two purposive upland sites, so no statistical claim of
-generalisation. No second annotation pass, so whether the pair is inseparable in the imagery or was
-labelled inconsistently stays open, and is stated as an open question and never as a diagnosis. The
-pre-training arm's doubled step count, declared rather than corrected, with the per-class pattern given
-as the reason it cannot explain the result.
-
-**§5 Conclusions.** The curation decision with the most leverage was the earliest one. More data and
-rebalancing are both downstream of a taxonomy that already fixed what was learnable.
-
-## 7. What to cut, and what that buys
-
-Ranked by how much the paper improves, not by pages.
-
-1. **The confident-learning appendix.** Its headline is a retracted statistic, its stated assumption
-   is violated by the spatial structure this paper claims, and under the new framing it is the closest
-   thing in the paper to a measured label-error bound. A referee will read it as the inter-annotator
-   ceiling this project has never measured, which is the most damaging misreading available. About two
-   pages, one figure, one table.
-2. **The residual-uncertainty section and its three figures.** The paper already concedes the
-   label-based analyses are stronger. Calibration is a different paper and it dilutes this one. About
-   two pages, three figures.
-3. **The frequency-versus-difficulty figure**, for the reason in §4 above.
-4. **The mitigation-axes schematic.** It draws a data-versus-model split the design cannot test, since
-   the architecture is fixed, and it promises the forbidden claim before the text arrives to hedge it.
-5. **Test-time augmentation, and the roads aside.** Orphaned; nothing depends on them.
-6. **Compress** the pre-training stage mechanics and the factorial arithmetic. Methods stay clear;
-   bookkeeping does not need the space.
-
-Roughly five pages and five figures, which is what the per-class results and the discussion need.
-
-**Repurpose rather than cut:** the qualitative panel figure. Four configurations whose aggregate
-differences sit inside the noise makes a figure showing nothing. But no reader can obtain this imagery,
-and one panel is the only way they will ever see what improved and semi-natural grassland look like
-side by side, and why there is no line to draw. Re-point it at the class pair.
-
-## 8. The four sentences to strike first
-
-All four are in the abstract, highlights and contributions, all four are on the forbidden list, and it
-takes half an hour.
-
-- "label quality, rather than class imbalance or model capacity, is the dominant remaining constraint"
-- "indicating a label-quality ceiling rather than a limit of model capacity"
-- "annotation effort is best spent there" — unconditioned
-- "the consistency of that supervision, not the capacity of the model, becomes the binding constraint"
-  (`main.tex:459`)
-
-**Do not touch `main.tex:471`** — the convergent-evidence-rather-than-proof sentence. It is the most
-protective sentence in the paper.
-
-## 9. What a practitioner can take away
-
-This is the part an industrial reader is buying, and it is now licensed by measured effects rather
-than by a null.
-
-- **Read your class mapping before you pre-train on public data.** It tells you which of your classes
-  will improve and which will get worse. Folding several source classes into one of yours can cost you
-  more than the others gain.
-- **Do not judge pre-training on an aggregate score.** Ours said "no effect" while hiding an 11-point
-  gain and a 19-point loss.
-- **Rebalancing changes what the model claims, not what it can tell apart.** If the model already
-  over-claims the rare class, more of it will not help.
-- **Annotation effort pays where there is a real edge to trace, and recovers nothing where the
-  transition has no line on the ground.**
-- **Some class definitions ask for a distinction the sensor cannot deliver.** That is the question
-  worth revisiting before spending on any of the above.
-
-## 10. What stays open, and is said so
-
-Whether the two grasslands are genuinely inseparable in this imagery, or were labelled inconsistently,
+Whether the two grassland classes are inseparable in this imagery or were labelled inconsistently
 cannot be settled here. It needs a second independent annotation pass over the same ground, which does
-not exist. Stated as an open question in Limitations, never as a diagnosis, and noted that for a
-transition with no line on the ground the two are not fully separable even in principle.
+not exist. **Stated as an open question in Limitations, never as a diagnosis** — and for a transition
+with no line on the ground the two are not fully separable even in principle.
+
+Scope: one annotator, one protocol, one acquisition year, training data from a single site. What is
+characterised is the ceiling imposed by *that* annotation process, not a property of dense land-cover
+annotation in general.
+
+## Demoted, and why
+
+**Per-class pre-training effects.** On Test B they are large — settlement and forest gain, grassland
+loses heavily — and they follow the OpenEarthMap mapping. But Test B is two purposively chosen upland
+sites and cannot carry a headline. On Test A, the reporting surface, the same effects are small.
+Report them as a secondary observation with a warning that per-class effects differ in sign and are
+hidden by an aggregate score. **Do not claim the mapping predicts which way a class moves** — it
+licenses only whether a class is reachable at all, and mapping structure is confounded with class
+prevalence across five classes.
+
+**The mapping's provenance, stated correctly.** It is the argmax of a trained OpenEarthMap teacher's
+confusion on the training split, regrounded 2026-07-26. Write "fixed before any of the four factorial
+cells was trained, and derived only from the training split". Never "before any model existed".
