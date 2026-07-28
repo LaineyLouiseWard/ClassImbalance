@@ -223,3 +223,37 @@ waiting for it.
 grassland, so that swaps one mostly-wrong label for a more-wrong one) or soft-label pre-training
 against the confusion distribution the hard mapping discards. The second is genuine future work - the
 matrix that grounds the mapping already contains the uncertainty the mapping throws away.
+
+---
+
+## The framing for the Data Curation special issue
+
+**The curation decisions that mattered were not the two we tested.** Ranked by how much each actually
+determined the outcome:
+
+1. **The class definitions.** Semi-natural against improved grassland is a distinction the imagery does
+   not support and public land-cover data does not encode. That decision was made before any model
+   existed and it set the ceiling.
+2. **The taxonomy mapping.** Translating one dataset's classes into another's decided which classes
+   transfer could help at all. Three OpenEarthMap classes collapse onto Grassland; the two weak classes
+   receive nothing. That single choice explains the whole per-class pattern.
+3. **The two interventions.** Tested properly over ten seeds, neither moves the error.
+
+So the paper's contribution to data curation is not "we tried two curation methods". It is that **the
+curation decision with the most leverage was the earliest one - the label schema - and it is the one
+nobody revisits.** More data and rebalancing are downstream of a taxonomy that already decided what is
+learnable.
+
+**What this licenses telling a practitioner**, which is the point for an industrial audience:
+
+- Finer imagery will not fix the grassland pair; the distinction is not a resolution problem.
+- More public data will not fix it either; the class does not exist in the public taxonomy.
+- Annotation effort helps where there is a real edge to trace, and recovers nothing where the
+  transition has no line on the ground.
+- The class definitions themselves may be asking for a distinction the sensor cannot deliver. That is
+  the question worth revisiting before spending on any of the above.
+
+**Consequence for length.** This framing needs room in the Discussion, and it is more valuable than
+per-cell detail on the factorial. If pages are needed, compress the factorial and the OpenEarthMap
+mechanics - report the contrasts and the per-class pattern, drop the interaction interpretation and
+the pre-training stage detail. The methods must stay clear; the ablation arithmetic does not.
