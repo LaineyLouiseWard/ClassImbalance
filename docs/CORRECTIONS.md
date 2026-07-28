@@ -264,7 +264,7 @@ constant across the four cells predicts the same pattern — encoder–decoder e
 0.5 m, image-to-vector registration offset — and the architecture is held constant in every contrast
 the design computes, so none of them can be excluded here.
 
-`main.tex:459` already gets this right: *"such models blur edges even on clean labels, so no single
+`main.tex:471` already gets this right (NOT 459 -- 459 carries the FORBIDDEN "binding constraint" sentence and must be struck): *"such models blur edges even on clean labels, so no single
 measurement separates the two. We read this as convergent evidence rather than proof."* **Keep that
 sentence.** The problem is the internal record, not the paper: `CLAUDE.md` and
 `METHODOLOGICAL_CHOICES.md` §E5 state the arm without the two qualifiers the registered version

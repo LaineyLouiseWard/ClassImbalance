@@ -148,7 +148,7 @@ not supported.
 **What it cannot do.** Observing the pattern does not establish the premise. Every rival cause that
 is constant across the four cells predicts the same thing — encoder/decoder edge blur, mixed pixels
 at 0.5 m, image-to-vector registration offset — and since the architecture is fixed in every
-contrast, none can be excluded here. `main.tex:459` already says this correctly and that sentence
+contrast, none can be excluded here. `main.tex:471` already says this correctly (NOT 459 -- 459 carries the FORBIDDEN "binding constraint" sentence and must be struck) and that sentence
 should survive: *"such models blur edges even on clean labels, so no single measurement separates
 the two. We read this as convergent evidence rather than proof."*
 
