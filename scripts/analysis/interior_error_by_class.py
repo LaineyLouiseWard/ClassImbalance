@@ -47,6 +47,26 @@ def find_repo_root() -> Path:
     raise RuntimeError("repo root not found")
 
 
+def accumulate_bins(mask, dist, pred, bin_n, bin_e, edges):
+    """Add one tile's per-class counts into (6, nbin) accumulators over the distance bins.
+
+    The decay curve and any single-threshold figure MUST come from the same accumulation, or the
+    headline and the curve end up in different units -- which is exactly what happened when the
+    curve was taken from the seed ensemble and the headline from the per-seed mean.
+    """
+    fg = mask != 0
+    err = fg & (pred != mask)
+    bidx = np.digitize(dist, edges[1:-1])
+    for k in FG:
+        sel = mask == k
+        if not sel.any():
+            continue
+        bin_n[k] += np.bincount(bidx[sel], minlength=len(edges) - 1)
+        e = sel & err
+        if e.any():
+            bin_e[k] += np.bincount(bidx[e], minlength=len(edges) - 1)
+
+
 def accumulate(mask, dist, pred, near_n, near_e, int_n, int_e):
     """Add one tile's counts, per class, into the four (6,) accumulators."""
     fg = mask != 0
@@ -144,8 +164,12 @@ def main() -> int:
         keep = set(sub["splits"][args.split]["tiles"])
     tiles = sorted(p for p in mask_dir.glob("*.png") if keep is None or p.stem in keep)
 
+    from scripts.analysis.seed_disagreement import DIST_BIN_EDGES_M as EDGES
+    nb = len(EDGES) - 1
     z = {k: 0 for k in FG}
     acc = {s: (dict(z), dict(z), dict(z), dict(z)) for s in args.seeds}
+    bacc = {s: ({k: np.zeros(nb, np.int64) for k in FG},
+                {k: np.zeros(nb, np.int64) for k in FG}) for s in args.seeds}
     n_scored = n_skipped = 0
     for p in tiles:
         m = np.array(Image.open(p).convert("L"))
@@ -159,7 +183,9 @@ def main() -> int:
         n_scored += 1
         stack = load_seed_stack(args.softmax_root, args.seeds, args.cell, p.stem)
         for i, s in enumerate(args.seeds):
-            accumulate(m, d, stack[i].argmax(axis=0), *acc[s])
+            pr = stack[i].argmax(axis=0)
+            accumulate(m, d, pr, *acc[s])
+            accumulate_bins(m, d, pr, *bacc[s], EDGES)
 
     if n_scored == 0:
         raise SystemExit(f"no scorable tiles in {mask_dir}: every tile lacks a GT boundary")
@@ -167,8 +193,11 @@ def main() -> int:
     out = {"split": args.split, "cell": args.cell, "seeds": args.seeds,
            "dedup": bool(args.dedup), "near_m": NEAR_M, "interior_m": INTERIOR_M,
            "n_tiles_scored": n_scored, "n_tiles_boundary_free_skipped": n_skipped,
-           "per_seed": {}}
+           "edges_m": EDGES.tolist(), "per_seed": {}, "per_seed_bins": {}}
     for s in args.seeds:
+        bn, be = bacc[s]
+        out["per_seed_bins"][str(s)] = {
+            FG[k]: {"n": bn[k].tolist(), "err": be[k].tolist()} for k in FG}
         nn, ne, tn, te = acc[s]
         out["per_seed"][str(s)] = {
             FG[k]: {"near_rate": ne[k] / max(nn[k], 1), "near_n": nn[k],
