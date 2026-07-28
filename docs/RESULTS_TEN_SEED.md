@@ -208,9 +208,38 @@ so the landscape is a constant in every comparison.
 Range over mean tells the same story: at 8 m the near-boundary rate spans 7.85% of its mean across
 the four cells, the interior rate 31.59%.
 
-**Stated plainly:** whatever the two interventions change, they move interior error about four times
-as much, in relative terms, as they move boundary error. Boundary error is the same in all four
-curation configurations.
+**THE SEED-ONLY CONTROL, computed 2026-07-28 after an adversarial check, and it changes the reading.**
+The spreads above are taken across the four cells within a seed. Recomputing them across the ten
+seeds within a cell — the same arithmetic with the roles swapped, so the interventions are held fixed
+and only initialisation varies:
+
+| band | | across the four CELLS | across the ten SEEDS |
+|---|---|---|---|
+| 8 m | near-boundary rate | CV 3.53% | **CV 3.53%** |
+| 8 m | interior rate | CV 14.10% | **CV 13.51%** |
+| 1 m | near-boundary rate | CV 1.89% | **CV 1.86%** |
+| 1 m | interior rate | CV 9.06% | **CV 8.61%** |
+
+**They are the same.** The variation across the four curation configurations is run-to-run seed
+variance and nothing else. So the registered condition holds literally — the near-boundary rate does
+vary less than the interior rate — but it holds for a reason that has nothing to do with the
+interventions, and **the reading "the interventions move interior error but not boundary error" is
+FALSE and must not be written.** They move neither.
+
+**What is licensed instead.** The near-boundary error rate is a near-invariant of this dataset and
+architecture: **19.49% at 8 m and 40.82% at 1 m, with a coefficient of variation of 3.5% and 1.9%
+across all forty runs**, spanning four curation configurations and ten initialisations. The interior
+rate is intrinsically the more variable of the two, run to run, by roughly a factor of four in
+relative terms — a property of the estimator, not an effect of the interventions.
+
+Absolute ranges across the four cells, for reporting beside the relative form: 1.53 pp near against
+2.85 pp interior at 8 m; 1.74 pp against 2.20 pp at 1 m. The relative form is what was registered, and
+it is measured against a near-boundary rate roughly twice the interior rate, so it overstates the
+contrast if quoted alone.
+
+**The registered falsifier did not fire** — the two rates do not fall proportionally, because neither
+falls. But the arm is closer to uninformative than to passed, and it must be reported that way, with
+the seed control printed beside it.
 
 **Two things this is not.** The interior rate does not *fall* — the full model has the highest
 interior rate of the four (9.69% against baseline 8.78%). The registered wording is about
