@@ -177,3 +177,49 @@ What licenses each of the three, and the limit on each:
 semi-natural grassland, where management intensity grades off over metres. It is NOT true of forest,
 settlement or water edges, which are real and where the residual error is mixed pixels. The paper's
 value is in distinguishing the two cases; collapsing them throws that away.
+
+---
+
+## Why the factorial includes OpenEarthMap, and why its null is evidence
+
+**Settled 2026-07-28** after questioning whether the factorial should have been run without it.
+
+**Keep it.** The factorial tests the two things a practitioner reaches for when a model underperforms
+on rare classes: get more data, or rebalance the data you have. Dropping OpenEarthMap leaves a
+one-factor study asking only whether a sampler helps, which is thinner and licenses nothing. Showing
+that neither standard move shifts the error is what permits moving on to diagnosis; without it the
+paper only describes where errors sit, with no evidence that the obvious fixes fail.
+
+**The limitation, stated plainly because a referee will find it in the mapping table.** OpenEarthMap
+supplies **no labels for cropland and none for semi-natural** - the two classes carrying nearly all the
+error. Three OEM classes (Bareland, Rangeland, Agriculture) collapse onto Grassland. So the
+intervention cannot help those two classes by label transfer at all, only through general
+representation.
+
+**The observed pattern is exactly what that predicts**, which is why it reads as a result rather than a
+puzzle. Paired per seed on Test A, OEM pre-training gives small consistent gains on Settlement (9/10
+seeds) and Forest (8/10) - the classes whose mappings are clean at 80-96% - and nothing resolvable on
+cropland or semi-natural.
+
+**And this is the part to lead with, because it turns the null into evidence.** OpenEarthMap is the
+largest public land-cover dataset in this space and it has no class corresponding to semi-natural
+grassland. Its nearest, rangeland, lands 53% on improved grassland and only 15% on semi-natural when
+measured against our labels. So the distinction this model cannot make is one that **public land-cover
+data does not encode either** - a globally trained model, built by other people on other imagery, also
+fails to separate these two grasslands. That is independent support for the ceiling, from a different
+direction, and it explains the null instead of apologising for it.
+
+**The arc, therefore:** try more data - the public data does not contain the distinction. Try
+rebalancing - showing the model more of a class it cannot identify does not help. Neither works, and
+for the first we can say precisely why. So the question becomes where the error actually sits: at
+boundaries, in one class pair, whose transition has no line on the ground.
+
+**What this costs:** one sentence in §2 saying OpenEarthMap supplies no labels for the two weakest
+classes, and one in the Discussion saying the mapping was grounded on where the teacher's predictions
+fell rather than on what the classes mean. Both are honest, and both pre-empt the criticism rather than
+waiting for it.
+
+**Not done and not worth doing before submission:** remapping rangeland to semi-natural (it is 53%
+grassland, so that swaps one mostly-wrong label for a more-wrong one) or soft-label pre-training
+against the confusion distribution the hard mapping discards. The second is genuine future work - the
+matrix that grounds the mapping already contains the uncertainty the mapping throws away.
