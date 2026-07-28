@@ -56,8 +56,42 @@ Run the student lineage at a different seed (the teacher stays fixed at seed 42)
 SEED=1 bash RUNBOOK.sh --from B1
 ```
 
-Valid stages: `A0` (taxonomy check), `A1`–`A10` (data prep + teacher build), `B1`–`B5` (student
-training), `C1`–`C4` (evaluation), `D` (analyses), `E` (figures).
+**Valid stages, in execution order.** This is the list `RUNBOOK.sh` actually holds
+(`STAGES=(...)`, line 82). Note that it is not alphabetical: `A10` runs before `B4`, and `B4` and
+`B4b` run before `B1`, because the normalisation statistics and the leakage preflight must exist
+before any training starts.
+
+| stage | what it does |
+|---|---|
+| `A0` | verify taxonomy consistency — class orders and the grounded OEM→student mapping |
+| `A1` | unpack Biodiversity tiles into the pool layout (the old assignment is discarded; see `A1b`) |
+| `A1b` | **build the spatially blocked split.** This replaced the random split that leaked |
+| `A2` | identify minority-rich tiles, for the D-stage sampler-uplift analysis |
+| `A3` | filter OpenEarthMap to rural tiles, before mapping |
+| `A4` | prepare the teacher training split, full OEM in its native 9-class taxonomy |
+| `A5` | train the OEM teacher (seed fixed at 42 — build-once, seed-invariant) |
+| `A6` | export the teacher checkpoint and verify its output channels |
+| `A7` | measure teacher→ground-truth confusion on the training set; this grounds the mapping |
+| `A8` | relabel OEM to the 6-class taxonomy using the grounded argmax mapping |
+| `A10` | build the combined Biodiversity + OEM pool for stage-2a pre-training |
+| `B4` | build per-site normalisation statistics |
+| `B4b` | **full leakage preflight** over the split and every derived artefact |
+| `B1` | stage 1: baseline cell |
+| `B2` | stage 2a: OEM pre-training on the combined pool |
+| `B3` | stage 2b: OEM-transfer finetune, initialised from 2a |
+| `B4c` | **sampler-only cell** — the fourth factorial cell, added 2026-07-26 |
+| `B5` | stage 3: full model, pre-training plus class-balanced sampler |
+| `C1` | evaluate the validation set, all four cells (checkpoint-selection split) |
+| `C1b` | **Test B** — the held-out upland sites |
+| `C2` | evaluate Test A, all four cells |
+| `C3` | aggregate the validation summary |
+| `C4` | export the test-set LaTeX table |
+| `C5` | dump per-seed softmax for the boundary evidence, both test sets, all four cells |
+| `D` | supplementary analyses |
+| `E` | figures |
+
+There is **no stage `A9`**; `--from A9` is rejected. Stages `A1b`, `B4b`, `B4c`, `C1b` and `C5` were
+added during the 2026-07-26 rebuild and are absent from older descriptions of this pipeline.
 
 **Warning:** This overwrites all derived outputs in-place — checkpoints, sampler weights, evaluation
 results, and figures. Raw data (`data/biodiversity_raw/`, `data/openearthmap_raw/`) is never modified.
@@ -77,7 +111,13 @@ not publicly redistributable; users with licensed access should place raw files 
 
 ---
 
-## A. Data preparation + teacher build (A1–A10)
+## A. Data preparation
+
+> **The stage-by-stage sections below predate the 2026-07-26 rebuild in places.** The stage table
+> above is generated from `RUNBOOK.sh` and is authoritative on what runs and in what order. Five
+> stages added in that rebuild — `A1b`, `B4b`, `B4c`, `C1b`, `C5` — have a row in the table but no
+> section of their own here yet. `SPLIT_TAG=f1` gates every path; run the shell script rather than
+> hand-copying these blocks. + teacher build (A1–A10)
 
 The teacher (A4–A6) and its confusion (A7) come **before** the OEM relabel (A8), because the grounded
 OEM→student mapping is the argmax of that confusion.
@@ -101,7 +141,7 @@ PYTHONPATH=. python scripts/data_prep/split_biodiversity_dataset.py \
 ### A2. Identify minority-rich tiles
 ```bash
 PYTHONPATH=. python scripts/data_prep/analyze_class_distribution.py \
-  --data-root data/biodiversity_split/train \
+  --data-root data/split_f1/train \
   --out artifacts/train_augmentation_list.json --overwrite
 ```
 **Output:** `artifacts/train_augmentation_list.json` (consumed by the D-stage sampler-uplift analysis).
@@ -154,20 +194,20 @@ PYTHONPATH=. python scripts/data_prep/relabel_oem_taxonomy.py \
 ```
 **Output:** `data/openearthmap_relabelled/{images,masks}/` (PNG, 6-class IDs)
 
-### A9. Filter OEM (post-mapping, remove settlement-dominant)
-```bash
-PYTHONPATH=. python scripts/data_prep/filter_oem_settlement_postmap.py \
-  --in-root data/openearthmap_relabelled --out-root data/openearthmap_relabelled_filtered --overwrite
-```
-**Output:** `data/openearthmap_relabelled_filtered/{images,masks}/`
+### A9. Removed
+
+`filter_oem_settlement_postmap.py` used to sit between A8 and A10, dropping settlement-dominant
+tiles after relabelling. It was a **measured no-op** — 2,118 tiles in, 2,118 out — because A3's
+rural filter had already removed every tile its 50% threshold was written to catch. The stage was
+deleted; `--from A9` is rejected. A10 reads A8's output directly.
 
 ### A10. Create combined Biodiversity + OEM dataset (Stage 2a pool)
 ```bash
 PYTHONPATH=. python scripts/data_prep/create_biodiversity_oem_combined.py \
-  --bio-root data/biodiversity_split --oem-root data/openearthmap_relabelled_filtered \
-  --out-root data/biodiversity_oem_combined --overwrite
+  --bio-root data/split_f1 --oem-root data/openearthmap_relabelled \
+  --out-root data/oem_combined_f1 --overwrite
 ```
-**Output:** `data/biodiversity_oem_combined/{train,val,test}/{images,masks}/`
+**Output:** `data/oem_combined_f1/{train,val,test}/{images,masks}/`
 
 ---
 
@@ -179,19 +219,19 @@ Seed-varying; honours `$SEED` (default 42). Each stage warm-starts from the prev
 ```bash
 PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage1_baseline.py --force
 ```
-**Data:** `data/biodiversity_split/train/` · **Output:** `model_weights/biodiversity/stage1_baseline/`
+**Data:** `data/split_f1/train/` · **Output:** `model_weights/biodiversity/stage1_baseline_f1/`
 
 ### B2. Stage 2a — OEM pre-training (combined)
 ```bash
 PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage2a_oem_pretrain.py --force
 ```
-**Data:** `data/biodiversity_oem_combined/train/` · **Output:** `model_weights/biodiversity/stage2a_oem_pretrain/`
+**Data:** `data/oem_combined_f1/train/` · **Output:** `model_weights/biodiversity/stage2a_oem_pretrain_f1/`
 
 ### B3. Stage 2b — OEM-transfer finetune (init from 2a)
 ```bash
 PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage2b_oem_finetune.py --force
 ```
-**Data:** `data/biodiversity_split/train/` · **Requires:** Stage 2a ckpt · **Output:** `model_weights/biodiversity/stage2b_oem_finetune/`
+**Data:** `data/split_f1/train/` · **Requires:** Stage 2a ckpt · **Output:** `model_weights/biodiversity/stage2b_oem_finetune_f1/`
 
 ### B4. Build class-balanced sampler weights (offline)
 ```bash
@@ -204,8 +244,8 @@ Frequency-only (Kang 2020): no checkpoint needed. Defaults are q=1.0 and settlem
 ```bash
 PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage3_clsbal.py --force
 ```
-**Data:** `data/biodiversity_split/train/` · **Requires:** Stage 2b ckpt (warm start), `sampler_weights_clsbal.tsv`
-**Output:** `model_weights/biodiversity/stage3_clsbal/` (deployed final model)
+**Data:** `data/split_f1/train/` · **Requires:** Stage 2b ckpt (warm start), `sampler_weights_clsbal.tsv`
+**Output:** `model_weights/biodiversity/stage3_clsbal_f1/` (deployed final model)
 
 ---
 
@@ -214,7 +254,7 @@ PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage3_cls
 ### C1. Validation set (all stage checkpoints)
 ```bash
 PYTHONPATH=. python evaluation/compute_metrics.py --split val \
-  --base-dir model_weights/biodiversity --data-root data/biodiversity_split/val \
+  --base-dir model_weights/biodiversity --data-root data/split_f1/val \
   --out-dir evaluation/evaluation_results/val --force
 ```
 **Output:** `evaluation/evaluation_results/val/<stage>/` (metrics.json, confusion matrices, reports).
@@ -222,14 +262,14 @@ PYTHONPATH=. python evaluation/compute_metrics.py --split val \
 ### C2. Held-out test set (baseline + final model; final model also WITH TTA)
 ```bash
 PYTHONPATH=. python evaluation/compute_metrics.py --split test \
-  --base-dir model_weights/biodiversity/stage1_baseline --data-root data/biodiversity_split/test \
+  --base-dir model_weights/biodiversity/stage1_baseline --data-root data/split_f1/test \
   --out-dir evaluation/evaluation_results/test --force
 PYTHONPATH=. python evaluation/compute_metrics.py --split test \
-  --base-dir model_weights/biodiversity/stage3_clsbal --data-root data/biodiversity_split/test \
+  --base-dir model_weights/biodiversity/stage3_clsbal --data-root data/split_f1/test \
   --out-dir evaluation/evaluation_results/test --force
 # final model WITH test-time augmentation (flips + multi-scale), reported alongside the no-TTA number
 PYTHONPATH=. python evaluation/compute_metrics.py --split test \
-  --base-dir model_weights/biodiversity/stage3_clsbal --data-root data/biodiversity_split/test \
+  --base-dir model_weights/biodiversity/stage3_clsbal --data-root data/split_f1/test \
   --out-dir evaluation/evaluation_results/test_tta --tta --tta-flips hv --tta-scales 0.75,1.0,1.25 --force
 ```
 **Output:** `evaluation/evaluation_results/test/{stage1_baseline,stage3_clsbal}/` and `evaluation/evaluation_results/test_tta/stage3_clsbal/` (TTA). The val/ablation eval (C1) stays no-TTA.
@@ -312,8 +352,8 @@ Raw data (Biodiversity + OEM)
  +-- A4:     OEM teacher split (raw OEM)   -->  openearthmap_teacher/   (native 9-class)
  +-- A5-A6:  train + export teacher        -->  pretrain_weights/*.pth
  +-- A7:     teacher->GT confusion         -->  artifacts/teacher_oem_gt_confusion.npz
- +-- A8-A9:  grounded relabel + filter OEM -->  openearthmap_relabelled_filtered/
- +-- A10:    combine Bio + OEM             -->  biodiversity_oem_combined/
+ +-- A8:     grounded relabel of OEM      -->  openearthmap_relabelled/
+ +-- A10:    combine Bio + OEM             -->  oem_combined_f1/
  |
  +-- B1:     Stage 1 baseline
  +-- B2-B3:  Stage 2 OEM transfer (2a pre-train -> 2b finetune)
