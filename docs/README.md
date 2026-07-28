@@ -19,10 +19,6 @@ of itself.
 | **`FINDING_BOUNDARY_IS_PER_CLASS.md`** | the per-class boundary result and its confounds |
 | **`METHODOLOGICAL_CHOICES.md`** | every deliberate choice in plain language, with what it costs. **Start here.** |
 | **`METHODS_STATED_LIMITATIONS.md`** | eleven properties the methods section must state, each with the measurement behind it |
-
-Before quoting any number, run `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py`.
-It checks each figure the narrative uses against the committed artifact behind it, and prints the
-regenerating command for anything missing.
 | **`CORRECTIONS.md`** | sentences currently in the manuscript that are wrong and must change |
 | **`DO_NOT_ADD.md`** | sentences the design forbids, and sources that do not exist or do not say what they are cited for |
 | **`FIGURES.md`** | the figure map |
@@ -53,3 +49,7 @@ bootstrap, a coverage simulation), not the addition of it.
 `README.md`, `RUNBOOK.md` and `DESIGN_NOTES.md` still describe the withdrawn 1,706/219/218 split and
 state its conclusions as fact. They now carry banners saying so and are rewritten after the rebuilt
 campaign runs. Do not read a number out of any of them.
+
+Before quoting any number, run `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py`.
+It checks each figure the narrative uses against the committed artifact behind it, and prints the
+regenerating command for anything missing.

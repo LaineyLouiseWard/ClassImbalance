@@ -2,7 +2,7 @@
 > campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
 > the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
 > split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
-> provisional. The current design is in `docs/METHODOLOGICAL_CHOICES.md`; this file is rewritten
+> provisional. The current design and results are in `docs/README.md`, which says what to read and in what order; this file is rewritten
 > after the rebuilt campaign runs.
 
 > **Pipeline: clean 3-stage.** Stage 3 (clsbal — class-balanced frequency-only sampling, Kang et al. 2020) is the final shipped model. Stage-4 knowledge distillation and self-distillation were tested and dropped as a negative result (distillation underperformed a step-matched control that trained for the same extra steps without it). See [docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md) for the design decisions and negative results.
@@ -83,7 +83,15 @@ The teacher (A4–A6) and its confusion (A7) come **before** the OEM relabel (A8
 OEM→student mapping is the argmax of that confusion.
 
 ### A1. Split Biodiversity into train / val / test
+
+> **DO NOT RUN THIS. It is the split that leaked and it is retained only as a record.** The tiles are
+> chipped on a 50% stride, so a random split by tile puts ~93% of each held-out tile's ground inside a
+> training tile — same pixels, same labels. Every number produced from it is withdrawn. `RUNBOOK.sh`
+> replaced this with **stage A1b**, `scripts/data_prep/build_spatial_split.py`, which cuts one site
+> along an axis with buffers either side. Use that.
+
 ```bash
+# WITHDRAWN -- see the note above. Kept so the history is legible, not to be executed.
 PYTHONPATH=. python scripts/data_prep/split_biodiversity_dataset.py \
   --in-root data/biodiversity_raw --out-root data/biodiversity_split \
   --seed 42 --mode copy --overwrite

@@ -3,6 +3,11 @@
 Computed 2026-07-28 from the completed campaign. **These supersede every five-seed figure in Parts 3
 and 4.** Two of them change the narrative — see §6.
 
+> **READING ORDER. §7 to §13 are the live numbers and supersede §1 to §6 wherever the two conflict.**
+> §1-6 were written earlier the same day and three of their claims have since been retracted — §5 in
+> full, the "near-symmetric" wording, and the interaction reading. Each retraction is marked where it
+> occurs, but the sections were not deleted, because the retraction is part of the record.
+
 ## What these numbers are, and are not
 
 - **Deduplicated.** Scoring used the non-overlapping subset: 20.81M foreground pixels on Test A
@@ -86,6 +91,10 @@ Absolute pixels. 208.10M foreground pixels scored, **27.63M foreground errors**.
 | Cropland | **+1,259,903** |
 
 ## 5. The asymmetry, stated precisely
+
+> **RETRACTED. Do not use this section.** It compares absolute pixel counts between classes that
+> differ in size by a factor of ten. Per pixel the flow runs TOWARD the majority class, roughly 8:1.
+> §12 has the correct statement and the reason.
 
 Grassland -> Seminatural exceeds the reverse by a **ratio of 1.261**, a net 1.49M pixels. On five
 seeds the ratio was 1.17; ten seeds made it slightly larger, not smaller.

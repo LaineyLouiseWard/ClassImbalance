@@ -2,7 +2,7 @@
 > campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
 > the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
 > split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
-> provisional. The current design is in `docs/METHODOLOGICAL_CHOICES.md`; this file is rewritten
+> provisional. The current design and results are in `docs/README.md`, which says what to read and in what order; this file is rewritten
 > after the rebuilt campaign runs.
 
 # Diagnosing a Label-Quality Ceiling in Imbalanced Rural Land-Cover Segmentation
@@ -36,12 +36,23 @@ bash RUNBOOK.sh --from B1    # resume from training
 bash RUNBOOK.sh --from C1    # resume from evaluation
 ```
 
-Evaluate the shipped model on the held-out test set (add `--tta` for the reported test-time-augmentation number):
+Evaluate the shipped model on Test A, the inland held-out strip. `SPLIT_TAG` gates every checkpoint
+and evaluation path and must be exported; `--checkpoints` is explicit because `--base-dir` globs the
+whole tree and would pick up the withdrawn campaign's untagged weights. No test-time augmentation is
+used anywhere in the reported results.
 
 ```bash
-PYTHONPATH=. python evaluation/compute_metrics.py \
-  --split test --base-dir model_weights/biodiversity/stage3_clsbal \
-  --data-root data/biodiversity_split/test
+SPLIT_TAG=f1 PYTHONPATH=. python evaluation/compute_metrics.py \
+  --split test --data-root data/split_f1/test \
+  --checkpoints model_weights/biodiversity/stage3_clsbal_f1/stage3_clsbal_f1.ckpt
+```
+
+Checkpoints are not distributed — `RUNBOOK.sh` produces them, and the reported results come from ten
+seeds rather than one. The per-seed metrics and every derived artifact the write-up quotes *are*
+committed, under `analysis/`, so the numbers can be checked without retraining:
+
+```bash
+PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py
 ```
 
 Rebuild every paper figure:
