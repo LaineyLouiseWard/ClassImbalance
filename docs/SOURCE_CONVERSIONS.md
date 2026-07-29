@@ -63,9 +63,34 @@ manuscript until obtained → added to Zotero → converted with MinerU → read
 the script computes a correlogram (distance classes, per-class binary model matrices, sign reversal,
 half-distance cutoff, progressive Holm). Citing it would misattribute the method.
 
-**The low-friction alternative for the correlogram:** `kattenbornSpatiallyAutocorrelated2022` is
-already cited, already converted and already read, and is the paper this analysis explicitly mirrors
-(`spatial_correlogram.py` docstring). It can carry the method reference without any new sourcing.
+**The correlogram citation — settled by reading Kattenborn, 2026-07-29.**
+
+`kattenbornSpatiallyAutocorrelated2022` runs this exact method and can carry the reference. Verbatim
+from the conversion:
+
+> "The latent variables for all available tiles of the orthoimagery (predictors) were then used to
+> quantify the spatial autocorrelation by means of **multivariate correlograms**. These estimate the
+> spatial dependence across discrete distance classes (lags) using the **centred Mantel statistic
+> (Bjørnstad et al., 1999, 2001)**. The correlograms were created with correlog function in the
+> R-package **ncf** (Bjørnstad, 2020)"
+
+Three consequences:
+
+- **Cite Kattenborn for the approach.** Multivariate Mantel correlogram over distance classes, applied
+  in remote sensing, already cited and read. No new sourcing.
+- **Legendre & Legendre was never the natural citation.** Kattenborn credits **Bjørnstad et al.
+  1999/2001** for the centred Mantel statistic. `vegan`'s documentation points at the textbook, but the
+  paper this analysis mirrors does not. Drop it.
+- **Do not imply a shared implementation.** Kattenborn used `ncf::correlog`;
+  `scripts/analysis/spatial_correlogram.py` follows vegan's conventions (sign reversal, progressive
+  Holm, half-distance cutoff). Cite him for the approach, describe our implementation in our own words.
+
+Also verified: the script's docstring claim that it mirrors his two-descriptor design is accurate — he
+runs one correlogram on the response (species cover) and one on imagery latents, matching our
+composition/spectral pair.
+
+**Bjørnstad et al. 1999/2001** would be the citation for the statistic itself, but neither is held or
+read, so the same rule applies: not citable as things stand.
 
 ## Note
 
