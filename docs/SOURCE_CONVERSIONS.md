@@ -12,9 +12,28 @@ Conversions live in this directory so they travel with the repo. The global libr
 
 25 cited · 63 conversions present · 38 not currently cited
 
+## Two version traps — verified 2026-07-29
+
+**Cheng 2021 — use the proceedings conversion.** The file matching on surname was
+`cheng-2021-boundary-iou-improving-object-centric-segmentation-evaluation.md`, whose own frontmatter
+reads `venue: "CVPR (converted from arXiv 2103.16562)"` — i.e. **the arXiv version, labelled CVPR**.
+`docs/DO_NOT_ADD.md` requires quotations to come from the proceedings. The genuine proceedings
+conversion is now in this directory as `cheng-2021-boundary-iou-cvpr-proceedings.md`. **Any quotation
+of Cheng taken before 2026-07-29 came from the arXiv copy and should be re-checked.**
+
+**Montgomery — right book, wrong edition.** The `.bib` entry is the 9th edition (2017); the
+conversion is a chapter-6 extract from the **8th edition (2012)** with nothing internal newer than
+2010. The substance survives — the halving convention is genuinely present ("the regression
+coefficients β̂1 and β̂2 are one-half the corresponding factor effect estimates") — but note it
+attaches to *regression coefficients*, not to main effects, and the edition should be reconciled
+before any page or chapter is cited.
+
+Two further conversions are non-canonical but honestly labelled: **Kohli** is a RADAR postprint and
+**Volpi** is the arXiv version. Fine for reading; check against the published version before quoting.
+
 | Citekey | Title | Conversion |
 |---|---|---|
-| `chengBoundaryIoUImproving2021` | Boundary IoU: Improving Object-Centric Image Segmentation Evaluation | `cheng-2021-boundary-iou-improving-object-centric-segmentation-evaluation.md` |
+| `chengBoundaryIoUImproving2021` | Boundary IoU: Improving Object-Centric Image Segmentation Evaluation | `cheng-2021-boundary-iou-cvpr-proceedings.md` ⚠ use this one, not the arXiv copy |
 | `csurkaWhatGoodEvaluation2013` | What is a good evaluation measure for semantic segmentation? | `csurka-2013-good-evaluation-measure-semantic-segmentation.md` |
 | `dengImageNetLargescaleHierarchical2009` | ImageNet: A Large-Scale Hierarchical Image Database | `deng-2009-imagenet-large-scale-hierarchical.md` |
 | `kangDecouplingRepresentationClassifier2020` | Decoupling Representation and Classifier for Long-Tailed Recognition | `kang-2019-decoupling-representation-and-classifier-for-longtailed-recognition.md` |
@@ -27,7 +46,7 @@ Conversions live in this directory so they travel with the repo. The global libr
 | `loshchilovSGDRStochasticGradient2017` | SGDR: Stochastic Gradient Descent with Warm Restarts | `loshchilov-2017-sgdr-warm-restarts.md` |
 | `maxwellThematicClassificationAccuracy2020` | Thematic Classification Accuracy Assessment with Inherently Uncertain  | `maxwell-2020-thematic-classification-accuracy-assessment-uncertain-boundaries.md` |
 | `milletariVNetFullyConvolutional2016` | V-Net: Fully Convolutional Neural Networks for Volumetric Medical Imag | `milletari-2016-vnet-fully-convolutional-neural-networks-for-volumetric-medical.md` |
-| `montgomeryDesignAnalysisExperiments2017` | Design and Analysis of Experiments | `montgomery-2012-ch6-2k-factorial-design.md` |
+| `montgomeryDesignAnalysisExperiments2017` | Design and Analysis of Experiments | `montgomery-2012-ch6-2k-factorial-design.md` ⚠ 8th ed. extract, `.bib` says 9th ed. 2017 |
 | `reinaSystematicEvaluationImage2020` | Systematic Evaluation of Image Tiling Adverse Effects on Deep Learning | `reina-2020-systematic-evaluation-image-tiling-adverse-effects-deep-learning-2.md` |
 | `robertsCrossValidationStrategies2017` | Cross-validation strategies for data with temporal, spatial, hierarchi | `roberts-2017-cross-validation-strategies-temporal-spatial-hierarchical.md` |
 | `saadeldinUsingDeepLearning2022` | Using deep learning to classify grassland management intensity in grou | `saadeldin-2022-using-deep-learning-classify-grassland-management-intensity-2.md` |
