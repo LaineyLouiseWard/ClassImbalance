@@ -109,7 +109,7 @@
   \node[anchor=south west] (p2) at (\bx,0)
       {\includegraphics[width=\panelW cm]{ga_panel3_seam.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\bx,0) rectangle (\bx+\panelW,\panelW);
-  \node[ptitle] at (\bx+\mid,\pcap+0.92) {They almost never touch};
+  \node[ptitle] at (\bx+\mid,\pcap+0.92) {Two grasslands rarely touch};
   \node[psub] at (\bx+\mid,\pcap+0.16)
       {forest \textbf{21.4\%}, semi-natural \textbf{0.6\%}};
 
@@ -151,20 +151,15 @@
     {\lsw{errGS}\,grassland called semi-natural\\[1pt]
      \lsw{errSG}\,semi-natural called grassland};
 
-  \node[anchor=north, text=darkGrey, font=\scriptsize, align=center,
-        fill=captionBg, rounded corners=4pt, inner xsep=10pt, inner ysep=5pt] at (\midBC,-1.00)
-    {\lsw{baseGrass}\,grassland\hspace{1.1em}\lsw{baseSemi}\,semi-natural%
-     \hspace{1.1em}\lsw{baseForest}\,forest\hspace{1.1em}\lsw{baseSettle}\,settlement};
-
   % ======================================================================
   % caption bar - the one takeaway, in plain words
   % ======================================================================
   \node[anchor=north, align=center, font=\large, text=darkGrey,
         execute at begin node={\hyphenpenalty=10000\relax},
-        fill=captionBg, rounded corners=7pt, inner xsep=16pt, inner ysep=11pt,
-        text width=13.4cm] at (\totW/2,-1.62)
-    {\textbf{Redrawing outlines will not fix this map.} The two grassland types the model mixes up
-     almost never touch, so most of the error is not a misplaced boundary.};
+        fill=captionBg, rounded corners=7pt, inner xsep=18pt, inner ysep=10pt,
+        text width=11.4cm] at (\totW/2,-1.20)
+    {Almost half of this map's error is \textbf{two grassland types confused with each other}. They
+     almost never sit side by side, so retracing outlines cannot reach most of it.};
 
 \end{tikzpicture}
 \end{document}
