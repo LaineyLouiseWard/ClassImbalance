@@ -1,10 +1,19 @@
-% Graphical Abstract - TikZ (redesigned 2026-07-01)
+% Graphical Abstract - TikZ. Rebuilt 2026-07-29 on the current spatially blocked split.
 %
-% Narrative (diagnostic): a strong vision transformer (ADE20K-pretrained Swin,
-% FT-UNetFormer) maps high-resolution rural Ireland well; the residual error is a
-% thin shell on class boundaries -> a label-quality ceiling, not a model-capacity or
-% class-imbalance limit. Three real panels from the final shipped model (clsbal),
-% tile biodiversity_0603.
+% The header that stood here until 2026-07-29 carried the WITHDRAWN framing -- "the residual error
+% is a thin shell on class boundaries -> a label-quality ceiling, not a model-capacity or
+% class-imbalance limit" -- which is the claim `docs/DO_NOT_ADD.md` forbids, and it named tile
+% biodiversity_0603 from the withdrawn campaign.
+%
+% Current narrative, three panels of ONE Test A chip (biodiversity_1078, seed 47, stage1_baseline;
+% graphical_abstract_panels.py asserts it against the split manifest and the 90-chip scoring
+% subset, and refuses to build otherwise):
+%   1 the imagery, from the labels ->
+%   2 grassland's 8 m band to forest against to semi-natural, arithmetic on the reference masks
+%     alone, no model output; from the model ->
+%   3 the two error directions between the pair, which is 46.7% of all foreground error.
+% The line beneath states where the question lies and names no remedy, because model failure,
+% parcel-level label error and minority absorption all remain open.
 %
 % Build (run from repo ROOT; panels first):
 %   python scripts/figures/graphical_abstract_panels.py
@@ -154,8 +163,9 @@
         execute at begin node={\hyphenpenalty=10000\relax},
         fill=captionBg, rounded corners=7pt, inner xsep=18pt, inner ysep=10pt,
         text width=12.8cm] at (\totW/2,-1.20)
-    {Two grassland types barely share a border, yet they account for \textbf{nearly half the map's
-     error}. The question is why parcels take the wrong class, not where their edges were drawn.};
+    {\textbf{Nearly half of this map's error} is two grassland types confused across whole fields,
+     not the border they barely share. This knowledge can guide where operational curation effort
+     is best spent.};
 
 \end{tikzpicture}
 \end{document}
