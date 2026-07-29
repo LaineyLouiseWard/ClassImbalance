@@ -152,7 +152,12 @@ def choose_chip(pooled_semi: float, pooled_forest: float):
 def plot_matrix(ax, m):
     cmap = plt.get_cmap("Purples").copy()
     cmap.set_bad("#E8E8E8")
-    ax.imshow(np.ma.masked_invalid(m), cmap=cmap, vmin=0, vmax=np.nanmax(m))
+    # PowerNorm, not linear. On a linear 0-70 scale the two largest cells both sit at max-dark and
+    # everything below about 25 collapses into one near-white band -- which is where 0.6, 6.1 and
+    # 21.4 live, the three cells the argument turns on. gamma=0.5 spreads the low end without
+    # capping anything, so the ordering stays monotone and no value is thrown away.
+    norm = mpl.colors.PowerNorm(gamma=0.5, vmin=0, vmax=np.nanmax(m))
+    ax.imshow(np.ma.masked_invalid(m), cmap=cmap, norm=norm)
     ax.set_xticks(range(5))
     ax.set_yticks(range(5))
     ax.set_xticklabels(SHORT, rotation=45, ha="right")
@@ -162,13 +167,14 @@ def plot_matrix(ax, m):
     for sp in ax.spines.values():
         sp.set_visible(False)
     ax.tick_params(length=0)
-    hi = 0.6 * np.nanmax(m)
     for i in range(5):
         for j in range(5):
             if i == j:
                 continue
+            # Switch on the NORMALISED value, not the raw one: with a non-linear norm the raw value
+            # no longer tells you how dark the cell is, which is what the text has to contrast with.
             ax.text(j, i, f"{m[i, j]:.1f}", ha="center", va="center", fontsize=9,
-                    color="white" if m[i, j] > hi else "black")
+                    color="white" if norm(m[i, j]) > 0.6 else "black")
     # The two cells of the pair that carries 46.7% of the error, in both directions. An outline,
     # not a colour: the cells already carry a colour that means something else. The comparison the
     # argument rests on is inside the outlined row -- 0.6 against 21.4 -- so nothing else is marked.

@@ -85,7 +85,11 @@ DISPLAY_NAMES = {"Seminatural": "Semi-natural"}
 # the reference and the prediction, not a class, and reusing the class colour for an error would
 # make the error panel look like a third label map.
 ERR_G2S = "#B2182B"         # reference Grassland, predicted Semi-natural
-ERR_S2G = "#2166AC"         # reference Semi-natural, predicted Grassland
+# Purple, not the blue it was until 2026-07-29: that blue sat beside Settlement's #3B8DF7 and the
+# two co-occur in columns (c) and (d), so the class legend and the error legend read as one scale.
+# Purple is distinct from all five class colours -- forest pink-red, grassland lime, cropland
+# orange, settlement blue, semi-natural yellow -- and from the red of the other error direction.
+ERR_S2G = "#542788"         # reference Semi-natural, predicted Grassland
 CORRECT_WASH = 0.82         # how far the reference map is washed out behind the error overlay
 
 
