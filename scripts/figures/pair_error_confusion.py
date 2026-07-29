@@ -209,7 +209,7 @@ def main():
     err_ha_per_seed = meta["foreground_errors"] / n_seeds * 0.25 / 1e4
 
     fig = plt.figure(figsize=(FIG_W, 3.05), dpi=300)
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.02], wspace=1.05)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.20, 1.02], wspace=0.92)
 
     ax1 = fig.add_subplot(gs[0, 0])
     # No colourbar. Every cell carries its number, so a scale bar would restate them and, at this
@@ -232,6 +232,11 @@ def main():
     # every defect on this project has been found. study_area.py does the same.
     fig.savefig(OUT_PDF.with_suffix(".png"), dpi=300, bbox_inches="tight")
     plt.close(fig)
+    # Printed width of the matrix, as a fraction of the tight-cropped figure. Both matrix
+    # figures are placed at the same \\linewidth, so equal fractions mean equal printed size.
+    _bb = fig.get_tightbbox(fig.canvas.get_renderer())
+    _ax = ax1.get_window_extent()
+    print(f"  matrix width: {100 * (_ax.width / fig.dpi) / _bb.width:.2f}% of the cropped figure")
     print(f"Saved: {OUT_PDF}")
     print(f"  {CELL}, {SPLIT}, {meta['n_tiles']} chips, {n_seeds} seeds; "
           f"{meta['foreground_errors']:,} foreground error px "

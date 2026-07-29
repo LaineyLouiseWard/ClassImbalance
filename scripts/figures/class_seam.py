@@ -226,13 +226,25 @@ def main() -> None:
     gs = fig.add_gridspec(1, 3, width_ratios=[1.22, 1.0, 1.0], wspace=0.14)
     ax_m = fig.add_subplot(gs[0, 0])
     plot_matrix(ax_m, m)
-    ax_m.set_title(r"(a) All 90 Test A chips", pad=8)
+    ax_m.set_title("")
 
     ax_b = fig.add_subplot(gs[0, 1])
     ax_c = fig.add_subplot(gs[0, 2])
     plot_chip((ax_b, ax_c), chip)
-    ax_b.set_title("(b) " + ax_b.get_title(), pad=4)
-    ax_c.set_title("(c) " + ax_c.get_title(), pad=4)
+    titles = [(ax_m, r"(a) All 90 Test A chips"),
+              (ax_b, "(b) " + ax_b.get_title()),
+              (ax_c, "(c) " + ax_c.get_title())]
+    for ax, _ in titles:
+        ax.set_title("")
+    fig.canvas.draw()
+    # One shared height for all three, in figure coordinates. Panel (a) has equal aspect so its
+    # axes box is shorter than the chip panels', and axes titles therefore sat at three different
+    # heights. Taken from the tallest box so nothing overlaps.
+    top = max(ax.get_position().y1 for ax, _ in titles)
+    for ax, text in titles:
+        box = ax.get_position()
+        fig.text(box.x0 + box.width / 2, top + 0.035, text,
+                 ha="center", va="bottom", fontsize=9, linespacing=1.25)
     # The chip id belongs in the caption, not stamped on the figure -- it is provenance, not
     # something a reader reads off the panels.
 
@@ -242,6 +254,11 @@ def main() -> None:
     fig.savefig(out.with_suffix(".png"), bbox_inches="tight", pad_inches=0.03, dpi=300)
     plt.close(fig)
 
+    # Printed width of the matrix, as a fraction of the tight-cropped figure. Both matrix
+    # figures are placed at the same \\linewidth, so equal fractions mean equal printed size.
+    _bb = fig.get_tightbbox(fig.canvas.get_renderer())
+    _ax = ax_m.get_window_extent()
+    print(f"  matrix width: {100 * (_ax.width / fig.dpi) / _bb.width:.2f}% of the cropped figure")
     print(f"Saved: {out}")
     print(f"  pooled: grassland within 8 m of semi-natural {pooled_semi:.2f}%, "
           f"of forest {pooled_forest:.2f}%")
