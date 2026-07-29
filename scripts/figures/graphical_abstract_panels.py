@@ -1,180 +1,166 @@
 #!/usr/bin/env python3
-"""
-scripts/figures/graphical_abstract_panels.py
+"""The three raster panels of the graphical abstract.
 
-Generate the three raster panels for the redesigned graphical abstract
-(diagnostic narrative: a strong vision transformer maps rural Ireland well;
-the residual error is a thin boundary shell = a label-quality ceiling).
+REBUILT 2026-07-29. Every element of the previous version was withdrawn: its chip
+(biodiversity_0957) is a TRAINING chip under the current split, so the abstract showed the model
+marking its own homework; its badges carried the leakage-inflated 90.8% mean IoU and the retracted
+"<1% inside, 42% at boundaries" error share; and its caption stated the label-quality-ceiling claim
+that `docs/DO_NOT_ADD.md` forbids. It also rebuilt from `sonic/results/`, which is not staged here.
 
-Panels (saved to figures/graphical_abstract/):
-  ga_panel1_rgb.png    Satellite RGB tile (Pleiades), dataset-matched normalisation.
-  ga_panel2_map.png    The model's segmentation (mean_pred), full class palette.
-  ga_panel3_error.png  Desaturated map + glowing error pixels concentrated on class edges.
+The three panels are ONE Test A chip seen three ways, so the abstract is an argument rather than a
+pipeline:
 
-All three use REAL current-model outputs: the prediction is the 10-seed ensemble argmax
-of the final ADE20K shipped model (stage3_clsbal), reconstructed from the per-seed softmax
-dumps (<softmax root>/stage3_clsbal/seed<N>/<tile>.npy). Tile biodiversity_0957 is
-chosen: it contains all five land classes in a balanced, visually clean scene, and ~95% of
-its error lies within 8 px (~4 m) of a class boundary. The ensemble prediction + GT are
-cached to figures/graphical_abstract/ga_source_maps.npz so the figure rebuilds without the
-(large, gitignored) softmax dumps.
+  1. the imagery -- the two grassland classes are a distinction of management, not appearance
+  2. where the model is wrong -- whole parcels flipped between them, not rims
+  3. how often the two classes actually meet -- grassland's 8 m band to forest against to
+     semi-natural, both drawn on the same picture so the contrast is one glance
 
-Run from repo root:
+Chip biodiversity_1078, seed 47, stage1_baseline. It is in the 90-chip Test A scoring subset, is
+fully labelled, holds over a hectare of each of the two classes, and is the chip class_seam.py
+uses -- so the abstract and that figure show the same ground. The split is asserted below rather
+than trusted.
+
+Numbers that go on the badges are in the ledger: 46.7% (pair share of foreground error), 0.6% and
+21.4% (grassland within 8 m of semi-natural and of forest).
+
+Writes figures/graphical_abstract/ga_panel{1,2,3}*.png, read by graphical_abstract_tikz.tex.
+
+Run:
   python scripts/figures/graphical_abstract_panels.py
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
 import numpy as np
 import rasterio
 from PIL import Image
-from scipy import ndimage as ndi
+from scipy import ndimage
 
 
 def find_repo_root() -> Path:
-    p = Path(__file__).resolve()
-    for parent in [p.parent, *p.parents]:
-        if (parent / "geoseg").is_dir() and (parent / "scripts").is_dir():
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "geoseg").is_dir() and (parent / "config").is_dir():
             return parent
     raise RuntimeError("repo root not found")
 
 
 REPO = find_repo_root()
-TILE = "biodiversity_0957"
-SEEDS = [f"seed{n}" for n in range(42, 52)]
-OUT = REPO / "figures" / "graphical_abstract"
-OUT.mkdir(parents=True, exist_ok=True)
-CACHE = OUT / "ga_source_maps.npz"  # committed: ensemble pred + GT for TILE
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 
-# Class palette (geoseg/taxonomy.py STUDENT_PALETTE)
-PALETTE = np.array(
-    [
-        [0, 0, 0],        # 0 Background
-        [250, 62, 119],   # 1 Forest
-        [168, 232, 84],   # 2 Grassland
-        [242, 180, 92],   # 3 Cropland
-        [59, 141, 247],   # 4 Settlement
-        [255, 214, 33],   # 5 Seminatural
-    ],
-    dtype=np.uint8,
-)
+from geoseg.taxonomy import STUDENT_PALETTE  # noqa: E402
+
+SPLIT_TAG = "f1"
+TILE = "biodiversity_1078"
+SEED = 47
+CELL = "stage1_baseline"
+NEAR_M = 8.0
+PX_M = 0.5
+FOREST, GRASS, SEMI = 1, 2, 5
+SIDE = 1200                       # output side in px; panels are square
+
+PALETTE = np.array(STUDENT_PALETTE, dtype=np.uint8)
+# Panel 2, the two error directions. Same two colours as two_grasslands_qualitative, so a reader
+# who meets the abstract first is not relearning them at that figure.
+ERR_G2S = (178, 24, 43)
+ERR_S2G = (84, 39, 136)
+# Panel 3, the two bands. One cool, one warm, and neither is a class colour.
+BAND_FOREST = (59, 42, 107)
+BAND_SEMI = (232, 106, 20)
+WASH = 0.52
+
+OUT = REPO / "figures/graphical_abstract"
 
 
-def read_rgb(tif_path: Path) -> np.ndarray:
-    """The RGB the MODEL saw. Imports the one reader rather than reimplementing it.
+def assert_test_chip() -> None:
+    """Refuse to build from a chip the model was trained on.
 
-    Was a local per-tile 2-98 percentile stretch, which stopped matching the dataset on 2026-07-27
-    when the reader moved to cached per-site percentiles (docs/CORRECTIONS_PAPER_PT2.md).
+    This is the defect that shipped last time. The manifest is the authority; the scoring subset is
+    checked too, so the abstract cannot show ground the reported numbers exclude.
     """
-    from geoseg.datasets.biodiversity_dataset import _read_tif_as_rgb_uint8
-    return np.asarray(_read_tif_as_rgb_uint8(str(tif_path)))
+    manifest = json.loads((REPO / f"artifacts/spatial_split_manifest_{SPLIT_TAG}.json").read_text())
+    assignment = manifest.get("assignment", manifest)
+    split = assignment.get(TILE)
+    if split != "test":
+        raise SystemExit(
+            f"{TILE} is '{split}' in the split manifest, not 'test'. The graphical abstract would "
+            f"show the model predicting on ground it was trained on, which is exactly the defect "
+            f"the previous version shipped with.")
+    subset = json.loads((REPO / f"artifacts/scoring_subset_{SPLIT_TAG}.json").read_text())
+    if TILE not in set(subset["splits"]["test"]["tiles"]):
+        raise SystemExit(f"{TILE} is not in the 90-chip scoring subset the paper's numbers use.")
 
 
-def boundary_band(gt: np.ndarray, width: int = 8) -> np.ndarray:
-    b = np.zeros_like(gt, dtype=bool)
-    for ax in (0, 1):
-        diff = np.diff(gt, axis=ax) != 0
-        sl0 = [slice(None)] * 2
-        sl0[ax] = slice(0, -1)
-        b[tuple(sl0)] |= diff
-        sl1 = [slice(None)] * 2
-        sl1[ax] = slice(1, None)
-        b[tuple(sl1)] |= diff
-    return ndi.binary_dilation(b, iterations=width)
+def read_mask() -> np.ndarray:
+    return np.array(Image.open(REPO / f"data/split_{SPLIT_TAG}/test/masks/{TILE}.png").convert("L"))
 
 
-def colourise(mask: np.ndarray) -> np.ndarray:
-    return PALETTE[mask]
+def read_rgb() -> np.ndarray:
+    with rasterio.open(REPO / f"data/split_{SPLIT_TAG}/test/images/{TILE}.tif") as src:
+        a = src.read([1, 2, 3]).astype(np.float32)
+    out = np.empty_like(a)
+    for b in range(3):
+        lo, hi = np.percentile(a[b], [2, 98])
+        out[b] = np.clip((a[b] - lo) / (hi - lo), 0, 1)
+    return (out.transpose(1, 2, 0) * 255).round().astype(np.uint8)
 
 
-def load_pred_gt() -> tuple[np.ndarray, np.ndarray]:
-    """Return (gt, ensemble-argmax prediction) for TILE.
-
-    Prefers the small cached npz; otherwise rebuilds the 10-seed ensemble from the
-    per-seed softmax dumps (verified to reproduce the paper's mean_pred exactly) and caches it.
-    """
-    if CACHE.exists():
-        z = np.load(CACHE)
-        return z["gt"].astype(np.int64), z["pred"].astype(np.int64)
-
-    gt = np.array(Image.open(REPO / "data" / "biodiversity_split" / "val" / "masks" / f"{TILE}.png")).astype(np.int64)
-    acc = None
-    for s in SEEDS:
-        sm = np.load(REPO / "sonic" / "results" / s / "analysis" / "seed_softmax"
-                     / "stage3_clsbal" / s / f"{TILE}.npy").astype(np.float32)
-        acc = sm if acc is None else acc + sm
-    pred = acc.argmax(0).astype(np.int64)
-    np.savez_compressed(CACHE, gt=gt.astype(np.uint8), pred=pred.astype(np.uint8))
-    return gt, pred
+def read_prediction() -> np.ndarray:
+    p = REPO / f"analysis/panel_root/seed{SEED}/analysis/seed_softmax/{CELL}/seed{SEED}/{TILE}.npy"
+    if not p.is_file():
+        raise SystemExit(f"prediction not staged: {p}")
+    return np.load(p).argmax(axis=0).astype(np.uint8)
 
 
-def main() -> None:
-    # --- load real assets -----------------------------------------------------
-    rgb_path = None
-    for split in ("val", "test", "train"):
-        cand = REPO / "data" / "biodiversity_split" / split / "images" / f"{TILE}.tif"
-        if cand.exists():
-            rgb_path = cand
-            break
-    if rgb_path is None:
-        sys.exit(f"RGB tif for {TILE} not found under data/biodiversity_split/*/images")
+def washed(mask: np.ndarray) -> np.ndarray:
+    return (PALETTE[mask].astype(np.float32) * (1 - WASH) + 255 * WASH).astype(np.uint8)
 
-    gt, pred = load_pred_gt()
-    rgb = read_rgb(rgb_path)
 
-    H, W = gt.shape
+def save(arr: np.ndarray, name: str) -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(arr).resize((SIDE, SIDE), Image.NEAREST).save(OUT / name)
+    print(f"  wrote {name}")
 
-    # --- Panel 1: satellite RGB ----------------------------------------------
-    Image.fromarray(rgb).save(OUT / "ga_panel1_rgb.png")
 
-    # --- Panel 2: the model's segmentation -----------------------------------
-    Image.fromarray(colourise(pred)).save(OUT / "ga_panel2_map.png")
+def main() -> int:
+    assert_test_chip()
+    mask = read_mask()
+    pred = read_prediction()
+    pred[mask == 0] = 0
 
-    # --- Panel 3: desaturated map + glowing boundary-located error -----------
-    seg = colourise(pred).astype(np.float32)
-    lum = seg @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
-    grey = np.repeat(lum[:, :, None], 3, axis=2)
-    # muted "solved" base: near-grey with a whisper of class colour, darkened so the
-    # glowing seams read with high contrast (the interior is calm and correct).
-    base = (0.12 * seg + 0.88 * grey) * 0.42 + 8.0
-    base = base.clip(0, 255)
+    # 1 -- the imagery. Licensed; the credit is placed by the TikZ assembly, per the Airbus EULA.
+    save(read_rgb(), "ga_panel1_rgb.png")
 
-    # real errors (prediction != ground truth); these sit on class edges (98% within 8 px)
-    err = (pred != gt)
-    err_core = ndi.binary_dilation(err, iterations=1)  # thicken 1 px for visibility
+    # 2 -- the pair's error over a washed reference, so the flipped parcels read as blocks.
+    p2 = washed(mask)
+    p2[(mask == GRASS) & (pred == SEMI)] = ERR_G2S
+    p2[(mask == SEMI) & (pred == GRASS)] = ERR_S2G
+    save(p2, "ga_panel2_error.png")
 
-    # two-scale glow: a soft wide halo + a tight bright bloom, amber -> white core.
-    ef = err_core.astype(np.float32)
-    halo_wide = ndi.gaussian_filter(ef, sigma=3.4)
-    halo_tight = ndi.gaussian_filter(ef, sigma=1.2)
-    halo_wide /= max(halo_wide.max(), 1e-6)
-    halo_tight /= max(halo_tight.max(), 1e-6)
-    amber = np.array([255, 176, 59], dtype=np.float32)    # electric amber glow
-    core = np.array([255, 255, 240], dtype=np.float32)    # near-white hot core
+    # 3 -- how much of grassland's ground lies within 8 m of each of the two classes, both bands on
+    # one picture. Semi-natural is drawn last so the sparser band cannot be hidden by the denser.
+    d_forest = ndimage.distance_transform_edt(mask != FOREST, sampling=(PX_M, PX_M))
+    d_semi = ndimage.distance_transform_edt(mask != SEMI, sampling=(PX_M, PX_M))
+    g = mask == GRASS
+    band_f, band_s = g & (d_forest < NEAR_M), g & (d_semi < NEAR_M)
+    p3 = washed(mask)
+    p3[band_f] = BAND_FOREST
+    p3[band_s] = BAND_SEMI
+    save(p3, "ga_panel3_seam.png")
 
-    out = base.copy()
-    # screen-blend both halos (wide for atmosphere, tight for punch)
-    for halo, gain in ((halo_wide, 1.0), (halo_tight, 1.0)):
-        glow_rgb = (gain * halo)[:, :, None] * amber[None, None, :]
-        out = 255.0 - (255.0 - out) * (255.0 - glow_rgb.clip(0, 255)) / 255.0
-    # lay the bright cores on top
-    out[err_core] = core
-    out = out.clip(0, 255).astype(np.uint8)
-    Image.fromarray(out).save(OUT / "ga_panel3_error.png")
-
-    # --- stats for caption sanity check --------------------------------------
-    band = boundary_band(gt, 8)
-    frac = 100 * (err & band).sum() / max(err.sum(), 1)
-    print(f"[panels] tile={TILE}  size={W}x{H}")
-    print(f"[panels] error rate={100*err.mean():.2f}%  |  {frac:.1f}% of error within 8 px of a boundary")
-    print(f"[panels] classes present (GT): "
-          + ", ".join(f"{['Bg','Forest','Grass','Crop','Settle','SemiNat'][c]} {100*np.mean(gt==c):.0f}%"
-                       for c in range(6) if np.mean(gt == c) > 0.005))
-    print(f"[panels] wrote 3 PNGs to {OUT}")
+    pair = ((mask == GRASS) | (mask == SEMI)).sum()
+    pair_err = int(((mask == GRASS) & (pred == SEMI)).sum()
+                   + ((mask == SEMI) & (pred == GRASS)).sum())
+    print(f"{TILE}, seed {SEED}, {CELL}: verified Test A and in the scoring subset")
+    print(f"  pair error on this chip: {pair_err:,} px ({100 * pair_err / pair:.1f}% of its ground)")
+    print(f"  grassland within 8 m of forest {100 * band_f.sum() / g.sum():.1f}%, "
+          f"of semi-natural {100 * band_s.sum() / g.sum():.2f}% (pooled: 21.4%, 0.6%)")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

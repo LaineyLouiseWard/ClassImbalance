@@ -39,6 +39,11 @@
 \definecolor{glowAmber}{HTML}{FFB03B}
 \definecolor{captionAccent}{HTML}{B5771E}  % dark amber (glow family), readable on light
 \definecolor{attnCyan}{HTML}{35D0E0}
+% keys for the two raster overlays, matching graphical_abstract_panels.py exactly
+\definecolor{errGS}{RGB}{178,24,43}
+\definecolor{errSG}{RGB}{84,39,136}
+\definecolor{bandForest}{RGB}{59,42,107}
+\definecolor{bandSemi}{RGB}{232,106,20}
 
 \graphicspath{{figures/graphical_abstract/}}
 
@@ -53,6 +58,11 @@
     badge/.style={font=\small, text=white, fill=black, fill opacity=0.82,
                   text opacity=1, rounded corners=2.5pt, inner sep=3.6pt,
                   anchor=south west},
+    % Wrapping badges only. \raggedright needs a text width, so it cannot live on `badge`, which
+    % panel 1's single-line credit also uses. Hyphenation off: the badges are narrow and LaTeX
+    % broke "forest" across lines.
+    badgewrap/.style={badge, align=left, text width=4.05cm,
+                      execute at begin node={\raggedright\hyphenpenalty=10000\relax}},
     flow/.style={-{Stealth[length=3.2mm,width=3mm]}, line width=1.5pt, color=arrowGrey},
   ]
 
@@ -63,73 +73,75 @@
   \pgfmathsetmacro{\mid}{\panelW/2}
   \pgfmathsetmacro{\pcap}{\panelW}       % top of panels (y)
   \pgfmathsetmacro{\totW}{\cx+\panelW}   % total width
+  % Midpoints of the two gaps. Computed here rather than inline: \gapW is a \newcommand, and TikZ
+  % will not evaluate \gapW/2 inside a coordinate.
+  \pgfmathsetmacro{\gapmidA}{\ax+\panelW+\gapW/2}
+  \pgfmathsetmacro{\gapmidB}{\bx+\panelW+\gapW/2}
 
   % ======================================================================
-  % PANEL 1 - satellite RGB + vision-transformer motif
+  % PANEL 1 - the imagery: the two classes are a distinction of management, not appearance
   % ======================================================================
   \node[anchor=south west] (p1) at (\ax,0)
       {\includegraphics[width=\panelW cm]{ga_panel1_rgb.png}};
-  \begin{scope}
-    \clip (\ax,0) rectangle (\ax+\panelW,\panelW);
-    % patch grid: a vision transformer reads the image as a grid of patches
-    \foreach \k in {1,...,5}{
-      \draw[white, opacity=0.30, line width=0.5pt]
-        (\ax+\k*\panelW/6,0) -- (\ax+\k*\panelW/6,\panelW);
-      \draw[white, opacity=0.30, line width=0.5pt]
-        (\ax,\k*\panelW/6) -- (\ax+\panelW,\k*\panelW/6);
-    }
-  \end{scope}
   \draw[white, opacity=0.5, line width=0.7pt] (\ax,0) rectangle (\ax+\panelW,\panelW);
-  \node[ptitle] at (\ax+\mid,\pcap+0.14) {Satellite imagery};
-  % imagery copyright credit (Airbus EULA Art. 2.2.1, conspicuously displayed);
-  % same badge style/shade as panels 2-3, top-left corner for consistency
+  \node[ptitle] at (\ax+\mid,\pcap+0.14) {What the satellite sees};
+  % Imagery credit, Airbus EULA Art. 2.2.1 (conspicuously displayed). Panels 2 and 3 draw label
+  % masks, not imagery, so the credit belongs on this panel only.
   \node[badge, anchor=north west, font=\tiny] at (\ax+0.15,\panelW-0.15)
       {\textcopyright{} CNES 2021, Distribution Airbus DS};
 
   % ======================================================================
-  % PANEL 2 - the model's segmentation map
+  % PANEL 2 - where the model is wrong: whole parcels, not rims
   % ======================================================================
   \node[anchor=south west] (p2) at (\bx,0)
-      {\includegraphics[width=\panelW cm]{ga_panel2_map.png}};
+      {\includegraphics[width=\panelW cm]{ga_panel2_error.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\bx,0) rectangle (\bx+\panelW,\panelW);
-  \node[ptitle] at (\bx+\mid,\pcap+0.14) {FT-UNetFormer map};
-  \node[badge, anchor=north west] at (\bx+0.15,\panelW-0.15)
-      {\textcolor{glowAmber}{\textbf{90.8\%}} mean IoU};
+  \node[ptitle] at (\bx+\mid,\pcap+0.14) {Where the map is wrong};
+  \node[badgewrap, anchor=north west, text width=2.75cm] at (\bx+0.15,\panelW-0.15)
+      {\textcolor{glowAmber}{\textbf{46.7\%}} of all error};
 
   % ======================================================================
-  % PANEL 3 - where the error lives (glowing boundary shell)
+  % PANEL 3 - and they hardly ever meet
   % ======================================================================
   \node[anchor=south west] (p3) at (\cx,0)
-      {\includegraphics[width=\panelW cm]{ga_panel3_error.png}};
+      {\includegraphics[width=\panelW cm]{ga_panel3_seam.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\cx,0) rectangle (\cx+\panelW,\panelW);
-  \node[ptitle] at (\cx+\mid,\pcap+0.14) {Where the mistakes are};
-  \node[badge, anchor=north west, fill opacity=0.85, align=left, text width=3.95cm]
-        at (\cx+0.15,\panelW-0.15)
-      {\textcolor{glowAmber}{\textbf{$<$1\%}} of pixels misclassified inside,
-       \textcolor{glowAmber}{\textbf{42\%}} at boundaries};
+  \node[ptitle] at (\cx+\mid,\pcap+0.14) {How often they meet};
+  \node[badgewrap, anchor=north west, text width=3.15cm] at (\cx+0.15,\panelW-0.15)
+      {beside forest \textcolor{glowAmber}{\textbf{21.4\%}}\\
+       beside semi-natural \textcolor{glowAmber}{\textbf{0.6\%}}};
 
   % ======================================================================
-  % flow arrows between panels
+  % connectors. "and" then "yet" -- the panels are an argument, not a pipeline, so these are not
+  % the process arrows the withdrawn version used.
   % ======================================================================
   \draw[flow] (\ax+\panelW+0.18,\mid) -- (\bx-0.18,\mid);
   \draw[flow] (\bx+\panelW+0.18,\mid) -- (\cx-0.18,\mid);
+  \node[font=\small\itshape, text=midGrey, fill=white, inner sep=1.5pt]
+      at (\gapmidA,\mid+0.42) {and};
+  \node[font=\small\itshape, text=midGrey, fill=white, inner sep=1.5pt]
+      at (\gapmidB,\mid+0.42) {yet};
 
   % ======================================================================
-  % class legend (3 over 2, centred directly beneath the middle map)
-  % Auto-spaced text so uneven label widths cannot collide.
+  % keys. Panel 2's two error colours under panel 2; panel 3's two bands under panel 3.
   % ======================================================================
-  \node[anchor=center, text=darkGrey, font=\scriptsize] at (\bx+\mid,-0.37)
-    {\lsw{clsForest}\,Forest\hspace{1.7em}\lsw{clsGrassland}\,Grassland\hspace{1.7em}\lsw{clsCropland}\,Cropland};
-  \node[anchor=center, text=darkGrey, font=\scriptsize] at (\bx+\mid,-0.78)
-    {\lsw{clsSettlement}\,Settlement\hspace{1.7em}\lsw{clsSeminatural}\,Semi-natural};
+  \node[anchor=center, text=darkGrey, font=\scriptsize, align=center] at (\bx+\mid,-0.40)
+    {\lsw{errGS}\,grassland predicted as semi-natural\\[1pt]
+     \lsw{errSG}\,semi-natural predicted as grassland};
+  \node[anchor=center, text=darkGrey, font=\scriptsize, align=center] at (\cx+\mid,-0.40)
+    {\lsw{bandForest}\,grassland within 8\,m of forest\\[1pt]
+     \lsw{bandSemi}\,grassland within 8\,m of semi-natural};
 
   % ======================================================================
-  % caption bar (the single takeaway) - neutral bg, slate accent, no em dash
+  % caption bar - the one takeaway, in plain words
   % ======================================================================
   \node[anchor=north, align=center, font=\large, text=darkGrey,
+        execute at begin node={\hyphenpenalty=10000\relax},
         fill=captionBg, rounded corners=7pt, inner xsep=16pt, inner ysep=11pt,
-        text width=12.2cm] at (\totW/2,-1.12)
-    {The remaining errors concentrate at \textcolor{captionAccent}{\textbf{ambiguous class boundaries}}, consistent with a label-quality ceiling, not model capacity or class imbalance.};
+        text width=13.4cm] at (\totW/2,-1.12)
+    {Two grassland types are confused with each other, but they almost never sit side by side. The
+     mistake is \textcolor{captionAccent}{\textbf{not a line drawn in the wrong place}}, so
+     redrawing the outlines cannot fix it.};
 
 \end{tikzpicture}
 \end{document}
