@@ -206,6 +206,11 @@ def add_geom(ax, geom, dx=0.0, dy=0.0, **kw):
         ax.add_patch(PathPatch(MPath(verts, codes), **kw))
 
 
+# Data-coordinate limits of the footprints panel, named because the legend's anchor is computed
+# from them; changing one without the other silently unaligns the legend.
+Y_LO, Y_HI = -1.5, 0.15
+
+
 def footprints_row(ax, sites, use_tex):
     """The three real site footprints in a row at a COMMON km scale (so their
     relative sizes are honest), each labelled only with its true W x H km; the
@@ -216,7 +221,7 @@ def footprints_row(ax, sites, use_tex):
     order = ["biodiversity_", "ireland2_", "ireland1_"]
     assign = sites.get("_assign", {})
     letters = dict(zip(order, ("a", "b", "c")))
-    gap = 1.8   # the site labels stack on two lines, so they need little horizontal room
+    gaps = {"biodiversity_": 1.15, "ireland2_": 2.75}   # gap AFTER this site
     x = 0.0
     hmax = max(sites[p]["extent_km"][1] for p in order)
     for prefix in order:
@@ -239,9 +244,9 @@ def footprints_row(ax, sites, use_tex):
         cx = x + w / 2
         # tile count centred ON the footprint (count only; the region is given in the caption)
         cc = s["cover_km"].centroid
-        # inland: off a coverage hole. ireland1: its footprint is short enough that a centred
-        # two-line count touches the top edge, so it drops clear of it.
-        dy_lab = {"biodiversity_": -1.5, "ireland1_": -0.30}.get(prefix, 0.0)
+        # inland: off a coverage hole. ireland1: its centroid sits low in an L-shaped footprint,
+        # so a centred two-line count hangs off the bottom edge; it lifts clear of it.
+        dy_lab = {"biodiversity_": -1.5, "ireland1_": -0.10}.get(prefix, 0.0)
         lab_col = "#12314D" if (prefix == "biodiversity_" and assign) else "white"
         ax.text(cc.x + x, cc.y + dy_lab, f"{s['count']:,}\ntiles", ha="center", va="center",
                 fontsize=13, color=lab_col, fontweight="bold", linespacing=0.95, zorder=6,
@@ -249,14 +254,14 @@ def footprints_row(ax, sites, use_tex):
                 if (prefix == "biodiversity_" and assign) else None)
         # the site letter rides with the dimension label rather than floating above the
         # footprint, where it read as an unanchored mark
-        ax.annotate(f"({letters[prefix]})", xy=(cx, -0.5), xytext=(-15, 0),
+        ax.annotate(f"({letters[prefix]})", xy=(cx, -0.5), xytext=(0, 0),
                     textcoords="offset points", ha="center", va="top",
                     fontsize=12.5, color="#333333", zorder=5)
         ax.annotate(f"{w:.1f} {times} {h:.1f} km", xy=(cx, -0.5), xytext=(0, -19),
                     textcoords="offset points", ha="center", va="top",
                     fontsize=12.5, color="#333333", zorder=5)
-        x += w + gap
-    total_w = x - gap
+        x += w + gaps.get(prefix, 0.0)
+    total_w = x
 
     # vertical 2 km scale bar (one bar suffices -- common scale)
     xb = -1.0
@@ -271,12 +276,16 @@ def footprints_row(ax, sites, use_tex):
                          label=SPLIT_LABEL[k]) for k in SPLIT_ORDER]
         # sits in the empty space above the two short southwest footprints, so it never
         # overlays the inland site it describes
-        ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.57, 1.0),
+        # y in AXES fraction of the data value hmax, so the legend's top edge lands on the top of
+        # the tallest footprint -- which is what the locator is aligned to further down. Hard-coding
+        # 1.0 put it above them and made the panel carry headroom nothing used.
+        y_top = (hmax - Y_LO) / (hmax + Y_HI - Y_LO)
+        ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.57, y_top),
                   frameon=False, fontsize=9.5, handlelength=1.1, handleheight=0.9,
                   labelspacing=0.34, borderpad=0.0)
 
     ax.set_xlim(xb - 0.7, total_w + 0.3)
-    ax.set_ylim(-1.5, hmax + 0.4)
+    ax.set_ylim(Y_LO, hmax + Y_HI)
 
 
 LOC_EXTENT = [-10.9, -5.0, 51.2, 55.6]  # island of Ireland, with even ocean margin on all sides
