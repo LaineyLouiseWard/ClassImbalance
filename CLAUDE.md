@@ -26,7 +26,7 @@ across source classes** on raw shares — object size confounds it. Model
 failure, parcel-level label error and majority absorption all remain open. **The paper locates the
 error and stops.**
 
-- Manuscript: `manuscript/main.tex` (compiles with `latexmk`). Cover letter: `manuscript/cover_letter.tex`.
+- Manuscript: `manuscript_v2/main.tex` (compiles with `latexmk`). Cover letter: `manuscript_v2/cover_letter.tex`.
 - Goal for the code: a **clean, reproducible mirror** of the paper. Do not change scientific results,
   model architecture, training logic, or evaluation procedures — only organisation, reproducibility,
   and the write-up.

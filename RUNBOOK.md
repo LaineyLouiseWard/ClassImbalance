@@ -10,7 +10,7 @@
 # Reproducibility Runbook
 
 From-scratch instructions for reproducing all results in the manuscript
-*Diagnosing a Label-Quality Ceiling in Imbalanced Rural Land-Cover Segmentation*.
+*Characterising Thematic Error in an Operational Rural Land-Cover Map*.
 
 The ablation is **3-stage and replication-free**:
 

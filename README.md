@@ -1,20 +1,25 @@
-> **⚠ STALE BY DECISION — 2026-07-27.** Every accuracy, contrast and figure below comes from a
-> campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
-> the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
-> split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
-> provisional. The current design and results are in `docs/README.md`, which says what to read and in what order; this file is rewritten
-> after the rebuilt campaign runs.
+# Characterising Thematic Error in an Operational Rural Land-Cover Map
 
-# Diagnosing a Label-Quality Ceiling in Imbalanced Rural Land-Cover Segmentation
+Code accompanying the manuscript *Characterising Thematic Error in an Operational Rural Land-Cover Map*
+(in preparation for the journal *Remote Sensing*, special issue on Data Curation for AI).
 
-![Graphical abstract: satellite imagery, the FT-UNetFormer segmentation map, and the boundary-localised residual error that points to a label-quality ceiling.](assets/graphical_abstract.png)
+This is a case study of one operational product: a five-class land-cover map of rural Irish farmland from
+half-metre Pléiades imagery, produced by an industry partner from a single manual annotation pass that
+cannot be repeated at scale. Holding the segmentation model fixed (FT-UNetFormer), two off-the-shelf
+data-curation interventions — pre-training on the public OpenEarthMap dataset and minority oversampling —
+are crossed in a 2×2 factorial over ten training seeds. Neither main effect separates from run-to-run
+variation: the design resolves about three percentage points of foreground mean IoU (mIoU), wider than the
+spread between the four configurations.
 
-Code accompanying the manuscript *Diagnosing a Label-Quality Ceiling in Imbalanced Rural Land-Cover Segmentation*.
-Using high-resolution Pléiades satellite imagery and a fixed FT-UNetFormer, two off-the-shelf data-curation levers
-(cross-dataset transfer from OpenEarthMap and a class-balanced sampler) are evaluated in a 2×2 factorial over ten
-seeds. Cross-dataset transfer is the dominant lever and improves every class on validation, while the class-balanced
-sampler is largely redundant once transfer is applied. The residual error points to a label-quality ceiling
-concentrated at class boundaries, rather than a limit of model capacity or the imbalance method.
+The contribution is diagnostic rather than algorithmic. Three reproducible measurements locate the error.
+Nearly half of all foreground error is a single class pair, grassland and semi-natural grassland confused
+with each other (2.1× the share their area alone would give), and it falls within fields rather than at
+their shared edge: under 1% of grassland lies within eight metres of any semi-natural grassland, and about
+half of the pair's error sits in connected patches larger than a hectare, while the map otherwise follows
+the usual boundary pattern (a pixel within one metre of a class boundary is misclassified about 3.7× as
+often as one further away). Because the error that carries the volume is not concentrated at boundaries,
+re-tracing the outlines already drawn cannot reach it. Whether the cause is model failure, parcel-level
+label error, or absorption of the minority class into the majority is left open.
 
 Built with PyTorch 2.9, PyTorch Lightning 2.3, and Rasterio 1.4 on Python 3.11; the environment is pinned in
 `environment.yaml`.
