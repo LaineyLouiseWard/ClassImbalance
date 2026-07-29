@@ -6,7 +6,8 @@ Does each citation support the claim it is attached to? (Different question from
 **25 citation sites, 22 distinct keys, 28 key-checks.** Three agents plus a dedicated `DO_NOT_ADD`
 compliance lane. Sources read from the repo's own `references_md/` conversions.
 
-**16 SUPPORTS · 10 OVERREACH · 0 CONTRADICTS · 2 SOURCE UNAVAILABLE · 1 DO_NOT_ADD VIOLATION.**
+**18 SUPPORTS · 8 OVERREACH · 0 CONTRADICTS · 1 SOURCE UNAVAILABLE · 1 DO_NOT_ADD VIOLATION**
+*(post-verification; two first-pass OVERREACH findings were withdrawn — see §6)*
 
 Findings are anchored on **quoted manuscript text, not line numbers** — `main.tex` grew from 52,814
 to 55,602 bytes during the audit and every line number shifted.
@@ -108,24 +109,22 @@ sentence.
 
 ---
 
-**Wang 2022 does not state the pre-training recipe.** *(agent-only)* "Following the original design,
-the encoder is … initialised from an ImageNet-1K Swin-Base backbone further pre-trained … on ADE20K
-with a UPerNet head" attributes a recipe to the UNetFormer paper that it never gives — its only
-pre-training sentence concerns ResNet18, and its Implementation Details say nothing about backbone
-weights. Flagged by two agents. **Fix:** attribute the recipe to where it actually comes from, or
-state it as our own choice.
+**✓ Yuan does not study taxonomy mismatch.** The sentence blames the absence of taxonomy alignment
+for transfer degradation and cites a *scene-classification* letter (one label per image) that never
+studies label spaces, and that attributes degradation to **excessive and noisy pre-training** and to
+domain-gap width. Anyone who opens the reference sees the mismatch at once. **This is the one a
+reviewer is most likely to catch.** **Fix:** cite something that studies label-space or taxonomy
+mismatch, or drop the causal attribution and state the alignment step as our own design choice.
 
-**Milletari's Dice is not the shipped Dice.** *(agent-only)* Attribution of "Dice loss" is right, but
-the shipped loss is linear-denominator Sørensen–Dice (`geoseg/losses/functional.py:196,200`), not
-Milletari's squared $\sum p^2 + \sum g^2$; it carries a smoothing constant he never uses, is
-multi-class where he says the loss "is indicated for binary segmentation tasks", and is paired with
-cross-entropy and an oversampler when his selling point was removing the need for re-weighting.
-
-**Roberts states a minimum, not a bar.** *(agent-only)* He says the block size should be "at least"
-the autocorrelation range and that "larger blocks … may be required"; the manuscript reads this as a
-pass/fail threshold the split "clears". The 768 m train–val gap is 1.02× the 750 m range and is not
-adjudicated either way. Given `CLAUDE.md` already records that train–val at 256 m sits *inside* the
-range and is where every checkpoint is selected, this one is worth getting exactly right.
+**Wang 2022 — the recipe is true, only the attribution mispoints.** *(downgraded on verification)*
+"Following the original design, the encoder is … initialised from an ImageNet-1K Swin-Base backbone
+further pre-trained … on ADE20K with a UPerNet head." The verifier **loaded
+`pretrain_weights/stseg_base.pth`** and confirmed it is Swin-Base + UPerNet on ADE20K — 150 classes,
+ADE20K class names in `meta`, `psp_modules`/FPN decode head — and that
+`weight_path='pretrain_weights/stseg_base.pth'` is the upstream GeoSeg default. So the recipe is
+correct and verifiable; the only fault is "Following the original design", which points the reader at
+a paper that says nothing about backbone weights. **Fix:** three words. Drop the attribution phrase
+and state the provenance directly.
 
 ---
 
@@ -133,10 +132,22 @@ range and is where every checkpoint is selected, this one is worth getting exact
 
 | Claim as used | Source says | Fix |
 |---|---|---|
-| OpenEarthMap is "RGB satellite imagery" (twice) | "5000 aerial and satellite images" from "satellite, aircraft, and UAV" | Say "aerial and satellite". Load-bearing — the platform mismatch against Pléiades is part of the domain gap the next clause invokes. The added "dates" diversity axis is not claimed by the paper either |
-| Yuan cited for "without alignment, naïve transfer can degrade the target" | Scene classification, one label per image; never studies label-space or taxonomy mismatch; attributes degradation to excessive/noisy pre-training and domain-gap width | Cite something that studies taxonomy mismatch, or drop the causal attribution |
-| "the Montgomery halving convention" in a figure caption | No `\cite`, no chapter, no page | Add the citation and a chapter/page, or name the convention without the eponym |
-| Taxonomy reconciliation is done "conventionally" (Lambert) | One paper, which frames manual reconciliation as *its own contribution* against a naive name-matched norm | Soften "conventionally" |
+| OpenEarthMap is "RGB satellite imagery" (**once**, not twice) | "5000 aerial and satellite images" from "satellite, aircraft, and UAV" | Say "aerial and satellite". One word. *(The first pass called this load-bearing because the next clause invoked a platform mismatch; on re-reading, that clause is about class granularity, so the rationale was wrong even though the error is real.)* |
+| "the Montgomery halving convention" in a figure caption | The key **is** cited two paragraphs earlier and the halving arithmetic is correct, but the phrase is a **coinage** — his Ch. 6 attaches "one-half" to interactions and regression coefficients, not to main effects | Rename it, or attach a chapter reference. Minor |
+| Taxonomy reconciliation is done "conventionally" (Lambert) | One paper, which frames manual reconciliation as *its own contribution* against a naive name-matched norm | Soften "conventionally". One adverb |
+
+### Two first-pass findings withdrawn on verification
+
+**Milletari — pedantry, no change needed.** The code facts all check out (linear denominator at
+`geoseg/losses/functional.py:196,200`, `mode='multiclass'`, `smooth=0.05`, joined to cross-entropy),
+but a bare "Dice loss \cite{Milletari}" is the universal *family* citation and asserts no equivalence
+of algebraic form. No competent reviewer reads it as a claim to have implemented his exact squared
+denominator.
+
+**Roberts — mostly pedantry, and the first pass misread the split.** The 768 m gap is **val–test**,
+not train–val; train–val is **256 m** (`CLAUDE.md`: `train | 256 m | val | 768 m | test`). The
+manuscript also already states the concession the first pass said was missing. The "substantially
+larger" quote attributed to Roberts **does not exist in the paper**. Withdrawn.
 
 **Not a citation problem but visible to a reviewer:** the Zenodo deposit title still reads *"Code for
 'Diagnosing a Label-Quality Ceiling…'"* — the claim withdrawn on 2026-07-29. The deposit is cited
@@ -164,10 +175,33 @@ correctly as a pure availability pointer with no circular use, but the title con
   `Bibliography_additions.bib` and all 22 bibitems of `main.bbl`.
 - **"The second prediction we report"** is used with the falsifier attached, as required.
 
-## 5. Unchecked
+## 5. Unchecked, and where the sources actually live
 
-- **Deng 2009** and **Montgomery 2017** — no local conversion. Montgomery's in-text use is generic
-  enough to be safe; the caption issue above is the real flag.
+- **Deng 2009** — no local conversion. Its use (ImageNet provenance) is generic enough to be safe.
 - A **stale arXiv Cheng conversion** sits alongside the proceedings one in `references_md/`. Delete
   the arXiv copy so no future check quotes the wrong version — `DO_NOT_ADD` already warns quotations
   must come from the proceedings.
+- **Conversions are split across two directories** and this cost time twice. Most live in the repo's
+  own `references_md/`; some (Roberts, Maxwell, Krawczyk, Saadeldin, Reina) live in
+  `~/Documents/Github/papers-md/`. Search both. **Montgomery does have a conversion** —
+  `references_md/montgomery-2012-ch6-2k-factorial-design.md` — contrary to what the first pass said.
+
+---
+
+## 6. Verification record
+
+Every finding above was produced by one agent and then attacked by a second on a different evidence
+path. That second pass changed the result in five places, so the counts in the header are the
+post-verification ones:
+
+| Finding | First pass | After verification |
+|---|---|---|
+| Milletari Dice form | OVERREACH | **Withdrawn — pedantry** |
+| Roberts minimum-vs-bar | OVERREACH | **Withdrawn — and the first pass misread the split** |
+| Wang 2022 recipe | "attributes a recipe the paper never gives" | **Recipe is true** (checkpoint inspected); only the attribution phrase is wrong |
+| Xia / OpenEarthMap | wrong in two places, load-bearing | Wrong in **one** place; stated rationale was wrong |
+| Montgomery | "no local conversion" | Conversion exists; key already cited; the coinage is the real issue |
+
+Four findings were verified by me directly against the primary sources rather than delegated: the
+Volpi band conflation, the Kang `q` inversion, the Csurka r = 5 misattribution, and the missing
+boundary curve. Those four are the ones to act on first.
