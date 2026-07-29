@@ -68,8 +68,11 @@ PALETTE = np.array(STUDENT_PALETTE, dtype=np.uint8)
 # who meets the abstract first is not relearning them at that figure.
 ERR_G2S = (178, 24, 43)
 ERR_S2G = (84, 39, 136)
-# Panel 3, the two bands. One cool, one warm, and neither is a class colour.
-BAND_FOREST = (59, 42, 107)
+# Panel 3, the two bands. Teal and orange, deliberately a DIFFERENT pair from panel 2's red and
+# purple: the two panels mean different things by their overlays, and until 2026-07-29 this band
+# was a purple close enough to panel 2's that the same colour appeared to mean two things two
+# panels apart. Neither is a class colour.
+BAND_FOREST = (16, 92, 104)
 BAND_SEMI = (232, 106, 20)
 WASH = 0.52
 

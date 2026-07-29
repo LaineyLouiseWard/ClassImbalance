@@ -42,7 +42,7 @@
 % keys for the two raster overlays, matching graphical_abstract_panels.py exactly
 \definecolor{errGS}{RGB}{178,24,43}
 \definecolor{errSG}{RGB}{84,39,136}
-\definecolor{bandForest}{RGB}{59,42,107}
+\definecolor{bandForest}{RGB}{16,92,104}
 \definecolor{bandSemi}{RGB}{232,106,20}
 
 \graphicspath{{figures/graphical_abstract/}}
@@ -125,10 +125,10 @@
   % ======================================================================
   % keys. Panel 2's two error colours under panel 2; panel 3's two bands under panel 3.
   % ======================================================================
-  \node[anchor=center, text=darkGrey, font=\scriptsize, align=center] at (\bx+\mid,-0.40)
+  \node[anchor=north west, text=darkGrey, font=\scriptsize, align=left] at (\bx,-0.22)
     {\lsw{errGS}\,grassland predicted as semi-natural\\[1pt]
      \lsw{errSG}\,semi-natural predicted as grassland};
-  \node[anchor=center, text=darkGrey, font=\scriptsize, align=center] at (\cx+\mid,-0.40)
+  \node[anchor=north west, text=darkGrey, font=\scriptsize, align=left] at (\cx,-0.22)
     {\lsw{bandForest}\,grassland within 8\,m of forest\\[1pt]
      \lsw{bandSemi}\,grassland within 8\,m of semi-natural};
 
@@ -140,7 +140,7 @@
         fill=captionBg, rounded corners=7pt, inner xsep=16pt, inner ysep=11pt,
         text width=13.4cm] at (\totW/2,-1.12)
     {Two grassland types are confused with each other, but they almost never sit side by side. The
-     mistake is \textcolor{captionAccent}{\textbf{not a line drawn in the wrong place}}, so
+     mistake is \textbf{not a line drawn in the wrong place}, so
      redrawing the outlines cannot fix it.};
 
 \end{tikzpicture}
