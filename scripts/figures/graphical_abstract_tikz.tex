@@ -44,6 +44,14 @@
 \definecolor{errSG}{RGB}{84,39,136}
 \definecolor{bandForest}{RGB}{16,92,104}
 \definecolor{bandSemi}{RGB}{232,106,20}
+% The base map as it actually appears in panels 2 and 3: class colour at WASH=0.52 in
+% graphical_abstract_panels.py. Without these a reader is never told that pale green is grassland,
+% so the central claim -- green and yellow kept apart by pink -- cannot be checked against the
+% picture.
+\definecolor{baseGrass}{RGB}{213,244,173}
+\definecolor{baseSemi}{RGB}{255,235,149}
+\definecolor{baseForest}{RGB}{253,163,190}
+\definecolor{baseSettle}{RGB}{161,201,251}
 
 \graphicspath{{figures/graphical_abstract/}}
 
@@ -63,6 +71,9 @@
     % broke "forest" across lines.
     badgewrap/.style={badge, align=left, text width=4.05cm,
                       execute at begin node={\raggedright\hyphenpenalty=10000\relax}},
+    % Subtitle under each panel title: where the dataset-wide numbers live, outside the image
+    % frame so they cannot be read as computed from the one chip shown.
+    psub/.style={font=\scriptsize, text=darkGrey, anchor=south, align=center, text width=5.3cm},
     flow/.style={-{Stealth[length=3.2mm,width=3mm]}, line width=1.5pt, color=arrowGrey},
   ]
 
@@ -84,7 +95,8 @@
   \node[anchor=south west] (p1) at (\ax,0)
       {\includegraphics[width=\panelW cm]{ga_panel1_rgb.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\ax,0) rectangle (\ax+\panelW,\panelW);
-  \node[ptitle] at (\ax+\mid,\pcap+0.14) {What the satellite sees};
+  \node[ptitle] at (\ax+\mid,\pcap+0.92) {What the satellite sees};
+  \node[psub] at (\ax+\mid,\pcap+0.16) {one 256\,m square of farmland};
   % Imagery credit, Airbus EULA Art. 2.2.1 (conspicuously displayed). Panels 2 and 3 draw label
   % masks, not imagery, so the credit belongs on this panel only.
   \node[badge, anchor=north west, font=\tiny] at (\ax+0.15,\panelW-0.15)
@@ -96,9 +108,9 @@
   \node[anchor=south west] (p2) at (\bx,0)
       {\includegraphics[width=\panelW cm]{ga_panel2_error.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\bx,0) rectangle (\bx+\panelW,\panelW);
-  \node[ptitle] at (\bx+\mid,\pcap+0.14) {Where the map is wrong};
-  \node[badgewrap, anchor=north west, text width=2.75cm] at (\bx+0.15,\panelW-0.15)
-      {\textcolor{glowAmber}{\textbf{46.7\%}} of all error};
+  \node[ptitle] at (\bx+\mid,\pcap+0.92) {Where the map is wrong};
+  \node[psub] at (\bx+\mid,\pcap+0.16)
+      {these two swapped are \textbf{46.7\%} of all error};
 
   % ======================================================================
   % PANEL 3 - and they hardly ever meet
@@ -106,10 +118,9 @@
   \node[anchor=south west] (p3) at (\cx,0)
       {\includegraphics[width=\panelW cm]{ga_panel3_seam.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\cx,0) rectangle (\cx+\panelW,\panelW);
-  \node[ptitle] at (\cx+\mid,\pcap+0.14) {How often they meet};
-  \node[badgewrap, anchor=north west, text width=3.15cm] at (\cx+0.15,\panelW-0.15)
-      {beside forest \textcolor{glowAmber}{\textbf{21.4\%}}\\
-       beside semi-natural \textcolor{glowAmber}{\textbf{0.6\%}}};
+  \node[ptitle] at (\cx+\mid,\pcap+0.92) {They almost never touch};
+  \node[psub] at (\cx+\mid,\pcap+0.16)
+      {\textbf{21.4\%} of grassland sits beside forest, \textbf{0.6\%} beside semi-natural};
 
   % ======================================================================
   % connectors. "and" then "yet" -- the panels are an argument, not a pipeline, so these are not
@@ -118,9 +129,9 @@
   \draw[flow] (\ax+\panelW+0.18,\mid) -- (\bx-0.18,\mid);
   \draw[flow] (\bx+\panelW+0.18,\mid) -- (\cx-0.18,\mid);
   \node[font=\small\itshape, text=midGrey, fill=white, inner sep=1.5pt]
-      at (\gapmidA,\mid+0.42) {and};
+      at (\gapmidA,\mid+0.42) {predicted};
   \node[font=\small\itshape, text=midGrey, fill=white, inner sep=1.5pt]
-      at (\gapmidB,\mid+0.42) {yet};
+      at (\gapmidB,\mid+0.42) {measured};
 
   % ======================================================================
   % keys. Panel 2's two error colours under panel 2; panel 3's two bands under panel 3.
@@ -132,16 +143,19 @@
     {\lsw{bandForest}\,grassland within 8\,m of forest\\[1pt]
      \lsw{bandSemi}\,grassland within 8\,m of semi-natural};
 
+  \node[anchor=north, text=darkGrey, font=\scriptsize] at (\totW/2,-1.02)
+    {map colours: \lsw{baseGrass}\,grassland\hspace{1.1em}\lsw{baseSemi}\,semi-natural%
+     \hspace{1.1em}\lsw{baseForest}\,forest\hspace{1.1em}\lsw{baseSettle}\,settlement};
+
   % ======================================================================
   % caption bar - the one takeaway, in plain words
   % ======================================================================
   \node[anchor=north, align=center, font=\large, text=darkGrey,
         execute at begin node={\hyphenpenalty=10000\relax},
         fill=captionBg, rounded corners=7pt, inner xsep=16pt, inner ysep=11pt,
-        text width=13.4cm] at (\totW/2,-1.12)
-    {Two grassland types are confused with each other, but they almost never sit side by side. The
-     mistake is \textbf{not a line drawn in the wrong place}, so
-     redrawing the outlines cannot fix it.};
+        text width=13.4cm] at (\totW/2,-1.62)
+    {\textbf{Redrawing outlines will not fix this map.} The two grassland types the model mixes up
+     almost never touch, so most of the error cannot be a boundary drawn in the wrong place.};
 
 \end{tikzpicture}
 \end{document}
