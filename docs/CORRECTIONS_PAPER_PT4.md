@@ -270,3 +270,32 @@ learnable.
 per-cell detail on the factorial. If pages are needed, compress the factorial and the OpenEarthMap
 mechanics - report the contrasts and the per-class pattern, drop the interaction interpretation and
 the pre-training stage detail. The methods must stay clear; the ablation arithmetic does not.
+
+---
+
+## Added 2026-07-29 — two possible strengthenings, neither attempted
+
+Both came out of settling the boundary argument. Neither blocks the rewrite; both are cheap and both
+answer a question a reviewer is likely to ask.
+
+**1. Measure each error patch's width, not only its area.** `component_sizes` returns pixel counts times
+pixel area and nothing else, so a long thin ribbon and a compact blob of equal area are
+indistinguishable. That is why the tenth-of-a-hectare threshold turned out to separate nothing — error
+smeared along the reference boundaries clears it too — and why the paper now quotes the hectare
+threshold instead.
+
+Width comes straight out of a distance transform run *inside* each patch: for every pixel in the patch,
+the distance to the nearest pixel outside it. The largest such distance is the radius of the biggest
+circle that fits, so twice it is the width at the patch's widest point. A two-metre ribbon scores 1 m
+however long it runs; a one-hectare blob scores tens of metres. That separates the two cases outright
+rather than by proxy, and it is one call to `scipy.ndimage.distance_transform_edt` on the patch mask.
+
+**2. Mosaic the predictions before measuring patches.** Scoring runs tile by tile, so every patch is cut
+at the tile edge — no patch can exceed about 6.5 ha, and over 95% of the reference grassland mass on the
+scored chips sits in regions clipped by an edge. Every size the paper reports is therefore the size of a
+*piece* of a field. Reassembling the predictions onto real coordinates before labelling components would
+give true patch sizes and would let the paper say "field" honestly.
+
+This is not currently done because the per-seed predictions live on the cluster rather than locally. It
+is a logistics limitation, not a scientific choice, and the paper should say so plainly in Limitations
+rather than leave it to be found. It is also the obvious first move if the paper gets a revise.
