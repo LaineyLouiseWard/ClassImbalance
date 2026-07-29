@@ -82,7 +82,7 @@ PX_M = 0.5                  # inland site only; asserted below
 FIG_W = 7.28
 
 PALETTE = np.array(STUDENT_PALETTE, dtype=np.uint8)
-DISPLAY_NAMES = {"Seminatural": "Semi-natural"}
+DISPLAY_NAMES = {"Seminatural": "Semi-nat."}
 # The two error directions. Deliberately NOT the class colours: these mark a disagreement between
 # the reference and the prediction, not a class, and reusing the class colour for an error would
 # make the error panel look like a third label map.
