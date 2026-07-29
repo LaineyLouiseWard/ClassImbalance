@@ -89,6 +89,7 @@
   % will not evaluate \gapW/2 inside a coordinate.
   \pgfmathsetmacro{\gapmidA}{\ax+\panelW+\gapW/2}
   \pgfmathsetmacro{\gapmidB}{\bx+\panelW+\gapW/2}
+  \pgfmathsetmacro{\midBC}{(\bx+\cx+\panelW)/2}   % centre of panels 2 and 3 together
 
   % ======================================================================
   % PANEL 1 - the imagery: the two classes are a distinction of management, not appearance
@@ -124,8 +125,9 @@
 
   % scale bars: the number for the bar drawn into each raster
   \foreach \px in {\ax,\bx,\cx}{
-    \node[font=\tiny, text=black, anchor=south, inner sep=0pt]
-      at (\px+0.848*\panelW, 0.105*\panelW) {50\,m};
+    \node[font=\tiny, text=black, anchor=south, inner sep=1pt,
+          fill=white, fill opacity=0.78, text opacity=1]
+      at (\px+0.848*\panelW, 0.115*\panelW) {50\,m};
   }
 
   % ======================================================================
@@ -149,7 +151,8 @@
     {\lsw{errGS}\,grassland called semi-natural\\[1pt]
      \lsw{errSG}\,semi-natural called grassland};
 
-  \node[anchor=north, text=darkGrey, font=\scriptsize] at (\totW/2,-1.02)
+  \node[anchor=north, text=darkGrey, font=\scriptsize, align=center,
+        fill=captionBg, rounded corners=4pt, inner xsep=10pt, inner ysep=5pt] at (\midBC,-1.00)
     {\lsw{baseGrass}\,grassland\hspace{1.1em}\lsw{baseSemi}\,semi-natural%
      \hspace{1.1em}\lsw{baseForest}\,forest\hspace{1.1em}\lsw{baseSettle}\,settlement};
 
