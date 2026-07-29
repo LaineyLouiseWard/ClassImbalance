@@ -23,7 +23,9 @@ SELECTION, in full, so the caption can state it:
                0th, 33rd, 67th and 100th percentiles -- minimum, maximum and two interior points.
   Seed         each column is shown at the seed whose pair-error rate on THAT chip is closest to
                that chip's own ten-seed mean, so no column is an unrepresentative run of its own
-               chip. The seed differs between columns and is printed on each.
+               chip. The seed differs between columns; it is NOT printed on the panel any more
+               (the titles carry the ten-seed mean rate alone), so the caption must list them.
+               The run prints them, and so does the summary at the foot of main().
   Cell         stage1_baseline, the no-intervention cell of the 2x2 factorial.
 
 Pair-error rate is (Grassland-called-Semi-natural + Semi-natural-called-Grassland) error pixels
@@ -100,9 +102,12 @@ def set_plot_style() -> None:
         "font.serif": ["Computer Modern Roman"],
         "text.latex.preamble": r"\usepackage{lmodern}",
         "mathtext.fontset": "stix",
-        "font.size": 9,
-        "axes.titlesize": 9,
-        "legend.fontsize": 9,
+        # One size for the panel letters, the row labels and the legend: they are the three
+        # pieces of running text a reader actually uses, and mixing sizes made the figure read as
+        # having a hierarchy it does not have.
+        "font.size": 11,
+        "axes.titlesize": 11,
+        "legend.fontsize": 11,
         "figure.dpi": 300,
         "savefig.dpi": 300,
     })
@@ -210,7 +215,7 @@ def main() -> None:
             raise SystemExit(f"{c['tile']} is not from the inland site; {PX_M} m pixels are wrong")
 
     rows = ["Image", "Reference", "Prediction", "Pair error"]
-    fig, axes = plt.subplots(len(rows), len(cols), figsize=(FIG_W, 8.15))
+    fig, axes = plt.subplots(len(rows), len(cols), figsize=(FIG_W, 7.95))
 
     for j, col in enumerate(cols):
         tile, seed = col["tile"], col["seed"]
@@ -226,13 +231,9 @@ def main() -> None:
             for sp in ax.spines.values():
                 sp.set_visible(False)
             if i == 0:
-                ax.set_title(
-                    rf"({chr(97+j)})~pair error {100*col['mean_rate']:.1f}\%"
-                    "\n"
-                    rf"\footnotesize seed {seed}: {100*col['shown_rate']:.1f}\%",
-                    pad=4)
+                ax.set_title(rf"({chr(97+j)})~~{100*col['mean_rate']:.1f}\%", pad=5)
             if j == 0:
-                ax.set_ylabel(rows[i], fontsize=10, labelpad=5)
+                ax.set_ylabel(rows[i], labelpad=5)
         scale_bar(axes[0, j])
 
     class_handles = [Patch(facecolor=PALETTE[k] / 255, edgecolor="none",
@@ -245,16 +246,14 @@ def main() -> None:
     # Two legends, not one: with seven entries on a single row-wrapped legend matplotlib fills
     # column-major and splits the two error colours away from each other.
     leg1 = fig.legend(handles=class_handles, loc="lower center", ncol=5, frameon=False,
-                      bbox_to_anchor=(0.5, 0.030), handlelength=1.2, columnspacing=1.0,
+                      bbox_to_anchor=(0.5, 0.036), handlelength=1.2, columnspacing=1.2,
                       handletextpad=0.4)
     fig.add_artist(leg1)
-    err_handles.append(Patch(facecolor="none", edgecolor="none",
-                             label="(pair-error row: reference classes faded)"))
-    fig.legend(handles=err_handles, loc="lower center", ncol=3, frameon=False,
-               bbox_to_anchor=(0.5, -0.004), handlelength=1.2, columnspacing=1.4,
+    fig.legend(handles=err_handles, loc="lower center", ncol=2, frameon=False,
+               bbox_to_anchor=(0.5, 0.004), handlelength=1.2, columnspacing=1.8,
                handletextpad=0.4)
 
-    fig.subplots_adjust(left=0.055, right=0.995, top=0.955, bottom=0.115,
+    fig.subplots_adjust(left=0.055, right=0.995, top=0.955, bottom=0.085,
                         wspace=0.02, hspace=0.02)
     out = REPO / args.out_path
     out.parent.mkdir(parents=True, exist_ok=True)

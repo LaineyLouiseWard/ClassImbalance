@@ -122,25 +122,6 @@ def col(name):
     return np.array(RGB[name]) / 255.0
 
 
-def panel_recovery(ax, rec, use_tex):
-    """(a) per-class per-seed-mean trimap recovery."""
-    radii_px = rec["radii_px"]
-    # excluded-band width (m): baseline N=-1 -> 0; otherwise ~(N+1) px excised.
-    xb = [0.0 if N < 0 else (N + 1) * GSD_M for N in radii_px]
-    for name in TRACE:
-        y = np.array(rec["per_seed_class_iou_mean"][name])
-        sd = np.array(rec["per_seed_class_iou_std"][name])
-        ax.plot(xb, y, "-o", ms=3.5, lw=1.4, color=col(name), label=SHORT[name], zorder=3)
-        ax.fill_between(xb, y - sd, y + sd, color=col(name), alpha=0.15, lw=0, zorder=1)
-    ymac = np.array(rec["per_seed_macro_mean"])
-    ax.plot(xb, ymac, "--", lw=1.3, color="#444444", label="macro (fg)", zorder=2)
-    ax.set_xlabel("excluded boundary band (m)" if not use_tex
-                  else r"excluded boundary band (m)")
-    ax.set_ylabel("per-class IoU")
-    ax.set_title("(a)")
-    ax.grid(True, ls=":", lw=0.5, color="#cccccc")
-
-
 def panel_distance(ax, err, use_tex):
     """(b) foreground error rate vs distance-to-boundary (single axis).
     Entropy-vs-distance now lives in the uncertainty figure (Fig 13b)."""
@@ -223,8 +204,9 @@ def render(root, out_dir, cell, use_tex, split="test"):
     # (b) and (c) survive because they carry two sentences the paper does make -- that this map
     # follows the usual boundary pattern (so the grassland pair is an exception to it, not evidence
     # of unusually clean edges), and that the two classes differ in how deep their error runs.
-    # `panel_recovery` is left in the file, unused, because the JSON block still feeds it and a
-    # supplementary table may want it.
+    # `panel_recovery` was deleted with it -- the recovery_trimap JSON block is still written,
+    # so a supplementary table can be built from the data without keeping a drawing of a
+    # withdrawn claim in the tree.
     #
     # Width is 7.28 in, for \begin{adjustwidth}{-\extralength}{0cm} -- \textwidth is 13.90 cm and
     # \extralength 4.61 cm, so a figure built wider is scaled down and every label with it.
