@@ -6,7 +6,34 @@ a reviewer might raise.
 
 Ordered by value for effort.
 
-## 1. Mosaic the predictions before measuring error patches
+**Do 1 before 2, and do not do 2 without 1.** They fix different things — width is about a patch's shape,
+mosaicking is about how pixels are grouped into patches — and mosaicking on its own makes the area
+evidence weaker rather than stronger. If any of the error runs along class boundaries, and boundaries
+form one connected network across the map, then merging across tile edges joins those ribbon segments
+into a single enormous component. Its area climbs steeply while it stays a ribbon. The tiling is
+currently capping that by accident. Width is also the more robust measurement of the two: for a genuinely
+wide patch the largest inscribed circle usually sits well inside it, so clipping a corner at a tile edge
+often leaves the width alone, where it changes the area directly.
+
+## 1. Measure patch width, not only patch area
+
+**What.** `component_sizes` returns pixel count × pixel area and nothing else, so a long thin ribbon and
+a compact blob of equal area score the same. Width comes from a Euclidean distance transform run inside
+each patch: for every pixel, the distance to the nearest pixel outside the patch. The largest such
+distance is the radius of the biggest circle that fits, so twice it is the width at the widest point. A
+two-metre ribbon scores about a metre however far it runs; a one-hectare blob scores tens of metres.
+
+**Why it matters.** It separates ribbon from blob directly instead of by the hectare threshold, which is
+a proxy. The threshold was moved from 0.1 ha to 1 ha precisely because the smaller one could not tell
+the two apart.
+
+**Watch for.** Patches touching a tile edge have no background beyond it, so their width may come out
+inflated. Check how the distance transform behaves at array edges before trusting the numbers.
+
+**Honest caveat.** This refines a supporting result, not the lead. The paper's main evidence — that the
+two classes barely share a border — needs no patch analysis at all.
+
+## 2. Mosaic the predictions before measuring error patches
 
 **What.** Connected components of the error mask are currently labelled per 512×512 tile, so every patch
 is cut at a tile edge and no patch can exceed 6.55 ha. Reassemble the predictions onto real map
@@ -31,24 +58,6 @@ parcel boundaries, which is a different measurement.
 between them? They were selected to be non-overlapping, and if that left gaps, mosaicking still cuts
 patches at every gap edge and gains much less. Read the bounds from
 `data/biodiversity_raw/images/*.tif` for the tiles in `artifacts/scoring_subset_f1.json`.
-
-## 2. Measure patch width, not only patch area
-
-**What.** `component_sizes` returns pixel count × pixel area and nothing else, so a long thin ribbon and
-a compact blob of equal area score the same. Width comes from a Euclidean distance transform run inside
-each patch: for every pixel, the distance to the nearest pixel outside the patch. The largest such
-distance is the radius of the biggest circle that fits, so twice it is the width at the widest point. A
-two-metre ribbon scores about a metre however far it runs; a one-hectare blob scores tens of metres.
-
-**Why it matters.** It separates ribbon from blob directly instead of by the hectare threshold, which is
-a proxy. The threshold was moved from 0.1 ha to 1 ha precisely because the smaller one could not tell
-the two apart.
-
-**Watch for.** Patches touching a tile edge have no background beyond it, so their width may come out
-inflated. Check how the distance transform behaves at array edges before trusting the numbers.
-
-**Honest caveat.** This refines a supporting result, not the lead. The paper's main evidence — that the
-two classes barely share a border — needs no patch analysis at all.
 
 ## 3. Close the ledger rows
 
