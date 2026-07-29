@@ -1,4 +1,13 @@
-# Claim-support audit — `manuscript_v2/main.tex`, 2026-07-29
+# Citation and claim audit — `manuscript_v2`, 2026-07-29
+
+> **§7 is the current handoff list — read that first.** It covers the COMPLETE draft (abstract,
+> Introduction, Contributions, Methods, Results, Discussion, Conclusions) **plus the cover letter**,
+> audited once all sections had landed. §1–§6 below are the earlier Methods/Results-only pass, kept
+> for the reasoning; where §7 disagrees, §7 wins.
+
+---
+
+## Earlier pass — Methods and Results only
 
 Does each citation support the claim it is attached to? (Different question from
 `docs/BIB_AUDIT_2026-07-29.md`, which only asked whether the entries describe real papers correctly.)
@@ -205,3 +214,103 @@ post-verification ones:
 Four findings were verified by me directly against the primary sources rather than delegated: the
 Volpi band conflation, the Kang `q` inversion, the Csurka r = 5 misattribution, and the missing
 boundary curve. Those four are the ones to act on first.
+
+---
+
+# §7. Full-draft pass — the handoff list
+
+Run once the abstract, Introduction, Contributions, Discussion, Conclusions and cover letter had all
+landed. Four agents (abstract+intro, discussion+conclusions, cover letter, whole-document compliance).
+**✓ = I verified it myself against the source or the manuscript; everything else is single-agent.**
+
+**Clean, and checked:** no `Ortiz` trace anywhere; exactly one "88" in the file ("88\% of it carrying
+a label", Test A coverage — neither the expert mask-error audit nor the fabricated inter-annotator
+bound); no revival of the withdrawn ceiling framing in the manuscript; every §1 forbidden sentence
+absent; no "pre-registered"; no 75.3 / 15.0 / 1.27 / 2.84; every 95% CI sits on a contrast, never a
+Test B level; cross-document numbers reconcile; abstract is 302 words with the seven narrative moves
+in order and move 5 at sentence 5; Krawczyk's taxonomy citation is exactly compliant; Maxwell's
+boundary-expectation use clears all three traps; Saadeldin and Reina are both held to their permitted
+uses; the COI is declared correctly.
+
+## Blockers
+
+**1. ✓ Results §3.3 contradicts itself, in the paper's central finding.**
+> "Beyond thirty-two metres from any boundary, forest is wrong 0.7\% of the time and grassland 5.1\%,
+> but **semi-natural grassland is still wrong 27.0\%** of the time… **Both grassland classes
+> concentrate error near boundaries; only forest and grassland clear it deep inside.**"
+
+If semi-natural is wrong 27% deep inside, its error is *not* concentrated at boundaries — and the
+second clause excludes semi-natural anyway. The sentence disagrees with itself and with the numbers
+beside it. *(A downstream agent read this as the Discussion contradicting Results; it does not — the
+Discussion faithfully restates the summary line. The fault is here.)*
+
+**2. ✓ Contributions asserts the opposite of the map-wide result.** "Because the error is not
+concentrated at boundaries," — unqualified. §3.3 says a pixel within one metre is misclassified
+**3.7 times** as often, and "the map follows the usual boundary pattern; the grassland pair is the
+exception to it". The qualifier is what makes the claim true. Add it.
+
+**3. ✓ The cover letter promises foundation models; the paper never mentions them.** "foundation"
+appears **2× in `cover_letter.tex`, 0× in `main.tex`**. The letter tells the Guest Editors the
+measurements "should apply to other architectures, including pre-trained Earth-observation foundation
+models" — two of the three measurements need predicted label maps, so they are not model-free, and
+the repo's own scope note says not to argue this angle. Cut it.
+
+**4. ✓ The one claim attached to Volpi is false.** The Introduction says benchmarks erode a band
+"**without measuring what the band holds**". Volpi measured exactly that — he runs four evaluation
+strategies and reports both: *"By evaluating on eroded boundary ground truths, we observe a similar
+behavior, but with significantly higher accuracies"* (`volpi…md:210`). Also "aerial land-cover
+benchmarks" plural describes what is really one paper's choice.
+
+**5. ✓ The 8 m same-scale conflation survives in two places.** The Introduction fix ("**a** band")
+holds, but Methods still reads "conventionally erode **this band** away before scoring", and the
+cover letter "erode **this** boundary band". Volpi's band is 0.15–0.27 m against our 8 m.
+`DO_NOT_ADD.md` bans this by name. Make both match the Introduction.
+
+**6. ✓ Kang's `q` still inverted** and **7. ✓ Csurka still cited as a sweeper** — both unchanged from
+§2 above.
+
+**8. ✓ The curve is claimed at four sites and does not exist.** Methods now also says the ratio is
+reported "beside the curve over band widths", and the claim has spread to the Introduction and
+Contributions ("as a function of distance to the nearest class boundary"). `boundary_limited_error`
+has zero hits, no such PDF is in `manuscript_v2/Figures/`, and `TODO.md` still lists the panel.
+Three discrete points is not a curve.
+
+## High
+
+| Where | Problem | Fix |
+|---|---|---|
+| Discussion | "Tracing recovers error where a boundary exists on the ground and the error there is one of precision" — the **unconditioned** annotation-at-boundaries claim `DO_NOT_ADD.md:21` forbids, and it contradicts §4.2's own list of blur and 0.5 m mixed pixels | Condition it, or cut |
+| Discussion | "the class the model **cannot isolate**" quietly picks model failure out of the three explanations the paper declares open | Keep all three open |
+| Cover letter | "Neither produces a change the design can resolve" without the ~3 pp bound reads as the forbidden "no effect" | State the bound |
+| Cover letter | "all reported results are averaged over ten independently seeded runs" — false for the adjacency bound, which uses reference masks only, no model, no seeds | Qualify |
+| Bibliography + letter | Zenodo deposit still titled *Code for "Diagnosing a Label-Quality Ceiling…"* — prints in the reference list via `Bibliography.bib:587`. The one place a reader is told the paper diagnoses a ceiling it withdrew | Retitle the deposit |
+
+## Medium
+
+- **Maxwell, first use:** invents the word "positional", which never appears in his paper, and leans
+  on him for a thematic/positional separation he explicitly argues against (*"these types of
+  accuracies are not necessarily separable"*).
+- **Krawczyk:** the sentence calls pre-training a "data-level move"; his definition covers methods
+  that "balance distributions", which pre-training does not.
+- **Abstract:** opens by generalising one case study to all operational farmland maps; derives the
+  four-fifths bound from only one of the two adjacency figures it needs; gives the hectare-patch level
+  without its quarter-to-three-quarters seed range; omits the 3.7× the narrative insists be stated.
+- **Highlight 2** says the interventions failed to shift "that error" (the class pair) when the null
+  is on foreground mIoU.
+- **Registration offset** is missing from an otherwise-correct rival-cause list (zero hits).
+- The **"~five effective areas, one dominant"** caveat on the semi-natural half of the 46.7% appears
+  nowhere, though the narrative requires it.
+- **Conclusions** attribute the Irish-grassland confusion result to the literature with no `\cite`.
+- **Introduction** paraphrases Saadeldin's "fertilised… low number of grass species" and "rough
+  grazing" without citing him at that site.
+- **Cover letter housekeeping:** omits that model weights are also undistributable; drops the "K.D.'s
+  contributions were made in their capacity as a co-author" clause; opens with an unsupported
+  prevalence claim that edges into method novelty.
+- Carried from §2–§3: **Yuan** cited for taxonomy-mismatch degradation; **OpenEarthMap** called
+  satellite imagery; **"Following the original design"** attributing a correct recipe to a paper that
+  does not state it.
+
+## Not done
+
+No adversarial second pass on the §7 single-agent findings — the earlier one overturned five of
+eleven, so treat the unmarked rows as leads, not verdicts. The eight blockers are all ✓-verified.
