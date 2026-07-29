@@ -22,7 +22,9 @@ larger of the two absolute log deviations from the pooled pair of values (0.60% 
 21.44% near forest). That is the chip closest to typical on BOTH numbers at once, in relative terms.
 
 Choosing on the semi-natural number alone returns a chip whose forest seam is twice the pooled
-value, which would overstate the contrast. Dropping the hectare floor returns one holding 0.06 ha
+value, which would overstate the contrast. So does requiring the chip's forest seam to be at least
+the pooled one, tried and reverted on 2026-07-29: it returns a chip at 48% against a pooled 21%.
+Both directions of deviation have to be penalised, which is what the two-coordinate rule does. Dropping the hectare floor returns one holding 0.06 ha
 of semi-natural, which is closest of all on the ratios and useless as a picture: a reader answers
 "of course they do not meet, there is hardly any semi-natural here". The chip the rule now returns
 is BELOW the pooled contrast on both coordinates, so the illustration understates the effect it

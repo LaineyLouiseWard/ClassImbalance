@@ -143,6 +143,12 @@ def pair_by_tile(field):
     return f
 
 
+def sweep(band, field):
+    def f():
+        return load("artifacts/adjacency_band_sweep.json")["bands"][band][field]
+    return f
+
+
 def contrast(effect, cls, field):
     def f():
         return load("artifacts/narrative_numbers_test.json")["per_class_contrasts"][effect][cls][field]
@@ -207,6 +213,7 @@ MK_ADJ = ("PYTHONPATH=. python scripts/analysis/class_adjacency.py --split test 
           "analysis/confusion/confusion_test_stage1_baseline.npy")
 MK_TILE = ("PYTHONPATH=. python scripts/analysis/pair_error_by_tile.py <masks> "
            "<softmax>/stage1_baseline/seed<seed> analysis/tile_stats/tile_stats_seed<seed>_baseline.json")
+MK_SWEEP = "PYTHONPATH=. python scripts/analysis/adjacency_band_sweep.py"
 MK_SUP = "PYTHONPATH=. python scripts/analysis/report_class_support.py"
 MK_AREA = "PYTHONPATH=. python scripts/analysis/compute_scored_area.py"
 
@@ -220,6 +227,7 @@ CMD_NAMES = {
     MK_GEOM: "Pair error geometry: distance and component size",
     MK_ADJ: "Class adjacency and the contact null",
     MK_TILE: "Grassland/semi-natural error per chip",
+    MK_SWEEP: "Adjacency, swept over band width",
     MK_SUP: "Class support",
     MK_AREA: "Scored-subset ground area (covered vs labelled)",
 }
@@ -364,6 +372,20 @@ NUMBERS = [
      pair_by_tile("error_share_on_those"), MK_TILE),
     ("pair error px, summed per chip (10 seeds)", 12899256, 1,
      pair_by_tile("pair_error_px"), MK_TILE),
+
+    # The 8 m band is arbitrary and frozen (PREREGISTRATION_P1_AMENDMENT.md:158). These rows are
+    # the answer to a reviewer who says so: the forest-over-semi-natural adjacency ratio holds
+    # across a sixteenfold sweep of the width, so the choice is not carrying the claim. The 8 m
+    # row must agree with `grassland within 8 m of forest, %` above, which is computed by a
+    # different script from the same masks -- if the two ever diverge, one of them is wrong.
+    ("adjacency ratio forest/semi-natural, 2 m", 41.1, 0.15, sweep("2", "forest_over_semi"),
+     MK_SWEEP),
+    ("adjacency ratio forest/semi-natural, 8 m", 35.8, 0.15, sweep("8", "forest_over_semi"),
+     MK_SWEEP),
+    ("adjacency ratio forest/semi-natural, 32 m", 13.0, 0.15, sweep("32", "forest_over_semi"),
+     MK_SWEEP),
+    ("grassland within 8 m of forest, %, swept", 21.44, 0.02, sweep("8", "within_forest_pct"),
+     MK_SWEEP),
 
     ("grassland pair contact share, %", 1.594, 0.005,
      lambda: 100 * adjacency("contact_share")(), MK_ADJ),
