@@ -206,6 +206,28 @@ read all three findings correctly from the images, which is the test that matter
 
 None of these change a claim. They are caption work, which is yours.
 
+## Caption note for `class_seam`, 2026-07-29
+
+The illustration chip changed to **`biodiversity_1078`**, picked for legibility rather than by a
+closeness rule: both classes are well represented and its forest seam is a lattice rather than the
+single hedgerow the old rule returned. Panel (a) is the evidence — a census of all 90 chips —
+so (b) and (c) only illustrate it.
+
+**The caption must give the chip's two shares beside the pooled pair**, because the panel titles
+print the chip's numbers (1.42% and 26.4%) while panel (a) prints the pooled ones (0.6 and 21.4).
+Without that a reader sees two mismatched pairs and no statement that the difference is expected.
+Suggested clause: *"on this chip 1.42% of grassland lies within 8 m of semi-natural and 26.4%
+within 8 m of forest, against 0.60% and 21.4% over all ninety chips."* Note the chip is
+**conservative**: more of its grassland is near semi-natural than is typical, so the illustration
+understates the contrast. A gate in the script refuses any chip that would exaggerate it.
+
+**If a reviewer says the 8 m band is arbitrary:** it is, and the preregistration says so
+(`PREREGISTRATION_P1_AMENDMENT.md:158`, "not neutral"). The answer is that the width is not
+carrying the claim — the forest-over-semi-natural adjacency ratio runs 41x at 2 m, 36x at 8 m and
+13x at 32 m. Four ledger rows, from `scripts/analysis/adjacency_band_sweep.py`. Not worth a figure.
+
+---
+
 ## Which of the OLD manuscript's floats to bring across
 
 The question: `manuscript/main.tex` (the superseded draft) carries thirteen figures and four tables.
