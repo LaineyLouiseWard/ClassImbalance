@@ -56,7 +56,7 @@
 \graphicspath{{figures/graphical_abstract/}}
 
 \newcommand{\panelW}{4.9}   % panel side length (cm)
-\newcommand{\gapW}{1.75}    % gap between panels (cm)
+\newcommand{\gapW}{2.15}    % gap between panels (cm)
 \newcommand{\lsw}[1]{\textcolor{#1}{\rule[-0.02em]{0.72em}{0.72em}}}  % legend swatch
 
 \begin{document}
@@ -106,21 +106,27 @@
   % PANEL 2 - where the model is wrong: whole parcels, not rims
   % ======================================================================
   \node[anchor=south west] (p2) at (\bx,0)
-      {\includegraphics[width=\panelW cm]{ga_panel2_error.png}};
+      {\includegraphics[width=\panelW cm]{ga_panel3_seam.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\bx,0) rectangle (\bx+\panelW,\panelW);
-  \node[ptitle] at (\bx+\mid,\pcap+0.92) {Where the map is wrong};
+  \node[ptitle] at (\bx+\mid,\pcap+0.92) {They almost never touch};
   \node[psub] at (\bx+\mid,\pcap+0.16)
-      {these two swapped are \textbf{46.7\%} of all error};
+      {\textbf{21.4\%} of grassland sits beside forest, \textbf{0.6\%} beside semi-natural};
 
   % ======================================================================
   % PANEL 3 - and they hardly ever meet
   % ======================================================================
   \node[anchor=south west] (p3) at (\cx,0)
-      {\includegraphics[width=\panelW cm]{ga_panel3_seam.png}};
+      {\includegraphics[width=\panelW cm]{ga_panel2_error.png}};
   \draw[white, opacity=0.5, line width=0.7pt] (\cx,0) rectangle (\cx+\panelW,\panelW);
-  \node[ptitle] at (\cx+\mid,\pcap+0.92) {They almost never touch};
+  \node[ptitle] at (\cx+\mid,\pcap+0.92) {Where the map is wrong};
   \node[psub] at (\cx+\mid,\pcap+0.16)
-      {\textbf{21.4\%} of grassland sits beside forest, \textbf{0.6\%} beside semi-natural};
+      {these two swapped are \textbf{46.7\%} of all error};
+
+  % scale bars: the number for the bar drawn into each raster
+  \foreach \px in {\ax,\bx,\cx}{
+    \node[font=\tiny, text=black, anchor=south, inner sep=0pt]
+      at (\px+0.848*\panelW, 0.105*\panelW) {50\,m};
+  }
 
   % ======================================================================
   % connectors. "and" then "yet" -- the panels are an argument, not a pipeline, so these are not
@@ -129,19 +135,19 @@
   \draw[flow] (\ax+\panelW+0.18,\mid) -- (\bx-0.18,\mid);
   \draw[flow] (\bx+\panelW+0.18,\mid) -- (\cx-0.18,\mid);
   \node[font=\small\itshape, text=midGrey, fill=white, inner sep=1.5pt]
-      at (\gapmidA,\mid+0.42) {predicted};
+      at (\gapmidA,\mid+0.42) {measured};
   \node[font=\small\itshape, text=midGrey, fill=white, inner sep=1.5pt]
-      at (\gapmidB,\mid+0.42) {measured};
+      at (\gapmidB,\mid+0.42) {yet predicted};
 
   % ======================================================================
   % keys. Panel 2's two error colours under panel 2; panel 3's two bands under panel 3.
   % ======================================================================
   \node[anchor=north west, text=darkGrey, font=\scriptsize, align=left] at (\bx,-0.22)
-    {\lsw{errGS}\,grassland predicted as semi-natural\\[1pt]
-     \lsw{errSG}\,semi-natural predicted as grassland};
-  \node[anchor=north west, text=darkGrey, font=\scriptsize, align=left] at (\cx,-0.22)
     {\lsw{bandForest}\,grassland within 8\,m of forest\\[1pt]
      \lsw{bandSemi}\,grassland within 8\,m of semi-natural};
+  \node[anchor=north west, text=darkGrey, font=\scriptsize, align=left] at (\cx,-0.22)
+    {\lsw{errGS}\,grassland predicted as semi-natural\\[1pt]
+     \lsw{errSG}\,semi-natural predicted as grassland};
 
   \node[anchor=north, text=darkGrey, font=\scriptsize] at (\totW/2,-1.02)
     {map colours: \lsw{baseGrass}\,grassland\hspace{1.1em}\lsw{baseSemi}\,semi-natural%

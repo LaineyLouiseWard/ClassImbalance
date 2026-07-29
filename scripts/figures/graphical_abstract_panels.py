@@ -123,9 +123,25 @@ def washed(mask: np.ndarray) -> np.ndarray:
     return (PALETTE[mask].astype(np.float32) * (1 - WASH) + 255 * WASH).astype(np.uint8)
 
 
+def scale_bar(arr: np.ndarray, length_m: float = 50.0) -> np.ndarray:
+    """A 50 m bar, bottom right. The abstract's central claim is a DISTANCE -- within 8 m -- and
+    without a bar nothing on the figure lets a reader judge whether 8 m is one pixel or fifty.
+    Drawn into the raster so all three panels carry it at the same ground scale."""
+    out = arr.copy()
+    n = int(round(length_m / PX_M))
+    h, w = out.shape[:2]
+    x1, y1 = w - 28, h - 34
+    x0 = x1 - n
+    out[y1 - 9:y1 + 5, x0 - 4:x1 + 4] = 255          # halo, so the bar reads on any background
+    out[y1 - 4:y1, x0:x1] = 20
+    for xt in (x0, x1 - 3):                           # end ticks
+        out[y1 - 10:y1 + 2, xt:xt + 3] = 20
+    return out
+
+
 def save(arr: np.ndarray, name: str) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(arr).resize((SIDE, SIDE), Image.NEAREST).save(OUT / name)
+    Image.fromarray(scale_bar(arr)).resize((SIDE, SIDE), Image.NEAREST).save(OUT / name)
     print(f"  wrote {name}")
 
 
