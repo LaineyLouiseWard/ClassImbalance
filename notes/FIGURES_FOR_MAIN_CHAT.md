@@ -206,6 +206,25 @@ read all three findings correctly from the images, which is the test that matter
 
 None of these change a claim. They are caption work, which is yours.
 
+## Terminology: say "parcel-scale", not "blocks a hectare and larger"
+
+`NARRATIVE_LITERATURE_FINAL.md` :188 bans calling the error patches **fields**, and the reason is
+narrow — *"every SIZE here is the size of a piece of a field, not of a field"*, because almost all
+the grassland in the scored chips is cut by a chip edge. It bans size and count claims phrased as
+fields. It does not ban the concept.
+
+**"Parcel" is the standard term and is already in use**: the narrative writes "whole-parcel error"
+(:192) and "parcel-level label error" (:349), and `main.tex` uses it seven times. So where the paper
+describes the shape of the error, **parcel-scale** is the phrase — the error sits at parcel scale
+rather than along edges. It carries the scale without asserting a complete parcel was covered, which
+is the only thing the chip-edge caveat actually blocks.
+
+The measured numbers behind it stay as they are: 53.8% and 56.2% of the pair's error in connected
+components over a hectare, both ledgered, with the per-seed range (a quarter to three quarters)
+given alongside the level.
+
+---
+
 ## Caption note for `class_seam`, 2026-07-29
 
 The illustration chip changed to **`biodiversity_1078`**, picked for legibility rather than by a
