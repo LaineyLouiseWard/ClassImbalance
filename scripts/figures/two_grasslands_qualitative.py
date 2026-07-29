@@ -240,8 +240,13 @@ def main() -> None:
                            label=DISPLAY_NAMES.get(STUDENT_CLASSES[k], STUDENT_CLASSES[k]))
                      for k in range(1, 6)]
     err_handles = [
-        Patch(facecolor=ERR_G2S, edgecolor="none", label="Grassland called semi-natural"),
-        Patch(facecolor=ERR_S2G, edgecolor="none", label="Semi-natural called grassland"),
+        # Reference class first, prediction second, and "predicted as" rather than "called":
+        # "Grassland called semi-natural" leaves which of the two is the reference to inference,
+        # and a reader who guesses wrong reads the whole error row backwards.
+        Patch(facecolor=ERR_G2S, edgecolor="none",
+              label="Grassland predicted as semi-natural"),
+        Patch(facecolor=ERR_S2G, edgecolor="none",
+              label="Semi-natural predicted as grassland"),
     ]
     # Two legends, not one: with seven entries on a single row-wrapped legend matplotlib fills
     # column-major and splits the two error colours away from each other.

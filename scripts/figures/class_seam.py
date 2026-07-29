@@ -15,13 +15,18 @@ Panel (a) is the whole matrix: for each row class, the share of its ground lying
 column class, over the 90 Test A scoring chips. Panel (b) shows one chip so a reader can see what
 0.6% looks like beside 21%.
 
-CHIP SELECTION for panel (b), stated so the caption can repeat it: of the 90 chips, those that are
-fully labelled and contain grassland, semi-natural AND forest, the one minimising the larger of the
-two absolute log deviations from the pooled pair of values (0.60% near semi-natural, 21.44% near
-forest). That is the chip closest to typical on BOTH numbers at once, in relative terms. Choosing on
-the semi-natural number alone returns a chip whose forest seam is twice the pooled value, which
-would overstate the contrast; the two-coordinate rule is what stops the illustration flattering the
-claim.
+CHIP SELECTION for panels (b) and (c), stated so the caption can repeat it: of the 90 chips, those
+that are fully labelled, contain forest, and hold at least a hectare of BOTH grassland and
+semi-natural -- the same eligibility two_grasslands_qualitative uses -- the one minimising the
+larger of the two absolute log deviations from the pooled pair of values (0.60% near semi-natural,
+21.44% near forest). That is the chip closest to typical on BOTH numbers at once, in relative terms.
+
+Choosing on the semi-natural number alone returns a chip whose forest seam is twice the pooled
+value, which would overstate the contrast. Dropping the hectare floor returns one holding 0.06 ha
+of semi-natural, which is closest of all on the ratios and useless as a picture: a reader answers
+"of course they do not meet, there is hardly any semi-natural here". The chip the rule now returns
+is BELOW the pooled contrast on both coordinates, so the illustration understates the effect it
+illustrates.
 
 Writes:
   figures/class_seam.pdf  (+ .png)
@@ -61,6 +66,12 @@ from geoseg.taxonomy import STUDENT_PALETTE  # noqa: E402
 
 SPLIT_TAG = "f1"
 NEAR_M = 8.0
+# The same eligibility as two_grasslands_qualitative: at least a hectare of each class. Without it
+# the rule returned a chip holding 0.06 ha of semi-natural -- statistically the closest to the
+# pooled pair of values, but an illustration of "these two classes do not meet" on a chip that
+# barely contains one of them, which invites the reader to answer "because there is hardly any of
+# it here". A figure has to be persuasive as well as representative.
+MIN_HA_PX = 40_000
 FOREST, GRASS, SEMI = 1, 2, 5
 FG_ORDER = ["Forest", "Grassland", "Cropland", "Settlement", "Seminatural"]
 SHORT = ["Forest", "Grassland", "Cropland", "Settlement", "Semi-nat."]
@@ -128,7 +139,9 @@ def choose_chip(pooled_semi: float, pooled_forest: float):
         m = np.array(Image.open(REPO / f"data/split_{SPLIT_TAG}/test/masks/{t}.png").convert("L"))
         if (m == 0).any():
             continue
-        if not ((m == GRASS).any() and (m == SEMI).any() and (m == FOREST).any()):
+        if not (m == FOREST).any():
+            continue
+        if (m == GRASS).sum() < MIN_HA_PX or (m == SEMI).sum() < MIN_HA_PX:
             continue
         n_eligible += 1
         xs, xf, mask, band_s, band_f = chip_shares(t)

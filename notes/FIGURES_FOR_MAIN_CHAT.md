@@ -89,6 +89,15 @@ chosen:**
 > prints them on every run. The number is the pair-error rate: (grassland-called-semi-natural +
 > semi-natural-called-grassland) pixels over grassland + semi-natural reference pixels.
 > The caption must also carry the faded-reference note, which came off the legend.
+>
+> **The percentage in each column header is the chip's pair-error rate, averaged over the ten
+> seeds** — (grassland predicted as semi-natural + semi-natural predicted as grassland) error
+> pixels, over grassland + semi-natural reference pixels. Nothing on the figure says so, and a
+> reader has already asked. Define it in the caption's first or second sentence.
+>
+> The error-legend wording changed to "Grassland predicted as semi-natural" / "Semi-natural
+> predicted as grassland" — reference class first, prediction second. "called" left which of the
+> two was the reference to inference.
 
 **Why a ladder and not one chip — this is the part worth knowing.** The first version showed the
 median chip plus the largest-volume chip. An independent checker, given only the per-chip statistics
@@ -117,11 +126,17 @@ reader sees what those two numbers look like: a dense lattice along every hedge,
 This is arithmetic on the two **reference masks**. No model output enters it, which is why it is a
 bound rather than a failed test.
 
-**Chip selection for (b)/(c), also for the caption:** of the chips that are fully labelled and
-contain grassland, semi-natural and forest, the one minimising the larger of the two absolute log
-deviations from the pooled values (0.60% and 21.44%) — `biodiversity_1594`, at 0.50% and 23.75%.
-Choosing on the semi-natural number alone returns a chip whose forest seam is twice the pooled value,
-which would overstate the contrast.
+**Chip selection for (b)/(c), also for the caption — CHANGED 2026-07-29.** Of the chips that are
+fully labelled, contain forest, and hold **at least a hectare of both grassland and semi-natural**
+(the same eligibility `two_grasslands_qualitative` uses), the one minimising the larger of the two
+absolute log deviations from the pooled values. That is **`biodiversity_2157`**, at 0.87% and 13.3%
+against pooled 0.60% and 21.4%.
+
+It was `biodiversity_1594` until the hectare floor was added. 1594 is closest of all on the ratios
+but holds **0.06 ha of semi-natural**, so the figure illustrated "these two classes do not meet" on
+a chip that barely contains one of them — a reader answers "of course, there is hardly any
+semi-natural here". Worth stating in the caption: 2157 is **below** the pooled contrast on both
+coordinates, so the illustration understates the effect it illustrates.
 
 ---
 
