@@ -178,9 +178,15 @@ def plot_matrix(ax, m):
     # The two cells of the pair that carries 46.7% of the error, in both directions. An outline,
     # not a colour: the cells already carry a colour that means something else. The comparison the
     # argument rests on is inside the outlined row -- 0.6 against 21.4 -- so nothing else is marked.
+    # Inset, and clipping off. imshow spans -0.5 to 4.5, so a box drawn on the cell boundary in
+    # the last row or column has half its stroke outside the axes and that edge is clipped -- the
+    # outline then renders thinner on two sides than the other two.
+    inset = 0.055
     for (i, j) in ((1, 4), (4, 1)):
-        ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, fill=False,
-                                   edgecolor="#B2182B", lw=1.8, zorder=5))
+        ax.add_patch(plt.Rectangle((j - 0.5 + inset, i - 0.5 + inset),
+                                   1 - 2 * inset, 1 - 2 * inset, fill=False,
+                                   edgecolor="#B2182B", lw=1.8, joinstyle="miter",
+                                   clip_on=False, zorder=5))
 
 
 def plot_chip(axes, chip):
@@ -240,11 +246,18 @@ def main() -> None:
     # One shared height for all three, in figure coordinates. Panel (a) has equal aspect so its
     # axes box is shorter than the chip panels', and axes titles therefore sat at three different
     # heights. Taken from the tallest box so nothing overlaps.
-    top = max(ax.get_position().y1 for ax, _ in titles)
-    for ax, text in titles:
+    ax_a, text_a = titles[0]
+    box_a = ax_a.get_position()
+    t_a = fig.text(box_a.x0 + box_a.width / 2, box_a.get_points()[1][1] + 0.030, text_a,
+                   ha="center", va="bottom", fontsize=9, linespacing=1.25)
+    # Read (a)'s rendered top back rather than assuming a line height, then hang the two-line chip
+    # titles from it. They then start level with (a) and end just above their own images.
+    fig.canvas.draw()
+    top_a = t_a.get_window_extent().transformed(fig.transFigure.inverted()).y1
+    for ax, text in titles[1:]:
         box = ax.get_position()
-        fig.text(box.x0 + box.width / 2, top + 0.035, text,
-                 ha="center", va="bottom", fontsize=9, linespacing=1.25)
+        fig.text(box.x0 + box.width / 2, top_a, text,
+                 ha="center", va="top", fontsize=9, linespacing=1.25)
     # The chip id belongs in the caption, not stamped on the figure -- it is provenance, not
     # something a reader reads off the panels.
 
