@@ -1,9 +1,32 @@
 # Citation and claim audit — `manuscript_v2`, 2026-07-29
 
-> **§7 is the current handoff list — read that first.** It covers the COMPLETE draft (abstract,
-> Introduction, Contributions, Methods, Results, Discussion, Conclusions) **plus the cover letter**,
-> audited once all sections had landed. §1–§6 below are the earlier Methods/Results-only pass, kept
-> for the reasoning; where §7 disagrees, §7 wins.
+## START HERE — eight blockers
+
+Covers the complete draft plus the cover letter. All eight verified against the source or the
+manuscript. Full detail and suggested rewordings in **§7**; §1–§6 are an earlier Methods/Results-only
+pass kept for reasoning, and where §7 disagrees, §7 wins.
+
+| # | Where | What is wrong |
+|---|---|---|
+| 1 | **Results §3.3** | Contradicts itself. Reports semi-natural wrong **27.0%** beyond 32 m, then says "Both grassland classes concentrate error near boundaries; only forest and grassland clear it deep inside." Disagrees with itself and the numbers beside it. **The paper's central finding — fix first.** |
+| 2 | **Contributions** | "Because the error is not concentrated at boundaries" — unqualified. §3.3 says a pixel within 1 m is misclassified **3.7×** as often; only the grassland pair is the exception. Add the qualifier. |
+| 3 | **Cover letter** | Promises foundation models. "foundation" = 2× in `cover_letter.tex`, **0× in `main.tex`**, and the scope note rules out the angle. Cut. |
+| 4 | **Introduction** | The claim attached to Volpi is false — "without measuring what the band holds". He measured it and reports it (`volpi…md:210`). |
+| 5 | **Methods + cover letter** | 8 m same-scale conflation survives: "erode **this band** away" / "erode **this** boundary band". Volpi's band is 0.15–0.27 m. The Introduction already says "**a** band" — match it. |
+| 6 | **Methods** | "q=1.0 gives full inverse-frequency weighting" cites Kang, whose q=1 is instance-balanced, i.e. **no rebalancing**. Our code computes the reciprocal, so ours is his q=0. The sampler is right; the sentence is not. |
+| 7 | **Methods** | Csurka cited as a precedent who swept the band width. They chose r=5 and argued *against* sweeping, attributing the curve to Kohli. Cite Kohli alone. |
+| 8 | **Four sites** | The band-width curve is claimed in Methods, Introduction and Contributions and does not exist. `boundary_limited_error`: zero hits, no PDF in `Figures/`, still open in `TODO.md`. |
+
+**Clean:** no fabricated reference; one benign "88"; no revival of the withdrawn ceiling framing in
+the manuscript; every §1 forbidden sentence absent; every interval on a contrast, never a Test B
+level; numbers reconcile across sections; abstract is 302 words with the seven narrative moves in
+order and move 5 at sentence 5.
+
+**Caveat:** the medium-priority rows in §7 are single-agent leads with no adversarial pass. The eight
+above are verified.
+
+**`docs/BIB_AUDIT_2026-07-29.md` needs no action** — its 25 fixes are already applied and
+`Bibliography.bib` renders with 0 warnings.
 
 ---
 
