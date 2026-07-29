@@ -242,13 +242,13 @@ def footprints_row(ax, sites, use_tex):
             add_geom(ax, s["cover_km"], x, 0, facecolor=face, edgecolor="black",
                      linewidth=0.9, alpha=0.97, zorder=3)
         cx = x + w / 2
-        # tile count centred ON the footprint (count only; the region is given in the caption)
+        # chip count centred ON the footprint (count only; the region is given in the caption)
         cc = s["cover_km"].centroid
         # inland: off a coverage hole. ireland1: its centroid sits low in an L-shaped footprint,
         # so a centred two-line count hangs off the bottom edge; it lifts clear of it.
         dy_lab = {"biodiversity_": -1.5, "ireland1_": -0.10}.get(prefix, 0.0)
         lab_col = "#12314D" if (prefix == "biodiversity_" and assign) else "white"
-        ax.text(cc.x + x, cc.y + dy_lab, f"{s['count']:,}\ntiles", ha="center", va="center",
+        ax.text(cc.x + x, cc.y + dy_lab, f"{s['count']:,}\nchips", ha="center", va="center",
                 fontsize=13, color=lab_col, fontweight="bold", linespacing=0.95, zorder=6,
                 path_effects=[pe.withStroke(linewidth=2.2, foreground="white")]
                 if (prefix == "biodiversity_" and assign) else None)
@@ -369,8 +369,9 @@ def render(root: Path, out_dir: Path, use_tex: bool):
     fig.savefig(png, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
-    # mirror into the submission tree
-    sub = root / "manuscript/Figures/study_area.pdf"
+    # Mirror into the submission tree. manuscript_v2/, not manuscript/: the latter is the
+    # superseded draft and must not receive fresh figures.
+    sub = root / "manuscript_v2/Figures/study_area.pdf"
     if sub.parent.is_dir():
         shutil.copyfile(pdf, sub)
 

@@ -36,10 +36,10 @@ REPO_ROOT = SCRIPTS_DIR.parent.parent
 FIGURES_DIR = REPO_ROOT / "figures"
 ANALYSIS_SCRIPTS_DIR = REPO_ROOT / "scripts" / "analysis"
 LABEL_CEILING_DIR = REPO_ROOT / "analysis" / "label_ceiling"
-# The rebuild's manuscript is manuscript_v2/; manuscript/ is the superseded draft. Both are synced
-# so a build cannot leave one of them holding a figure from the withdrawn campaign.
-SUBMISSION_FIGS_DIRS = [REPO_ROOT / "manuscript_v2" / "Figures",
-                        REPO_ROOT / "manuscript" / "Figures"]
+# The rebuild's manuscript is manuscript_v2/. manuscript/ is the SUPERSEDED draft and is
+# deliberately NOT synced: feeding it fresh figures leaves a directory half current and half
+# withdrawn with nothing to tell them apart, which is worse than leaving it uniformly stale.
+SUBMISSION_FIGS_DIRS = [REPO_ROOT / "manuscript_v2" / "Figures"]
 
 
 def run_py(script: Path, extra_args: list[str], device: str) -> bool:
