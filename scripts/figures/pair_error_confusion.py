@@ -209,7 +209,7 @@ def main():
     err_ha_per_seed = meta["foreground_errors"] / n_seeds * 0.25 / 1e4
 
     fig = plt.figure(figsize=(FIG_W, 3.05), dpi=300)
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.02], wspace=0.62)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.02], wspace=1.05)
 
     ax1 = fig.add_subplot(gs[0, 0])
     # No colourbar. Every cell carries its number, so a scale bar would restate them and, at this
@@ -223,7 +223,7 @@ def main():
     # Panel titles as figure text at one shared height, not axes titles. (a) has equal aspect, so
     # its axes box is shorter than (b)'s and axes titles landed at two different heights.
     for ax, text in ((ax1, r"(a) Share of all foreground error (\%)"),
-                     (ax2, r"(b) Against what class area alone gives")):
+                     (ax2, r"(b) Observed against what class area predicts")):
         box = ax.get_position()
         fig.text(box.x0 + box.width / 2, 0.965, text, ha="center", va="top", fontsize=9)
 

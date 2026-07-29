@@ -92,8 +92,8 @@ SPLIT_COLOUR = {"train": "#BBD4E8", "val": "#5E93BF", "test": "#1F4E79",
 # "test A"/"test B" rather than "test (a)"/"test (b)": the parenthesised letters label the three
 # SITES, and site (a) contains training, validation and test A, so reusing (a) for a split would
 # make one label mean two things. Capitalised A/B also matches Test A / Test B in the text.
-SPLIT_LABEL = {"train": "training", "val": "validation", "test": "test A (inland)",
-               "external_test": "test B (uplands)", "dropped": "excluded"}
+SPLIT_LABEL = {"train": "train", "val": "validation", "test": "test A (inland)",
+               "external_test": "test B (upland)", "dropped": "excluded"}
 SPLIT_ORDER = ("train", "val", "test", "external_test", "dropped")
 INLAND_ORDER = ("train", "val", "test", "dropped")
 
@@ -239,7 +239,9 @@ def footprints_row(ax, sites, use_tex):
         cx = x + w / 2
         # tile count centred ON the footprint (count only; the region is given in the caption)
         cc = s["cover_km"].centroid
-        dy_lab = -1.5 if prefix == "biodiversity_" else 0.0  # nudge inland label off a coverage hole
+        # inland: off a coverage hole. ireland1: its footprint is short enough that a centred
+        # two-line count touches the top edge, so it drops clear of it.
+        dy_lab = {"biodiversity_": -1.5, "ireland1_": -0.30}.get(prefix, 0.0)
         lab_col = "#12314D" if (prefix == "biodiversity_" and assign) else "white"
         ax.text(cc.x + x, cc.y + dy_lab, f"{s['count']:,}\ntiles", ha="center", va="center",
                 fontsize=13, color=lab_col, fontweight="bold", linespacing=0.95, zorder=6,
@@ -247,8 +249,12 @@ def footprints_row(ax, sites, use_tex):
                 if (prefix == "biodiversity_" and assign) else None)
         # the site letter rides with the dimension label rather than floating above the
         # footprint, where it read as an unanchored mark
-        ax.text(cx, -0.5, f"({letters[prefix]})\n{w:.1f} {times} {h:.1f} km", ha="center", va="top",
-                fontsize=12.5, color="#333333", linespacing=1.35, zorder=5)
+        ax.annotate(f"({letters[prefix]})", xy=(cx, -0.5), xytext=(-15, 0),
+                    textcoords="offset points", ha="center", va="top",
+                    fontsize=12.5, color="#333333", zorder=5)
+        ax.annotate(f"{w:.1f} {times} {h:.1f} km", xy=(cx, -0.5), xytext=(0, -19),
+                    textcoords="offset points", ha="center", va="top",
+                    fontsize=12.5, color="#333333", zorder=5)
         x += w + gap
     total_w = x - gap
 
