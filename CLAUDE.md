@@ -16,12 +16,13 @@ variation**; the design resolves about 3 pp of foreground mean IoU, wider than t
 
 46.7% of foreground error is Grassland and Seminatural confused **with each other**, both directions
 pooled — more than twice the share their ground area alone would give them. Holding the source class
-fixed and starting from grassland pixels: the model is about 15× likelier to call grassland forest
-within 8 m of a class boundary than beyond it (per seed 9.8–20.2), while its rate of calling grassland
-semi-natural is flat with distance (0.86, per seed 0.59–1.13). **The bare shares — 75.3% and 15.0%
-beyond 8 m — must not lead:** 72.4% of grassland's own ground already lies beyond 8 m, so 75.3% is
-1.04× that background and is not a finding. **Never compare across source classes** — object size
-confounds it, and that comparison is withdrawn. Model
+**The lead is that the two classes barely touch:** under 1% of Grassland's ground lies within 8 m of any
+Seminatural and ~6% of Seminatural's within 8 m of any Grassland, so at least four fifths of the pair's
+error must sit more than 8 m from the class it is confused with — a bound from the reference masks
+alone. **The bare shares — 75.3% and 15.0% beyond 8 m — must not lead:** 72.4% of grassland's own ground
+already lies beyond 8 m, so 75.3% is 1.04× that background and is not a finding. The per-direction rate
+ratio (0.86 vs 15.5) is a supporting row only — it is the share rescaled by a constant. **Never compare
+across source classes** on raw shares — object size confounds it. Model
 failure, parcel-level label error and majority absorption all remain open. **The paper locates the
 error and stops.**
 
