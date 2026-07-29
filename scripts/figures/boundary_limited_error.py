@@ -153,7 +153,7 @@ def panel_distance(ax, err, use_tex):
     ax.set_xscale("log")
     ax.set_xlabel("distance to GT boundary (m, log)")
     ax.set_ylabel("misclassification rate")
-    ax.set_title("(b)")
+    ax.set_title("(a)")
     ax.grid(True, ls=":", lw=0.5, color="#cccccc")
 
 
@@ -177,7 +177,7 @@ def panel_interior_floor(ax, bvi, use_tex):
     ax.set_xticklabels([SHORT[n] for n in names], rotation=30, ha="right")
     ax.set_ylabel("misclassification rate")
     ax.set_ylim(0, max(bnd) * 1.18)
-    ax.set_title("(c)")
+    ax.set_title("(b)")
     ax.grid(True, axis="y", ls=":", lw=0.5, color="#cccccc")
     from matplotlib.patches import Patch
     blab = (rf"contact zone ($\leq{bmax:g}$\,m)" if use_tex else f"contact zone (<={bmax:g} m)")
@@ -217,12 +217,22 @@ def render(root, out_dir, cell, use_tex, split="test"):
     setup_font(use_tex)
     bt = json.load(open(trimap_json(root, split, cell)))
 
-    fig, axes = plt.subplots(1, 3, figsize=(9.8, 4.5))
-    panel_recovery(axes[0], bt["recovery_trimap"], use_tex)
-    panel_distance(axes[1], bt["error_vs_distance"], use_tex)
-    panel_interior_floor(axes[2], bt["error_vs_distance"]["contact_zone_vs_interior"], use_tex)
+    # PANEL (a), TRIMAP IoU RECOVERY, WAS DROPPED 2026-07-29. It is the withdrawn claim itself:
+    # IoU climbing as a widening boundary band is excluded IS "the residual error is
+    # boundary-limited", which this paper does not claim and `docs/DO_NOT_ADD.md` forbids. Panels
+    # (b) and (c) survive because they carry two sentences the paper does make -- that this map
+    # follows the usual boundary pattern (so the grassland pair is an exception to it, not evidence
+    # of unusually clean edges), and that the two classes differ in how deep their error runs.
+    # `panel_recovery` is left in the file, unused, because the JSON block still feeds it and a
+    # supplementary table may want it.
+    #
+    # Width is 7.28 in, for \begin{adjustwidth}{-\extralength}{0cm} -- \textwidth is 13.90 cm and
+    # \extralength 4.61 cm, so a figure built wider is scaled down and every label with it.
+    fig, axes = plt.subplots(1, 2, figsize=(7.28, 3.9))
+    panel_distance(axes[0], bt["error_vs_distance"], use_tex)
+    panel_interior_floor(axes[1], bt["error_vs_distance"]["contact_zone_vs_interior"], use_tex)
 
-    # Shared class legend at the bottom (panels a and c use the class colours).
+    # Shared class legend at the bottom (panel c uses the class colours).
     from matplotlib.lines import Line2D
     handles = [Line2D([0], [0], color=col(n), lw=2.4, label=SHORT[n]) for n in BAR_ORDER]
     handles.append(Line2D([0], [0], color="#444444", lw=1.6, ls="--", label="macro (fg)"))
