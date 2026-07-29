@@ -36,7 +36,7 @@ Conversions live in this directory so they travel with the repo. The global libr
 | `wardLabelQualityCeilingCode2026` | Code for ``Diagnosing a Label-Quality Ceiling in Imbalanced Rural Land | **MISSING** |
 | `xiaOpenEarthMapBenchmarkDataset2023` | OpenEarthMap: A Benchmark Dataset for Global High-Resolution Land Cove | `xia-2023-openearthmap-benchmark-dataset-for-global-highresolution-land-cover-8.md` |
 | `xiaoUnifiedPerceptualParsing2018` | Unified Perceptual Parsing for Scene Understanding | `xiao-2018-unified-perceptual-parsing.md` |
-| `yuanEvaluationPretrainingImpact2019` | High-Resolution Remote Sensing Imagery Classification of Imbalanced Da | `yuan-2019-evaluation-pretraining-impact-finetuning-for-remote-sensing-scene-2.md` |
+| `yuanEvaluationPretrainingImpact2019` | Evaluation of pre-training impact on fine-tuning for remote sensing sc | `yuan-2019-evaluation-pretraining-impact-finetuning-for-remote-sensing-scene-2.md` |
 | `zhangLookaheadOptimizerSteps2019` | Lookahead Optimizer: k steps forward, 1 step back | `zhang-2019-lookahead-optimizer-steps-forward-step-back.md` |
 | `zhouSemanticUnderstandingScenes2019` | Semantic Understanding of Scenes Through the ADE20K Dataset | `zhou-2019-semantic-understanding-ade20k.md` |
 
