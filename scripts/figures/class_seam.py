@@ -74,6 +74,16 @@ NEAR_M = 8.0
 # barely contains one of them, which invites the reader to answer "because there is hardly any of
 # it here". A figure has to be persuasive as well as representative.
 MIN_HA_PX = 40_000
+# The illustration chip, chosen to be legible. Panels (b) and (c) are an ILLUSTRATION -- the
+# evidence is panel (a), a census of all 90 chips -- so the chip is picked for clarity and its own
+# two numbers are printed on it and compared with the pooled pair in the caption. It holds 1.35 ha
+# of semi-natural and 3.68 ha of grassland, so neither class is a sliver, and its forest seam is a
+# lattice rather than the single hedgerow the closest-to-pooled rule returned.
+ILLUSTRATION_CHIP = "biodiversity_1078"
+# How much denser than pooled the illustration's forest seam may be. Named, and interpolated into
+# the failure message, because the message used to hardcode "1.5x": changing the threshold then
+# printed a stale number and the first mutation test of this gate came back inconclusive.
+MAX_FOREST_RATIO = 1.5
 FOREST, GRASS, SEMI = 1, 2, 5
 FG_ORDER = ["Forest", "Grassland", "Cropland", "Settlement", "Seminatural"]
 SHORT = ["Forest", "Grassland", "Cropland", "Settlement", "Semi-nat."]
@@ -133,35 +143,31 @@ def chip_shares(tile: str):
 
 
 def choose_chip(pooled_semi: float, pooled_forest: float):
-    subset = json.loads((REPO / f"artifacts/scoring_subset_{SPLIT_TAG}.json").read_text())
-    tiles = sorted(subset["splits"]["test"]["tiles"])
-    best = None
-    n_eligible = 0
-    for t in tiles:
-        m = np.array(Image.open(REPO / f"data/split_{SPLIT_TAG}/test/masks/{t}.png").convert("L"))
-        if (m == 0).any():
-            continue
-        if not (m == FOREST).any():
-            continue
-        if (m == GRASS).sum() < MIN_HA_PX or (m == SEMI).sum() < MIN_HA_PX:
-            continue
-        n_eligible += 1
-        xs, xf, mask, band_s, band_f = chip_shares(t)
-        # Log deviation, so "twice the pooled value" and "half of it" are penalised equally. A plain
-        # difference would be dominated by the forest coordinate, which is 36x larger.
-        if xs <= 0 or xf <= 0:
-            # A chip with no grassland at all within 8 m of one of the two classes is infinitely
-            # far from the pooled value in log terms, so it cannot be the closest. Skipping it
-            # explicitly rather than letting log(0) do it keeps the intent readable.
-            continue
-        dev = max(abs(np.log(xs / pooled_semi)), abs(np.log(xf / pooled_forest)))
-        if best is None or dev < best["dev"]:
-            best = {"tile": t, "dev": dev, "near_semi": xs, "near_forest": xf,
-                    "mask": mask, "band_s": band_s, "band_f": band_f}
-    if best is None:
-        raise SystemExit("no eligible chip for the seam illustration")
-    best["n_eligible"] = n_eligible
-    return best
+    """Load the illustration chip and its two shares, and refuse it if it flatters the claim.
+
+    The gate is the point. A chip picked for legibility must still not exaggerate what panel (a)
+    measures, so this fails loudly if its grassland-near-semi-natural share is BELOW the pooled
+    value (which would make the seam look rarer than it is) or its grassland-near-forest share is
+    more than 1.5x the pooled value (which would make the comparator look denser than it is).
+    Deviations in the conservative direction are fine and are reported.
+    """
+    t = ILLUSTRATION_CHIP
+    m = np.array(Image.open(REPO / f"data/split_{SPLIT_TAG}/test/masks/{t}.png").convert("L"))
+    if (m == 0).any():
+        raise SystemExit(f"{t} is not fully labelled")
+    if (m == GRASS).sum() < MIN_HA_PX or (m == SEMI).sum() < MIN_HA_PX:
+        raise SystemExit(f"{t} holds under a hectare of one of the two classes")
+    xs, xf, mask, band_s, band_f = chip_shares(t)
+    if xs < pooled_semi:
+        raise SystemExit(
+            f"{t}: grassland within 8 m of semi-natural is {xs:.2f}%, BELOW the pooled "
+            f"{pooled_semi:.2f}%. The illustration would make the seam look rarer than it is.")
+    if xf > MAX_FOREST_RATIO * pooled_forest:
+        raise SystemExit(
+            f"{t}: grassland within 8 m of forest is {xf:.2f}%, over {MAX_FOREST_RATIO}x the "
+            f"pooled {pooled_forest:.2f}%. The illustration would overstate the comparator.")
+    return {"tile": t, "near_semi": xs, "near_forest": xf,
+            "mask": mask, "band_s": band_s, "band_f": band_f}
 
 
 def plot_matrix(ax, m):
@@ -290,9 +296,9 @@ def main() -> None:
     print(f"Saved: {out}")
     print(f"  pooled: grassland within 8 m of semi-natural {pooled_semi:.2f}%, "
           f"of forest {pooled_forest:.2f}%")
-    print(f"  illustration chip {chip['tile']} chosen from {chip['n_eligible']} eligible: "
-          f"{chip['near_semi']:.2f}% / {chip['near_forest']:.2f}% "
-          f"(max log deviation {chip['dev']:.3f})")
+    print(f"  illustration chip {chip['tile']}: {chip['near_semi']:.2f}% near semi-natural "
+          f"(pooled {pooled_semi:.2f}%, conservative), {chip['near_forest']:.2f}% near forest "
+          f"(pooled {pooled_forest:.2f}%)")
 
 
 if __name__ == "__main__":
