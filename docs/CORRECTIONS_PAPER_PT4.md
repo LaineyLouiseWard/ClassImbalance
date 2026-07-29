@@ -1,12 +1,16 @@
 # Part 4 — the narrative we are going with
 
-> **SUPERSEDED IN PART by `docs/NARRATIVE_FINAL.md`, later the same day.** Read that first; where the
-> two disagree it wins. Three things here are now known to be wrong and are corrected there: the
+> **SUPERSEDED IN PART. Read `notes/NARRATIVE_LITERATURE_FINAL.md`** — not `docs/NARRATIVE_FINAL.md`,
+> which this banner named until 2026-07-29 and which quotes rho on the 294-tile population. Where any
+> two disagree, the literature narrative wins. **What survives is listed below, with one exception:
+> the ceiling-dependent passages at `:103–105`, `:220` and `:247` are withdrawn with it.** Note in
+> particular the NIR control at `:107–111` and `:134`, which no successor
+> document carries. Three things here are now known to be wrong and are corrected there: the
 > claim that the confusion runs against the majority class (it does not, once class sizes are
 > accounted for), the "near-symmetric" wording, and the framing of the whole paper on a null result.
 > The per-class factorial decomposition, the registered across-cell arm and the sampler's measured
 > effect had not been computed when this file was written. What survives intact: the boundary
-> literature framing, the NIR and terrain material, the conditional recommendation, the scope limits,
+> literature framing, the NIR and terrain material, the conditional recommendation,
 > and the data-curation framing at the end.
 
 Parts 1-3 are lists of things to fix. This is the story they add up to, written once so the manuscript

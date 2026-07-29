@@ -200,7 +200,7 @@ is supportable, is an internal contradiction a referee finds in one pass. The si
 Test B (+3.51, 8/10), which is consistent with a landscape-specific cropland effect and not with a
 property of the interventions.
 
-## 10. The registered second arm — computed 2026-07-28, and it passes
+## 10. The registered second arm — computed 2026-07-28: the condition holds, but the arm is uninformative
 
 Never run before today. The preregistration requires that across the four cells the **near-boundary
 rate vary by less than the interior rate**, in relative terms, with the falsifier that if both move
@@ -334,14 +334,20 @@ backwards in the other.
 The two rarest classes are predicted *over* their true extent. The one badly under-predicted class is
 nearly twice as common in training as either. Under-prediction is not a function of rarity here.
 
-**(b) The sampler acted, and bought almost nothing.** Class-balanced sampling shifts the shipped
-model exactly as designed: predicted semi-natural rises from 16.23M pixels to 18.02M against a
-reference 14.57M, i.e. **24% more semi-natural than exists**. Semi-natural recall moves 56.03% to
-**56.40%**, and precision falls 50.3% to 45.6%. **Of every 100 extra pixels the sampler pushed into
-semi-natural, 3 were right.** The confusion into grassland does not shift either: 39.15% to 39.80%.
+**(b) The shipped configuration over-predicts semi-natural, and recall barely moves.** It predicts
+18.02M semi-natural pixels against a reference 14.57M, i.e. **24% more semi-natural than exists**.
+**Do not attribute that to the sampler.** The baseline cell predicts 16.23M, so the rise to 18.02M
+crosses both factors at once — the comparison is baseline against full, not sampler-off against
+sampler-on. Every *other* contrast in this paragraph is that same pair. The sampler-only cell predicts 15.79M,
+*below* baseline, so the sampler alone moves predicted area the other way — that figure has no ledger
+row. **And the 24% is a pooled figure hiding a −16% to +46% per-seed range, two seeds of ten
+under-predicting; it must not be quoted without that spread.** Semi-natural recall moves 56.03% to
+**56.40%**, and precision falls 50.3% to 45.6%. **Of every 100 extra pixels the shipped configuration
+claims over the baseline, 3 were right.** The confusion into grassland does not shift either: 39.15%
+to 39.80%.
 
-This is the strongest form of the null. The intervention is not inert — it moves the decision
-boundary as intended — and the classification does not improve. The model is not reluctant to say
+The interventions are not inert — they move the decision boundary as intended — and the classification
+does not improve. The model is not reluctant to say
 semi-natural; it cannot tell which pixels are semi-natural.
 
 **(c) WITHDRAWN 2026-07-28, same day, after an adversarial check.** An earlier version of this
@@ -377,14 +383,19 @@ and neither statistical:
 - The class-balanced sampler draws with replacement from the same 1,072 training tiles
   (`WeightedRandomSampler`, `num_samples=len(train_dataset)`), so it cannot introduce ground the
   training set does not already hold. The weights file holds three values over 261 / 550 / 261 tiles
-  and reproduces the documented 1.27x settlement and 2.84x semi-natural uplift.
+  and reproduces the documented 1.27x settlement and 2.84x semi-natural uplift. **Neither may be
+  quoted in the paper**: 1.27 is the binary-search target, so it is circular, and neither has a ledger
+  row. Both are ratios of mean tile sampling weights, so both depend on the tile list they are
+  calibrated against — no pixels enter the computation.
 - No OpenEarthMap class maps to Cropland or to Seminatural (`geoseg/taxonomy.py:67-91`), so
   pre-training cannot supply labelled examples of either. **State it that way** — OEM does add 2,118
   new scenes overall, so "adds no places" is false; what it adds no places of is these two classes.
   Any effect on them is representation transfer, not label transfer.
 
-Report §12(b) — the sampler acted and bought almost nothing — as an observation. Do not attach an
-explanation of why to it.
+**§12(b) is cut from the paper**, 2026-07-29: the 24% is a pooled figure hiding a −16% to +46%
+per-seed range with two seeds of ten under-predicting, and this project does not report pooled figures
+without a spread. Should anyone reinstate it, the contrast is baseline against full, so it crosses both
+factors and is never the sampler's.
 
 **Class pair shares are unchanged** (recomputed, matching §4): Grassland->Seminatural 7,195,002 px and
 Seminatural->Grassland 5,704,254 px, together **46.68%** of all foreground error.

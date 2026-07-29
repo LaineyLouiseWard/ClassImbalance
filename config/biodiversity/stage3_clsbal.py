@@ -2,8 +2,9 @@
 Stage 3 — STANDARD class-balanced minority oversampler (defensibility arm; Kang 2020,
 arXiv:1910.09217). Clone of stage3_sampler.py (A0) with ONLY the sampler weights swapped: A0's
 bespoke `hardness^0.5 x pooled-richness^1.0` TSV -> a citable frequency-only inverse-tile-frequency
-TSV ($SAMPLER_TSV, tagged per split), calibrated so Settlement stays flat (~1.27x); the
-realised semi-natural uplift on the f1 split is ~2.84x. Everything else (loss, init, optimiser, epochs, num_samples) is IDENTICAL
+TSV ($SAMPLER_TSV, tagged per split), calibrated so Settlement stays flat (~1.27x, the binary-search
+target); the realised semi-natural uplift on the f1 split is ~2.84x. Neither figure may be quoted in
+the manuscript — see notes/NARRATIVE_LITERATURE_FINAL.md. Everything else (loss, init, optimiser, epochs, num_samples) is IDENTICAL
 to A0 so the only difference is the sampler formula.
 
 Ship rule (course-correction §15): ship this if it TIES A0 on Semi-natural val IoU (>=~74-75, no

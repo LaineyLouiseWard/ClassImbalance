@@ -4,8 +4,12 @@
 > non-overlapping subset; class-pair share and symmetry restated (§7 fired — see below); boundary
 > sweep restated per seed, four cells, both widths, plus the registered across-cell arm.
 >
-> **But the plan below is now partly obsolete, because the numbers moved the story.** Read
-> `docs/NARRATIVE_FINAL.md` first — it replaces the arc this plan was written to serve. In
+> **SUPERSEDED IN PART, 2026-07-29, by `notes/IMPLEMENTATION_PLAN.md`.** Read
+> `notes/NARRATIVE_LITERATURE_FINAL.md` for the narrative — not `docs/NARRATIVE_FINAL.md`, which this
+> banner used to point at and which quotes rho on the 294-tile population. **§1, §5 and §6 all remain
+> live (see below); §6, language discipline, has no successor and must be ported into the plan.**
+> Ignore `:20`'s "3.85 at 1 m, 2.28 at 8 m": that is the 294-tile pair, and the reported figures are
+> 3.692 and 2.137. In
 > particular R1's upper-bound framing is gone, R2's symmetry claim is withdrawn, and the paper's
 > centre of gravity is now the per-class factorial decomposition, which this plan does not contain.
 > §1 (strike the forbidden sentences), §5 (sentences owed to Methods and Limitations) and §6

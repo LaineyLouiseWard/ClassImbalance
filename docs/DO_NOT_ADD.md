@@ -26,7 +26,7 @@ Companion documents: `docs/CORRECTIONS.md` (things currently in the manuscript t
 | "Approximately 88% of masks contain labelling errors" *(as a measured bound)* | No recorded protocol. It may be cited as **motivation** (`PAPER_PURPOSE.md:48` already says so) and never as a measured inter-annotator ceiling — this project has never measured one. See §2 for why this number is especially dangerous. |
 | "Every class collapses to a near-zero interior rate" | Stated at an undeclared 1.5 m / 8 m partition, and the previous campaign's version was flagged internally as unsupportable (D16a). |
 | Any "95% CI" on a Test B level | Both test sets are complete enumerations; there is no sample to resample. Uncertainty is per-seed and paired (METHODS §7). Contrasts carry intervals; levels do not. |
-| "N independent 950 m blocks" | The grid counts **cells touched**, not independent parcels: Test A touches 16 cells on 7.52 cells' worth of ground, Test B 14 on 5.72. Write "grid cells containing the class". |
+| "N independent 950 m blocks" | The grid counts **cells touched**, not independent parcels: Test A touches 16 cells on 7.50 cells' worth of ground, Test B 14 on 5.72. (This row said 7.52 until 2026-07-29; the extent was re-measured on 2026-07-27 and 7.50 is current.) Write "grid cells containing the class". |
 
 ## 2. Sources that must never be cited
 

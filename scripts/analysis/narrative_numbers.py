@@ -312,9 +312,10 @@ def main() -> int:
         out["confusion_summary"] = confusion_summary(conf)
         alt = Path(args.confusion_dir) / f"confusion_{args.split}_stage3_clsbal.npy"
         if alt.exists():
-            # The sampler's effect on what the model CLAIMS, which is the point of §12(b): it acted
-            # as designed and bought almost nothing. Expressed as the extra predicted pixels and how
-            # many of them were right, so the "3 in 100" is derived rather than asserted.
+            # What the SHIPPED configuration claims versus the baseline — the point of §12(b). This
+            # crosses both factors (baseline -> full), so it is not a sampler-alone effect and must
+            # never be reported as one. Expressed as the extra predicted pixels and how many of them
+            # were right, so the "3 in 100" is derived rather than asserted.
             c2 = np.load(alt)
             out["sampler_effect"] = {}
             for k in FG:

@@ -5,16 +5,24 @@ means this directory contains two very different kinds of document, and reading 
 order gives entirely the wrong impression of the project. **Read the first group. The second group is
 the record of how the first group was arrived at.**
 
-**The manuscript is being rewritten** to match the narrative in `NARRATIVE_FINAL.md`. Until that is
-done this file, `README.md` and `RUNBOOK.md` still describe the earlier design in places. That is
-deliberate — they are fixed after the manuscript, so the manuscript is not written to match a summary
-of itself.
+**The manuscript is being rewritten** to match `notes/NARRATIVE_LITERATURE_FINAL.md` (see the banner
+below). Until that is done this file, `README.md`
+and `RUNBOOK.md` still describe the earlier design in places. That is deliberate — they are fixed after
+the manuscript, so the manuscript is not written to match a summary of itself.
+
+> **Superseded 2026-07-29.** The narrative is **`notes/NARRATIVE_LITERATURE_FINAL.md`**, not
+> `NARRATIVE_FINAL.md` — it reports rho on the 90-chip subset (3.692 / 2.137), not the 294-tile
+> population (3.85 / 2.28), and gates every claim against the literature. Newer wins. Plan:
+> `notes/IMPLEMENTATION_PLAN.md`.
 
 ## Read these — they state the design as it now is
 
+The narrative is **not** in this directory. It is `notes/NARRATIVE_LITERATURE_FINAL.md`, and it is the
+first thing to read.
+
 | file | what it is |
 |---|---|
-| **`NARRATIVE_FINAL.md`** | what the paper claims, on the four diagnostic questions |
+| ~~`NARRATIVE_FINAL.md`~~ | **superseded — do not read.** Replaced by `notes/NARRATIVE_LITERATURE_FINAL.md` |
 | **`RESULTS_TEN_SEED.md`** | the numbers. §7-§13 supersede §1-6 |
 | **`FINDING_BOUNDARY_IS_PER_CLASS.md`** | the per-class boundary result and its confounds |
 | **`METHODOLOGICAL_CHOICES.md`** | every deliberate choice in plain language, with what it costs. **Start here.** |

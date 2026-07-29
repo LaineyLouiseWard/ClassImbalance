@@ -28,8 +28,11 @@ support:
 | sampler only | 22.5% *0.1M* | 2.0% *1.1M* | 0.3% *0.4M* | **29.8%** *10.1M* |
 | full | 28.8% *0.1M* | 0.9% *1.1M* | 44.1% *0.4M* | **22.8%** *10.1M* |
 
-**Settlement is omitted from both tables.** It has 2,000 pixels beyond 32 m on Test A and fewer on
-Test B — see the object-size confound below. Any number computed there is noise.
+**Settlement's deep-interior figure is noise, wherever it appears.** It has about 2,900 pixels beyond
+32 m on Test A and fewer on Test B — see the object-size confound below. It now appears in the
+per-class table further down at 0.0%, and the paragraph under that table reads it alongside forest's
+0.6%. **Settlement's 0.0% must not be quoted in the paper** — 2,900 pixels cannot support it. Forest's
+0.6%, on 475,555 pixels, can.
 
 **Three things this says.**
 
@@ -188,8 +191,9 @@ artifact.
 | Cropland | 81.3% | 71.6% | 57.6% | 51.9% | 46.3% | **78.8%** |
 
 **Read the last column.** Forest falls to 0.6% and settlement to 0.0% — those two really do collapse
-to a near-zero interior. Grassland holds a 7.1% floor across fourteen million pixels. Semi-natural
-holds **13.5%** across 1.7 million. Cropland has no boundary structure at all: 81% at the edge, 46%
+to a near-zero interior. Grassland holds a 5.1% floor across fourteen million pixels. Semi-natural
+holds **18.8%** across 1.7 million. (This paragraph said 7.1% and 13.5% until 2026-07-29, when it was
+corrected against the table above it; those were transcribed from a two-seed probe.) Cropland has no boundary structure at all: 81% at the edge, 46%
 in the middle distance, 79% again deep inside.
 
 **And for semi-natural the interior is where the pixels are.** Only 86,000 of its pixels sit in the
