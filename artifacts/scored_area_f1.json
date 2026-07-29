@@ -1,0 +1,16 @@
+{
+  "test": {
+    "n_chips": 90,
+    "all_px": 23592960,
+    "labelled_px": 20809671,
+    "labelled_frac_pct": 88.20288340250652,
+    "covered_km2": 5.89824,
+    "labelled_km2": 5.20241775
+  },
+  "external_test": {
+    "n_chips": 51,
+    "all_px": 13369344,
+    "labelled_px": 7453523,
+    "labelled_frac_pct": 55.750850602692246
+  }
+}

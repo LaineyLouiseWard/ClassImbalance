@@ -25,17 +25,30 @@ Build a single figure by running its script directly, or skip figures with
 
 ## Map
 
-**Seven figures** as of 2026-07-28, down from thirteen. See the cut list below.
+**Six figures** as of 2026-07-29. See the cut list below and the 2026-07-29 note.
 
 | Figure content | Source script | Output |
 |----------------|---------------|--------|
-| Staged pipeline | `scripts/figures/workflow_pipeline.tex` | `workflow_pipeline.pdf` |
-| OpenEarthMap ↔ Biodiversity taxonomy mapping | `scripts/figures/oem_mapping.tex` | `oem_mapping.pdf` |
 | Study area | `scripts/figures/study_area.py` | `study_area.pdf` |
-| Dataset class-distribution comparison | `scripts/figures/class_distributions.py` | `class_distributions.pdf` |
 | Ablation qualitative comparison | `scripts/figures/ablation_qualitative.py` | `ablation_qualitative.pdf` |
-| Confusion matrices | `scripts/figures/confusion_matrices.py` | `confusion_matrices.pdf` |
+| Foreground error by class pair, one factorial cell | `scripts/figures/pair_error_confusion.py` | `pair_error_confusion.pdf` |
+| The two grasslands on the ground, four chips | `scripts/figures/two_grasslands_qualitative.py` | `two_grasslands_qualitative.pdf` |
+| Whether the two classes meet: 8 m adjacency | `scripts/figures/class_seam.py` | `class_seam.pdf` |
 | Boundary-limited error | `scripts/figures/boundary_limited_error.py` | `boundary_limited_error.pdf` |
+
+### Changed 2026-07-29
+
+`confusion_matrices.py` was renamed `pair_error_confusion.py` and cut from three panels
+(baseline / full / delta) to one factorial cell — the factorial is a bound on what the design can
+resolve, not the finding, and several near-identical matrices invited the reader to hunt for
+differences the design cannot separate. `confusion_matrices.pdf` no longer exists.
+`two_grasslands_qualitative` and `class_seam` are new. `class_distributions`, `workflow_pipeline`
+and `oem_mapping` left the build.
+
+**All three new figures are built 7.28 in wide** for `\begin{adjustwidth}{-\extralength}{0cm}`
+(`\textwidth` 13.90 cm + `\extralength` 4.61 cm), not for plain `\textwidth`. Placing one in a
+`\textwidth` figure shrinks every label by a quarter. Handover notes for the manuscript chat, with
+the selection rules each caption has to state, are in `notes/FIGURES_FOR_MAIN_CHAT.md`.
 
 ## Cut on 2026-07-28, and why
 

@@ -10,8 +10,8 @@ Usage:
 Figures use stable DESCRIPTIVE names (the printed numbers are assigned by LaTeX).
   - workflow_pipeline, mitigation_axes, oem_mapping are TikZ (.tex), compiled with
     pdflatex and copied to figures/.
-  - study_area, class_distributions, ablation_qualitative, confusion_matrices,
-    boundary_limited_error are Python scripts that write directly to figures/.
+  - study_area, ablation_qualitative, pair_error_confusion, two_grasslands_qualitative,
+    class_seam, boundary_limited_error are Python scripts that write directly to figures/.
   - All figures read saved outputs/artifacts (no GPU required).
 
 The uncertainty-overlay, class-pair-boundary, and confident-learning cross-check figures are
@@ -36,7 +36,10 @@ REPO_ROOT = SCRIPTS_DIR.parent.parent
 FIGURES_DIR = REPO_ROOT / "figures"
 ANALYSIS_SCRIPTS_DIR = REPO_ROOT / "scripts" / "analysis"
 LABEL_CEILING_DIR = REPO_ROOT / "analysis" / "label_ceiling"
-SUBMISSION_FIGS_DIR = REPO_ROOT / "manuscript" / "Figures"
+# The rebuild's manuscript is manuscript_v2/; manuscript/ is the superseded draft. Both are synced
+# so a build cannot leave one of them holding a figure from the withdrawn campaign.
+SUBMISSION_FIGS_DIRS = [REPO_ROOT / "manuscript_v2" / "Figures",
+                        REPO_ROOT / "manuscript" / "Figures"]
 
 
 def run_py(script: Path, extra_args: list[str], device: str) -> bool:
@@ -99,7 +102,7 @@ def main() -> None:
     ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"],
                     help="Device for scripts that run model inference (default: cuda).")
     ap.add_argument("--skip", nargs="*", default=[],
-                    help="Descriptive figure keys to skip, e.g. --skip study_area confusion_matrices")
+                    help="Descriptive figure keys to skip, e.g. --skip study_area class_seam")
     args = ap.parse_args()
 
     skip = set(args.skip)
@@ -113,7 +116,10 @@ def main() -> None:
         ("study_area",             lambda: run_py_no_device(SCRIPTS_DIR / "study_area.py")),
         ("class_distributions",    lambda: run_py_no_device(SCRIPTS_DIR / "class_distributions.py")),
         ("ablation_qualitative",   lambda: run_py_no_device(SCRIPTS_DIR / "ablation_qualitative.py")),
-        ("confusion_matrices",     lambda: run_py_no_device(SCRIPTS_DIR / "confusion_matrices.py")),
+        ("pair_error_confusion",   lambda: run_py_no_device(SCRIPTS_DIR / "pair_error_confusion.py")),
+        ("two_grasslands_qualitative",
+         lambda: run_py_no_device(SCRIPTS_DIR / "two_grasslands_qualitative.py")),
+        ("class_seam",             lambda: run_py_no_device(SCRIPTS_DIR / "class_seam.py")),
         ("boundary_limited_error", lambda: run_py_no_device(SCRIPTS_DIR / "boundary_limited_error.py")),
     ]
     # CUT 2026-07-28, six figures. Five no longer support a surviving conclusion and one is refuted
@@ -149,15 +155,17 @@ def main() -> None:
     # from the withdrawn leaking campaign.
     if failed:
         print(f"\n{len(failed)} figure(s) failed: {', '.join(failed)}")
-        print(f"NOT syncing to {SUBMISSION_FIGS_DIR.relative_to(REPO_ROOT)}/ — a partial sync mixes "
-              f"fresh figures with whatever was there before, undetectably.")
+        print("NOT syncing to the submission bundles — a partial sync mixes fresh figures with "
+              "whatever was there before, undetectably.")
         sys.exit(1)
-    if SUBMISSION_FIGS_DIR.is_dir():
+    for dest in SUBMISSION_FIGS_DIRS:
+        if not dest.is_dir():
+            continue
         for name, status in results.items():
             pdf = FIGURES_DIR / f"{name}.pdf"
             if status is True and pdf.exists():
-                shutil.copyfile(pdf, SUBMISSION_FIGS_DIR / f"{name}.pdf")
-        print(f"\nSynced built figures -> {SUBMISSION_FIGS_DIR.relative_to(REPO_ROOT)}/")
+                shutil.copyfile(pdf, dest / f"{name}.pdf")
+        print(f"\nSynced built figures -> {dest.relative_to(REPO_ROOT)}/")
     print("\nAll requested figures built successfully.")
 
 

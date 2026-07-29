@@ -8,7 +8,7 @@ Every number the write-up quotes has a row here, the committed artifact that hol
 the command that regenerates that artifact. To check them all at once, run the same script
 with no arguments; it exits non-zero if any has drifted.
 
-64 numbers, grouped by the command that produces them.
+77 numbers, grouped by the command that produces them.
 
 ## 1. rho and the near/interior error rates
 
@@ -42,8 +42,21 @@ PYTHONPATH=. python scripts/analysis/class_adjacency.py --split test --confusion
 | total foreground contacts | 412641 |
 | grassland pair contact share, % | 1.59412 |
 | semi-natural within 8 m of grassland, % | 6.12631 |
+| grassland within 8 m of semi-natural, % | 0.599259 |
 
-## 3. Interior error rate by class
+## 3. Scored-subset ground area (covered vs labelled)
+
+```
+PYTHONPATH=. python scripts/analysis/compute_scored_area.py
+```
+
+| number | value |
+|---|---|
+| Test A subset covered, km2 | 5.89824 |
+| Test A subset labelled, % | 88.2029 |
+| Test B subset labelled, % | 55.7509 |
+
+## 4. Interior error rate by class
 
 ```
 PYTHONPATH=. python scripts/analysis/interior_error_by_class.py --softmax-root <cluster> --split test --cell <cell> --out-dir analysis/interior
@@ -64,7 +77,7 @@ PYTHONPATH=. python scripts/analysis/interior_error_by_class.py --softmax-root <
 | interior support, semi-natural, Test B, px | 1.00908e+07 |
 | interior support, settlement, Test B, px | 855 |
 
-## 4. Class-pair ratios, confusion summary, sampler effect, per-class contrasts
+## 5. Class-pair ratios, confusion summary, sampler effect, per-class contrasts
 
 ```
 PYTHONPATH=. python scripts/analysis/narrative_numbers.py --confusion-dir analysis/confusion --metrics-dir analysis/metrics/test --split test --out artifacts/narrative_numbers_test.json
@@ -76,6 +89,8 @@ PYTHONPATH=. python scripts/analysis/narrative_numbers.py --confusion-dir analys
 | pair co-area ratio | 2.10232 |
 | pair error pixels | 1.28993e+07 |
 | semi-natural predicted vs reference area, % | 11.4202 |
+| settlement predicted vs reference area, % | 5.10695 |
+| cropland predicted vs reference area, % | -45.6245 |
 | semi-natural recall, % | 56.0271 |
 | semi-natural precision, % | 50.2845 |
 | semi-natural called grassland, % | 39.1539 |
@@ -87,8 +102,14 @@ PYTHONPATH=. python scripts/analysis/narrative_numbers.py --confusion-dir analys
 | sampler, mIoU, pp | 0.19019 |
 | OEM pre-training, mIoU, CI low | -3.67361 |
 | OEM pre-training, mIoU, CI high | 2.93968 |
+| sampler, mIoU, CI low | -1.97905 |
+| sampler, mIoU, CI high | 2.35943 |
+| interaction, mIoU, pp | -2.08178 |
+| interaction, Cropland IoU, pp | -10.4437 |
+| interaction, mIoU, CI low | -3.81014 |
+| interaction, mIoU, CI high | -0.353427 |
 
-## 5. The seed-only control
+## 6. The seed-only control
 
 ```
 PYTHONPATH=. python scripts/analysis/narrative_numbers.py --rho-dir analysis/rho_dedup --split test --band-m <band> --out artifacts/seedcontrol_dedup_band<band>.json
@@ -101,7 +122,7 @@ PYTHONPATH=. python scripts/analysis/narrative_numbers.py --rho-dir analysis/rho
 | seed control 8 m: interior CV across cells, % | 13.886 |
 | seed control 8 m: interior CV across seeds, % | 14.2061 |
 
-## 6. Pair error geometry: distance and component size
+## 7. Pair error geometry: distance and component size
 
 ```
 PYTHONPATH=. python scripts/analysis/pair_error_geometry.py --softmax-root <cluster> --split test --cell <cell> --out-dir analysis/pair_geometry
@@ -123,7 +144,7 @@ PYTHONPATH=. python scripts/analysis/pair_error_geometry.py --softmax-root <clus
 | S->G error px per seed | 570425 |
 | G->S error px per seed | 719500 |
 
-## 7. Pooled confusion matrices
+## 8. Pooled confusion matrices
 
 ```
 PYTHONPATH=. python scripts/analysis/pooled_confusion.py --softmax-root <cluster> --split test --cell <cell> --out-dir analysis/confusion
@@ -133,8 +154,9 @@ PYTHONPATH=. python scripts/analysis/pooled_confusion.py --softmax-root <cluster
 |---|---|
 | foreground errors, Test A baseline | 2.76314e+07 |
 | foreground pixels scored (10 seeds) | 2.08097e+08 |
+| grassland share of Test A foreground, % | 71.7958 |
 
-## 8. Class support
+## 9. Class support
 
 ```
 PYTHONPATH=. python scripts/analysis/report_class_support.py

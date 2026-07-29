@@ -116,6 +116,33 @@ def adjacency(field, a="Grassland", b="Seminatural"):
     return f
 
 
+def pair_by_tile(field):
+    """Statistics over the ninety Test A chips, from analysis/tile_stats/ (ten per-seed files).
+
+    `chips_without_seminatural` counts chips whose reference mask holds no semi-natural pixel at
+    all; `error_share_on_those` is the share of the pair's whole ten-seed error volume that falls
+    on them. On such a chip there is no seam with semi-natural anywhere, so none of that error can
+    be a seam being drawn in the wrong place -- which is why the figure quotes it.
+    """
+    def f():
+        per_seed = {}
+        for s_ in SEEDS:
+            rows = load(f"analysis/tile_stats/tile_stats_seed{s_}_baseline.json")["tiles"]
+            per_seed[s_] = {r["tile"]: r for r in rows}
+        tiles = sorted(per_seed[SEEDS[0]])
+        no_semi = [t for t in tiles if per_seed[SEEDS[0]][t]["s_px"] == 0]
+        vol = {t: sum(per_seed[s_][t]["g2s_px"] + per_seed[s_][t]["s2g_px"] for s_ in SEEDS)
+               for t in tiles}
+        if field == "chips_without_seminatural":
+            return len(no_semi)
+        if field == "error_share_on_those":
+            return 100 * sum(vol[t] for t in no_semi) / sum(vol.values())
+        if field == "pair_error_px":
+            return sum(vol.values())
+        raise KeyError(field)
+    return f
+
+
 def contrast(effect, cls, field):
     def f():
         return load("artifacts/narrative_numbers_test.json")["per_class_contrasts"][effect][cls][field]
@@ -154,6 +181,12 @@ def conf_total(field):
     return f
 
 
+def scored_area(split, field):
+    def f():
+        return load("artifacts/scored_area_f1.json")[split][field]
+    return f
+
+
 # --- the ledger -------------------------------------------------------------
 # quoted value, tolerance, accessor, and the command that regenerates the artifact.
 
@@ -172,7 +205,10 @@ MK_GEOM = ("PYTHONPATH=. python scripts/analysis/pair_error_geometry.py --softma
            "--split test --cell <cell> --out-dir analysis/pair_geometry")
 MK_ADJ = ("PYTHONPATH=. python scripts/analysis/class_adjacency.py --split test --confusion "
           "analysis/confusion/confusion_test_stage1_baseline.npy")
+MK_TILE = ("PYTHONPATH=. python scripts/analysis/pair_error_by_tile.py <masks> "
+           "<softmax>/stage1_baseline/seed<seed> analysis/tile_stats/tile_stats_seed<seed>_baseline.json")
 MK_SUP = "PYTHONPATH=. python scripts/analysis/report_class_support.py"
+MK_AREA = "PYTHONPATH=. python scripts/analysis/compute_scored_area.py"
 
 # Human names for the groups in docs/NUMBERS.md, so the headings are readable.
 CMD_NAMES = {
@@ -183,7 +219,9 @@ CMD_NAMES = {
     MK_INT: "Interior error rate by class",
     MK_GEOM: "Pair error geometry: distance and component size",
     MK_ADJ: "Class adjacency and the contact null",
+    MK_TILE: "Grassland/semi-natural error per chip",
     MK_SUP: "Class support",
+    MK_AREA: "Scored-subset ground area (covered vs labelled)",
 }
 
 NUMBERS = [
@@ -194,9 +232,21 @@ NUMBERS = [
     ("pair error pixels", 12899256, 1, pair_field("pixels"), MK_NN),
     ("foreground errors, Test A baseline", 27631446, 1, conf_total("foreground_errors"), MK_CONF),
     ("foreground pixels scored (10 seeds)", 208096710, 1, conf_total("foreground_px"), MK_CONF),
+    ("grassland share of Test A foreground, %", 71.80, 0.05,
+     lambda: 100 * float(load("analysis/confusion/confusion_test_stage1_baseline.npy")[2, :].sum())
+                 / float(load("analysis/confusion/confusion_test_stage1_baseline.npy")[1:6, :].sum()), MK_CONF),
+
+    ("Test A subset covered, km2", 5.898, 0.001, scored_area("test", "covered_km2"), MK_AREA),
+    ("Test A subset labelled, %", 88.20, 0.02, scored_area("test", "labelled_frac_pct"), MK_AREA),
+    ("Test B subset labelled, %", 55.75, 0.02,
+     scored_area("external_test", "labelled_frac_pct"), MK_AREA),
 
     ("semi-natural predicted vs reference area, %", 11.4, 0.1,
      conf_summary("Seminatural", "predicted_over_reference_pct"), MK_NN),
+    ("settlement predicted vs reference area, %", 5.11, 0.1,
+     conf_summary("Settlement", "predicted_over_reference_pct"), MK_NN),
+    ("cropland predicted vs reference area, %", -45.63, 0.1,
+     conf_summary("Cropland", "predicted_over_reference_pct"), MK_NN),
     ("semi-natural recall, %", 56.03, 0.02,
      lambda: 100 * conf_summary("Seminatural", "recall")(), MK_NN),
     ("semi-natural precision, %", 50.28, 0.02,
@@ -295,10 +345,32 @@ NUMBERS = [
     ("interior support, settlement, Test B, px", 855, 1,
      interior_n("Settlement", split="external_test"), MK_INT),
 
+    ("Forest-Grassland share of foreground error, %", 30.06, 0.02,
+     lambda: 100 * next(d["share_of_error"] for d in load("artifacts/narrative_numbers_test.json")
+                        ["pair_ratios"] if d["pair"] == "Forest-Grassland"), MK_NN),
+    ("Forest-Grassland expected share from area, %", 50.33, 0.02,
+     lambda: 100 * next(d["expected_share_from_area"] for d in
+                        load("artifacts/narrative_numbers_test.json")["pair_ratios"]
+                        if d["pair"] == "Forest-Grassland"), MK_NN),
+    ("grassland pair expected share from area, %", 22.21, 0.02,
+     lambda: 100 * pair_field("expected_share_from_area")(), MK_NN),
+
+    ("grassland within 8 m of forest, %", 21.44, 0.02,
+     lambda: 100 * adjacency("share_of_a_within_8m_of_b", a="Grassland", b="Forest")(), MK_ADJ),
+
+    ("Test A chips with no semi-natural at all", 54, 0,
+     pair_by_tile("chips_without_seminatural"), MK_TILE),
+    ("pair error on chips with no semi-natural, %", 40.27, 0.05,
+     pair_by_tile("error_share_on_those"), MK_TILE),
+    ("pair error px, summed per chip (10 seeds)", 12899256, 1,
+     pair_by_tile("pair_error_px"), MK_TILE),
+
     ("grassland pair contact share, %", 1.594, 0.005,
      lambda: 100 * adjacency("contact_share")(), MK_ADJ),
     ("semi-natural within 8 m of grassland, %", 6.13, 0.02,
      lambda: 100 * adjacency("share_of_a_within_8m_of_b", a="Seminatural", b="Grassland")(), MK_ADJ),
+    ("grassland within 8 m of semi-natural, %", 0.599, 0.01,
+     lambda: 100 * adjacency("share_of_a_within_8m_of_b", a="Grassland", b="Seminatural")(), MK_ADJ),
 
     ("OEM pre-training, mIoU, pp", -0.37, 0.02,
      contrast("oem_pretraining", "foreground_mIoU", "mean"), MK_NN),
@@ -308,6 +380,18 @@ NUMBERS = [
      contrast("oem_pretraining", "foreground_mIoU", "ci_low"), MK_NN),
     ("OEM pre-training, mIoU, CI high", 2.94, 0.02,
      contrast("oem_pretraining", "foreground_mIoU", "ci_high"), MK_NN),
+    ("sampler, mIoU, CI low", -1.98, 0.02,
+     contrast("class_balanced_sampler", "foreground_mIoU", "ci_low"), MK_NN),
+    ("sampler, mIoU, CI high", 2.36, 0.02,
+     contrast("class_balanced_sampler", "foreground_mIoU", "ci_high"), MK_NN),
+    ("interaction, mIoU, pp", -2.08, 0.02,
+     contrast("interaction", "foreground_mIoU", "mean"), MK_NN),
+    ("interaction, Cropland IoU, pp", -10.44, 0.02,
+     contrast("interaction", "Cropland", "mean"), MK_NN),
+    ("interaction, mIoU, CI low", -3.81, 0.02,
+     contrast("interaction", "foreground_mIoU", "ci_low"), MK_NN),
+    ("interaction, mIoU, CI high", -0.35, 0.02,
+     contrast("interaction", "foreground_mIoU", "ci_high"), MK_NN),
 
     ("train grassland pixels", 193670068, 1, support("train", "Grassland"), MK_SUP),
     ("train semi-natural pixels", 11780653, 1, support("train", "Seminatural"), MK_SUP),
