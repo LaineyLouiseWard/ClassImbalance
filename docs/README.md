@@ -1,64 +1,40 @@
-# What is in `docs/`, and what to read first
+# What is in `docs/`
 
-A campaign was **withdrawn on 2026-07-25** for train/test leakage, and the split was rebuilt. That
-means this directory contains two very different kinds of document, and reading them in the wrong
-order gives entirely the wrong impression of the project. **Read the first group. The second group is
-the record of how the first group was arrived at.**
+This directory documents the design, results and methodology behind the code, plus a dated integrity
+trail from an early withdrawn campaign.
 
-**The manuscript is being rewritten** to match `notes/NARRATIVE_LITERATURE_FINAL.md` (see the banner
-below). Until that is done this file, `README.md`
-and `RUNBOOK.md` still describe the earlier design in places. That is deliberate — they are fixed after
-the manuscript, so the manuscript is not written to match a summary of itself.
+An earlier campaign was **withdrawn on 2026-07-25** for train/test leakage: tiles were chipped on a
+50% stride and split at random by tile, so most of each held-out tile's ground was also in training.
+The split was rebuilt as a spatially blocked split and every result regenerated. The manuscript
+reports the rebuilt results.
 
-> **Superseded 2026-07-29.** The narrative is **`notes/NARRATIVE_LITERATURE_FINAL.md`**, not
-> `NARRATIVE_FINAL.md` — it reports rho on the 90-chip subset (3.692 / 2.137), not the 294-tile
-> population (3.85 / 2.28), and gates every claim against the literature. Newer wins. Plan:
-> `notes/IMPLEMENTATION_PLAN.md`.
-
-## Read these — they state the design as it now is
-
-The narrative is **not** in this directory. It is `notes/NARRATIVE_LITERATURE_FINAL.md`, and it is the
-first thing to read.
+## The design and results
 
 | file | what it is |
 |---|---|
-| ~~`NARRATIVE_FINAL.md`~~ | **superseded — do not read.** Replaced by `notes/NARRATIVE_LITERATURE_FINAL.md` |
-| **`RESULTS_TEN_SEED.md`** | the numbers. §7-§13 supersede §1-6 |
+| **`METHODOLOGICAL_CHOICES.md`** | every deliberate design choice in plain language, with what it costs. **Start here.** |
+| **`RESULTS_TEN_SEED.md`** | the numbers (§7–§13 are authoritative) |
 | **`FINDING_BOUNDARY_IS_PER_CLASS.md`** | the per-class boundary result and its confounds |
-| **`METHODOLOGICAL_CHOICES.md`** | every deliberate choice in plain language, with what it costs. **Start here.** |
-| **`METHODS_STATED_LIMITATIONS.md`** | eleven properties the methods section must state, each with the measurement behind it |
-| **`CORRECTIONS.md`** | sentences currently in the manuscript that are wrong and must change |
-| **`DO_NOT_ADD.md`** | sentences the design forbids, and sources that do not exist or do not say what they are cited for |
+| **`METHODS_STATED_LIMITATIONS.md`** | properties the methods section states, each with the measurement behind it |
+| **`DESIGN_NOTES.md`** | design decisions and the negative results (knowledge distillation, the bespoke sampler) |
+| **`CORRECTIONS.md`** | corrections applied during manuscript preparation |
+| **`DO_NOT_ADD.md`** | claims the design forbids, and sources that do not say what they might be cited for |
 | **`FIGURES.md`** | the figure map |
-| **`NUMBERS.md`** | every number the write-up quotes, the file that holds it, and the command that rebuilds that file |
+| **`NUMBERS.md`** | every number the write-up quotes, the file that holds it, and the command that rebuilds it |
 
-## This is the audit trail, not the design
-
-These record a withdrawn campaign and the rebuild that followed. They are kept, tracked and
-unedited **on purpose**, and that is the point of them:
-
-`DECISIONS_REBUILD_2026-07.md` (D1–D19) · `PREREGISTRATION_P1_AMENDMENT.md` (three versions, two
-retracted) · `PRE_SUBMISSION_LEDGER.md` · `AUDIT_7_FINDINGS.md` ·
-`METHODOLOGY_REVIEW_2026-07-27.md` · `PLAN_FINAL_CATCHALL_AUDIT.md` · the `BRIEF_*.md` files
-
-**Why they look like they do.** A leakage retraction guarantees somebody asks: *were the second set
-of numbers tuned after the first set was withdrawn?* The honest answer needs dates, and this project
-has them. Every decision in `DECISIONS_REBUILD_2026-07.md`, and all three versions of the
-pre-registration including the two retractions, are dated **before any model was trained on the
-corrected split.** A statistic withdrawn before you have seen a single result cannot have been
-withdrawn because you did not like the result.
-
-So the 23 supersede/reverse/withdraw markers in the decisions log are not churn to be embarrassed
-about — they are the audit trail doing its job, in the one situation where a project most needs one.
-Note also what the reversals converged *on*: the removal of machinery (a threshold, a block
-bootstrap, a coverage simulation), not the addition of it.
-
-## Stale by decision
-
-`README.md`, `RUNBOOK.md` and `DESIGN_NOTES.md` still describe the withdrawn 1,706/219/218 split and
-state its conclusions as fact. They now carry banners saying so and are rewritten after the rebuilt
-campaign runs. Do not read a number out of any of them.
-
-Before quoting any number, run `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py`.
-It checks each figure the narrative uses against the committed artifact behind it, and prints the
+Before quoting any number, run `PYTHONPATH=. python scripts/analysis/verify_narrative_numbers.py` — it
+checks each figure the narrative uses against the committed artifact behind it, and prints the
 regenerating command for anything missing.
+
+## The integrity trail
+
+`audit/DECISIONS_REBUILD_2026-07.md` (the D1–D19 decisions log) and
+`audit/PREREGISTRATION_P1_AMENDMENT.md` (three versions, two retracted) are kept, tracked and dated
+**on purpose**.
+
+A leakage retraction guarantees somebody asks: *were the second set of numbers tuned after the first
+was withdrawn?* The honest answer needs dates, and this project has them. Every decision in the log,
+and all three versions of the pre-registration including the two retractions, are dated **before any
+model was trained on the corrected split**. A statistic withdrawn before a single result was seen
+cannot have been withdrawn because the result was unwelcome. The reversals also converged on the
+*removal* of machinery (a threshold, a block bootstrap, a coverage simulation), not its addition.

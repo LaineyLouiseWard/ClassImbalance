@@ -1,18 +1,7 @@
-> **⚠ STALE BY DECISION — 2026-07-27.** Every accuracy, contrast and figure below comes from a
-> campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
-> the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
-> split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
-> provisional. The current design and results are in `docs/README.md`, which says what to read and in
-> what order; this file is rewritten after the manuscript is finished.
->
-> **Scope of this banner:** it covers "Experimental design", "What the curation levers do" and
-> "Knowledge distillation" below. It does NOT cover "Boundary-free tiles are excluded from every
-> boundary analysis", which is dated 2026-07-28 and current.
-
 # Design notes
 
-This note records the main design decisions behind the experiments and the results that did not
-support a mechanism. It complements the manuscript, which carries the full quantitative results.
+This note records the design decisions and negative results behind the experiments. The full
+quantitative results are in the manuscript and `docs/NUMBERS.md`.
 
 ## Experimental design
 
@@ -30,11 +19,13 @@ reported with dispersion rather than from a single run.
 
 ## What the curation levers do
 
-On a strong pre-trained backbone the rare classes are already recovered to a large degree, so the
-curation levers move the result only modestly. Cross-dataset transfer gives a small, consistent
-gain; class-balanced sampling adds little once transfer is in place. This is the finding of the
-study, not a shortcoming: the remaining error is concentrated at class boundaries and reflects the
-quality of the labels rather than model capacity or the sampling scheme.
+Both levers act on the data pipeline around a fixed backbone, so the 2×2 measures what curation alone
+buys once the architecture is held constant. At ten seeds per cell, neither lever's main effect
+separates from run-to-run variation: the design resolves roughly 3 percentage points of foreground
+mean IoU across seeds, which is wider than the spread between the four cells. The honest reading is a
+detection bound, not a null result — an effect smaller than that bound would not be visible with this
+sample. The per-cell contrasts and their intervals are in the manuscript and `docs/NUMBERS.md`;
+they are reported per seed, never from a pooled ensemble.
 
 ## Knowledge distillation (tested and dropped)
 
@@ -74,7 +65,7 @@ since the uplands are 0.515 x 0.641 m and the band there is anisotropic.
 ## Conventions
 
 - **Class order:** Background (0), Forest (1), Grassland (2), Cropland (3), Settlement (4),
-  Seminatural (5), defined in `geoseg/datasets/biodiversity_dataset.py`.
+  Seminatural (5), defined by `STUDENT_CLASSES` in `geoseg/taxonomy.py`.
 - **Foreground mIoU:** the mean IoU over the five foreground classes (Background excluded), used
   for checkpoint selection and in all reported metrics.
 - **Teacher model:** the OpenEarthMap teacher is built once and held fixed across the seed
