@@ -37,7 +37,7 @@ fi
 # Valid stages: A0 (taxonomy check), A1-A10 (data prep + teacher build),
 #               B1-B5 (student training), C1-C4 (evaluation), D (analyses), E (figures)
 #
-# For the full 5-seed campaign as ONE resumable command, use ./run_campaign.sh.
+# For the full 10-seed campaign as ONE resumable command, use ./run_campaign.sh.
 #
 # Overwrite flags:  --overwrite (data-prep)   --force (training/eval/export)
 # Window flags:     --from <stage>  --to <stage>      Resume:  RESUME=1 (training stages)
@@ -565,7 +565,7 @@ if run_stage D; then
       --mask-dir "$SPLIT_ROOT/$SPLIT/masks" \
       --cell stage1_baseline --cell stage2b_oem_finetune \
       --cell stage_sampler_only --cell stage3_clsbal \
-      --out-dir "analysis/label_ceiling/$SPLIT"
+      --out-dir "analysis/boundary_error/$SPLIT"
     echo "[D] Boundary/interior error rates — $SPLIT (rho, reported descriptively; no threshold, D18)"
     PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py \
       --split-root "$SPLIT_ROOT" --split "$SPLIT" \
@@ -579,7 +579,7 @@ if run_stage D; then
       --softmax-root analysis/seed_softmax \
       --mask-dir "$SPLIT_ROOT/$SPLIT/masks" \
       --cell stage1_baseline --cell stage3_clsbal \
-      --out-dir "analysis/label_ceiling/$SPLIT"
+      --out-dir "analysis/boundary_error/$SPLIT"
   done
   echo "[D] Accuracy against distance from training ground — BOTH held-out strata on one axis"
   PYTHONPATH=. python scripts/analysis/accuracy_vs_separation.py \

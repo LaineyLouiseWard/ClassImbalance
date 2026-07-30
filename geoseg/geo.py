@@ -1,7 +1,7 @@
 """The single source of truth for this project's ground geometry constants.
 
 WHY THIS MODULE EXISTS. Until 2026-07-26 the per-site ground sample distance was hand-typed as a
-literal dict in FOUR files (seed_disagreement, boundary_exposure, figure_label_ceiling,
+literal dict in several files (seed_disagreement, boundary_exposure,
 figures/boundary_limited_error) and the metres-per-degree constants appeared in SEVEN
 (analysis/utils, data_prep/build_spatial_split, analysis/block_phase_sweep,
 analysis/report_class_support, analysis/accuracy_vs_separation, analysis/spatial_correlogram,

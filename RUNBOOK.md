@@ -1,9 +1,5 @@
-> **⚠ STALE BY DECISION — 2026-07-27.** Every accuracy, contrast and figure below comes from a
-> campaign **withdrawn on 2026-07-25** for train/test leakage: tiles are chipped on a 50% stride and
-> the split was random by tile, so ~93% of each held-out tile's ground was also in training. The
-> split described here (1,706/219/218) no longer exists. Treat every number as ABSENT, not
-> provisional. The current design and results are in `docs/README.md`, which says what to read and in what order; this file is rewritten
-> after the rebuilt campaign runs.
+> This runbook reproduces the rebuilt spatially-blocked pipeline (split `f1`); the withdrawn
+> 2026-07-25 campaign's outputs are archived under `../_archive-lqc/` and are not scored here.
 
 > **Pipeline: clean 3-stage.** Stage 3 (clsbal — class-balanced frequency-only sampling, Kang et al. 2020) is the final shipped model. Stage-4 knowledge distillation and self-distillation were tested and dropped as a negative result (distillation underperformed a step-matched control that trained for the same extra steps without it). See [docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md) for the design decisions and negative results.
 
@@ -114,10 +110,10 @@ not publicly redistributable; users with licensed access should place raw files 
 ## A. Data preparation
 
 > **The stage-by-stage sections below predate the 2026-07-26 rebuild in places.** The stage table
-> above is generated from `RUNBOOK.sh` and is authoritative on what runs and in what order. Five
-> stages added in that rebuild — `A1b`, `B4b`, `B4c`, `C1b`, `C5` — have a row in the table but no
+> above is generated from `RUNBOOK.sh` and is authoritative on what runs and in what order. Four
+> stages added in that rebuild — `A1b`, `B4b`, `B4c`, `C5` — have a row in the table but no
 > section of their own here yet. `SPLIT_TAG=f1` gates every path; run the shell script rather than
-> hand-copying these blocks. + teacher build (A1–A10)
+> hand-copying these blocks.
 
 The teacher (A4–A6) and its confusion (A7) come **before** the OEM relabel (A8), because the grounded
 OEM→student mapping is the argmax of that confusion.
@@ -161,7 +157,8 @@ PYTHONPATH=. python scripts/data_prep/prepare_oem_teacher_data.py \
   --out-root data/openearthmap_teacher --official-split --overwrite
 ```
 The teacher trains on the **full, native OEM** (labels 0–8) — NOT the rural-filtered/relabelled 6-class
-set, which would train the teacher on the wrong taxonomy and silently break KD.
+set, which would train the teacher on the wrong taxonomy and break the grounded OEM→student relabel
+(A7), and with it the transfer arm.
 **Output:** `data/openearthmap_teacher/{train,val}/{images,masks}/`
 
 ### A5. Train OEM teacher (seed fixed at 42)
@@ -182,10 +179,12 @@ PYTHONPATH=. python -m scripts.data_prep.export_teacher_checkpoint \
 
 ### A7. Measure teacher→GT confusion (grounds the mappings)
 ```bash
-PYTHONPATH=. python scripts/analysis/teacher_oem_to_gt_confusion.py
+PYTHONPATH=. python scripts/analysis/teacher_oem_to_gt_confusion.py \
+  --data-root data/split_f1/train --out artifacts/teacher_oem_gt_confusion_f1.npz
 ```
-**Output:** `artifacts/teacher_oem_gt_confusion.npz` (committed; the grounded pre-train map in
-`geoseg/taxonomy.py` is its argmax and the KD-B map is its row-normalised soft form — A0 asserts both).
+**Output:** `artifacts/teacher_oem_gt_confusion_f1.npz` (committed; its argmax is the grounded
+OEM→student pre-train map `OEM_TO_STUDENT_PRETRAIN` in `geoseg/taxonomy.py`, used to relabel the OEM
+tiles for pre-training — A0 asserts the two match).
 
 ### A8. Relabel OEM to the 6-class taxonomy (grounded argmax mapping)
 ```bash
@@ -244,35 +243,62 @@ Frequency-only (Kang 2020): no checkpoint needed. Defaults are q=1.0 and settlem
 ```bash
 PYTHONPATH=. python -m train.train_supervision -c config/biodiversity/stage3_clsbal.py --force
 ```
-**Data:** `data/split_f1/train/` · **Requires:** Stage 2b ckpt (warm start), `sampler_weights_clsbal.tsv`
+**Data:** `data/split_f1/train/` · **Requires:** Stage 2a ckpt (warm start), `sampler_weights_clsbal_f1.tsv`
 **Output:** `model_weights/biodiversity/stage3_clsbal_f1/` (deployed final model)
 
 ---
 
 ## C. Evaluation
 
-### C1. Validation set (all stage checkpoints)
+### C1. Validation set (all four factorial cells; checkpoint-selection split)
 ```bash
-PYTHONPATH=. python evaluation/compute_metrics.py --split val \
-  --base-dir model_weights/biodiversity --data-root data/split_f1/val \
-  --out-dir evaluation/evaluation_results/val --force
+for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
+  PYTHONPATH=. python evaluation/compute_metrics.py --split val \
+    --checkpoints model_weights/biodiversity/${CELL}_f1/${CELL}_f1.ckpt \
+    --data-root data/split_f1/val \
+    --out-dir evaluation/evaluation_results/val --force
+done
 ```
-**Output:** `evaluation/evaluation_results/val/<stage>/` (metrics.json, confusion matrices, reports).
+**Output:** `evaluation/evaluation_results/val/<cell>_f1/` (metrics.json, confusion matrices, reports).
+Score by tagged per-cell `--checkpoints`, never `--base-dir` — the latter globs the untagged
+withdrawn-campaign weights.
 
-### C2. Held-out test set (baseline + final model; final model also WITH TTA)
+### C1b. Test B — held-out upland sites (external_test)
+
+The generalisation number the paper leads on. All four cells, masked with `--ignore-index 0`.
 ```bash
+for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
+  PYTHONPATH=. python evaluation/compute_metrics.py --split test \
+    --checkpoints model_weights/biodiversity/${CELL}_f1/${CELL}_f1.ckpt \
+    --data-root data/split_f1/external_test \
+    --out-dir evaluation/evaluation_results/external_f1 --ignore-index 0 --force
+done
+# Per-class block support for Test B (reported without a verdict; Test B has no admissibility floor)
+PYTHONPATH=. python scripts/analysis/report_class_support.py --split-root data/split_f1
+```
+**Output:** `evaluation/evaluation_results/external_f1/<cell>_f1/` (metrics.json, confusion matrices, reports).
+
+### C2. Held-out Test A — all four factorial cells (final model also WITH TTA)
+
+Score every cell with tagged `--checkpoints`. Only two of four were scored here until 2026-07-26, so
+the transfer, sampler and interaction contrasts could be formed on validation alone (the split every
+checkpoint is selected on).
+```bash
+for CELL in stage1_baseline stage2b_oem_finetune stage_sampler_only stage3_clsbal; do
+  PYTHONPATH=. python evaluation/compute_metrics.py --split test \
+    --checkpoints model_weights/biodiversity/${CELL}_f1/${CELL}_f1.ckpt \
+    --data-root data/split_f1/test \
+    --out-dir evaluation/evaluation_results/test --force
+done
+# final model (Stage 3 clsbal) also WITH test-time augmentation (flips + multi-scale), reported
+# alongside the no-TTA number and written to a SEPARATE out-dir so the no-TTA metrics.json is preserved
 PYTHONPATH=. python evaluation/compute_metrics.py --split test \
-  --base-dir model_weights/biodiversity/stage1_baseline --data-root data/split_f1/test \
-  --out-dir evaluation/evaluation_results/test --force
-PYTHONPATH=. python evaluation/compute_metrics.py --split test \
-  --base-dir model_weights/biodiversity/stage3_clsbal --data-root data/split_f1/test \
-  --out-dir evaluation/evaluation_results/test --force
-# final model WITH test-time augmentation (flips + multi-scale), reported alongside the no-TTA number
-PYTHONPATH=. python evaluation/compute_metrics.py --split test \
-  --base-dir model_weights/biodiversity/stage3_clsbal --data-root data/split_f1/test \
+  --checkpoints model_weights/biodiversity/stage3_clsbal_f1/stage3_clsbal_f1.ckpt \
+  --data-root data/split_f1/test \
   --out-dir evaluation/evaluation_results/test_tta --tta --tta-flips hv --tta-scales 0.75,1.0,1.25 --force
 ```
-**Output:** `evaluation/evaluation_results/test/{stage1_baseline,stage3_clsbal}/` and `evaluation/evaluation_results/test_tta/stage3_clsbal/` (TTA). The val/ablation eval (C1) stays no-TTA.
+**Output:** `evaluation/evaluation_results/test/<cell>_f1/` (all four cells) and
+`evaluation/evaluation_results/test_tta/stage3_clsbal_f1/` (TTA). The val/ablation eval (C1) stays no-TTA.
 
 ### C3. Validation summary
 ```bash
@@ -285,14 +311,14 @@ PYTHONPATH=. python evaluation/aggregate_metrics.py \
 ```bash
 python evaluation/export_final_test_table.py
 ```
-**Input:** `evaluation/evaluation_results/test/{stage1_baseline,stage3_clsbal}/metrics.json`
+**Input:** `evaluation/evaluation_results/test/{stage1_baseline_f1,stage3_clsbal_f1}/metrics.json`
 **Output:** `evaluation/evaluation_results/final_test_table.tex`
 
 ---
 
-## D. Supplementary analyses (A1–A6)
+## D. Supplementary analyses and boundary evidence
 
-All analyses are derived from saved evaluation outputs and `artifacts/sampler_weights_clsbal_f1.tsv`. No retraining.
+The A1–A6 analyses are derived from saved evaluation outputs and `artifacts/sampler_weights_clsbal_f1.tsv`. No retraining.
 
 ```bash
 PYTHONPATH=. python scripts/analysis/a1_minority_recall.py
@@ -308,6 +334,38 @@ pre-registered rho threshold that was itself retired, both test sets are complet
 their ground rather than samples, and uncertainty in this study is per-seed and paired. The command
 that used to appear here referenced a script at a path that never existed.
 
+### Boundary evidence (held-out ground only)
+
+Since the pre-registered rho threshold was retired (D18), the trimap exclusion curve is the **primary
+evidence** for the boundary claim. These consume the per-seed softmax dumps produced by stage `C5`
+(`analysis/seed_softmax/`); validation is excluded because every checkpoint is selected on it.
+```bash
+# registered boundary-band denominators (never hand-edited)
+PYTHONPATH=. python scripts/analysis/register_boundary_denominators.py --split-root data/split_f1
+for SPLIT in test external_test; do
+  # trimap exclusion curve — PRIMARY EVIDENCE, all four cells
+  PYTHONPATH=. python scripts/analysis/boundary_trimap_iou.py \
+    --softmax-root analysis/seed_softmax --mask-dir data/split_f1/${SPLIT}/masks \
+    --cell stage1_baseline --cell stage2b_oem_finetune \
+    --cell stage_sampler_only --cell stage3_clsbal \
+    --out-dir analysis/boundary_error/${SPLIT}
+  # boundary/interior error rates (rho, reported descriptively; no threshold, D18)
+  PYTHONPATH=. python scripts/analysis/boundary_rate_ratio.py \
+    --split-root data/split_f1 --split ${SPLIT} \
+    --softmax-root analysis/seed_softmax --cell stage3_clsbal --per-site
+  # seed-ensemble uncertainty decomposition
+  PYTHONPATH=. python scripts/analysis/seed_disagreement.py \
+    --softmax-root analysis/seed_softmax --mask-dir data/split_f1/${SPLIT}/masks \
+    --cell stage1_baseline --cell stage3_clsbal \
+    --out-dir analysis/boundary_error/${SPLIT}
+done
+# accuracy against distance from training ground — both held-out strata on one axis
+PYTHONPATH=. python scripts/analysis/accuracy_vs_separation.py \
+  --split-root data/split_f1 \
+  --metrics-dir evaluation/evaluation_results/test/stage3_clsbal_f1 \
+                evaluation/evaluation_results/external_f1/stage3_clsbal_f1
+```
+
 **Inputs:**
 - `evaluation/evaluation_results/val/stage*/confusion_matrix.csv` (A1, A2, A5)
 - `evaluation/evaluation_results/val/stage*/metrics.json` (A4, A5)
@@ -320,21 +378,21 @@ that used to appear here referenced a script at a path that never existed.
 ## E. Paper figures
 
 **System prerequisite — LaTeX toolchain (all figures use it).** Every figure renders in Latin Modern (the vector
-Computer Modern / LaTeX font): the TikZ figures (1, 2, the mapping schematic, the graphical abstract) compile with
-`pdflatex`, and the Python figures (3–11) use matplotlib `text.usetex=True`. Install (Debian/Ubuntu):
+Computer Modern / LaTeX font): the TikZ figures compile with `pdflatex`, and the Python (matplotlib)
+figures use `text.usetex=True`. Install (Debian/Ubuntu):
 `texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra cm-super lmodern dvipng`
 (`lmodern` gives Type-1 vector fonts; `cm-super`+`dvipng` are required by matplotlib's usetex). Verify:
-`pdffonts figures/class_distributions.pdf` should list only `LMRoman`/`LMMath…`, all Type 1.
+`pdffonts figures/study_area.pdf` should list only `LMRoman`/`LMMath…`, all Type 1.
 
 ```bash
 python scripts/figures/build_all_figures.py
 ```
 
 Figures use stable descriptive script names (rather than figure numbers, which LaTeX assigns).
-`build_all_figures.py` builds all fourteen figures — it compiles the TikZ `.tex` figures with
-`pdflatex`, runs the matplotlib figures, and runs the two boundary/uncertainty figures under
-`scripts/analysis/` — then copies the set into the submission bundle (`manuscript/Figures/`), where
-`main.tex` reads them.
+`build_all_figures.py` builds all seven figures — it compiles the TikZ `.tex` figures with
+`pdflatex` and runs the matplotlib figures — then copies the set into the submission bundle
+(`manuscript/Figures/`), where `main.tex` reads them. The graphical abstract is built separately
+(`graphical_abstract_panels.py` + `graphical_abstract_tikz.tex`).
 
 See [docs/FIGURES.md](docs/FIGURES.md) for the full figure → source-script → output-file map and
 per-figure dependencies.
@@ -346,12 +404,13 @@ per-figure dependencies.
 ```
 Raw data (Biodiversity + OEM)
  |
- +-- A1:     split Biodiversity            -->  biodiversity_split/{train,val,test}
+ +-- A1:     unpack Biodiversity pool      -->  biodiversity_split/   (assignment DISCARDED; see A1b)
+ +-- A1b:    spatially blocked split (f1)  -->  split_f1/{train,val,test,external_test}
  +-- A2:     identify minority tiles       -->  artifacts/train_augmentation_list.json
  +-- A3:     filter OEM (rural)            -->  openearthmap_filtered/
  +-- A4:     OEM teacher split (raw OEM)   -->  openearthmap_teacher/   (native 9-class)
  +-- A5-A6:  train + export teacher        -->  pretrain_weights/*.pth
- +-- A7:     teacher->GT confusion         -->  artifacts/teacher_oem_gt_confusion.npz
+ +-- A7:     teacher->GT confusion         -->  artifacts/teacher_oem_gt_confusion_f1.npz
  +-- A8:     grounded relabel of OEM      -->  openearthmap_relabelled/
  +-- A10:    combine Bio + OEM             -->  oem_combined_f1/
  |

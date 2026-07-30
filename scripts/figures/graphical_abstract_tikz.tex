@@ -1,11 +1,6 @@
 % Graphical Abstract - TikZ. Rebuilt 2026-07-29 on the current spatially blocked split.
 %
-% The header that stood here until 2026-07-29 carried the WITHDRAWN framing -- "the residual error
-% is a thin shell on class boundaries -> a label-quality ceiling, not a model-capacity or
-% class-imbalance limit" -- which is the claim `docs/DO_NOT_ADD.md` forbids, and it named tile
-% biodiversity_0603 from the withdrawn campaign.
-%
-% Current narrative, three panels of ONE Test A chip (biodiversity_1078, seed 47, stage1_baseline;
+% Three panels of ONE Test A chip (biodiversity_1078, seed 47, stage1_baseline;
 % graphical_abstract_panels.py asserts it against the split manifest and the 90-chip scoring
 % subset, and refuses to build otherwise):
 %   1 the imagery, from the labels ->
@@ -137,7 +132,7 @@
 
   % ======================================================================
   % connectors. "and" then "yet" -- the panels are an argument, not a pipeline, so these are not
-  % the process arrows the withdrawn version used.
+  % process arrows.
   % ======================================================================
   \draw[flow] (\ax+\panelW+0.18,\mid) -- (\bx-0.18,\mid);
   \draw[flow] (\bx+\panelW+0.18,\mid) -- (\cx-0.18,\mid);
@@ -163,8 +158,8 @@
         execute at begin node={\hyphenpenalty=10000\relax},
         fill=captionBg, rounded corners=7pt, inner xsep=18pt, inner ysep=10pt,
         text width=12.8cm] at (\totW/2,-1.20)
-    {\textbf{Nearly half of this map's error} is two grassland types confused at parcel scale, not
-     along the border they barely share. That shows where curation effort cannot reach.};
+    {\textbf{Nearly half of this map's error} is two grassland classes confused within fields, not
+     along the boundary they rarely share. Knowing where the error occurs shows where curation effort can reach it, and where it cannot.};
 
 \end{tikzpicture}
 \end{document}

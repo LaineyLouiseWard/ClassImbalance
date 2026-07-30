@@ -177,7 +177,7 @@ conservative of the two and is the one to report, but it must be called a co-are
 
 The trimap gain is one summary of a curve. The curve itself is in the same JSON, thirteen distance
 bins per class. **Both tables in this section are the ten-seed values from
-`analysis/label_ceiling/test/boundary_trimap_stage1_baseline.json`.** They were transcribed from a
+`analysis/boundary_error/test/boundary_trimap_stage1_baseline.json`.** They were transcribed from a
 two-seed probe until 2026-07-29 and two rows had been swapped in the process — the figures given for
 Forest were Settlement's. Support counts are dropped rather than re-transcribed; they are in the
 artifact.

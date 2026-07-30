@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 """The three raster panels of the graphical abstract.
 
-REBUILT 2026-07-29. Every element of the previous version was withdrawn: its chip
-(biodiversity_0957) is a TRAINING chip under the current split, so the abstract showed the model
-marking its own homework; its badges carried the leakage-inflated 90.8% mean IoU and the retracted
-"<1% inside, 42% at boundaries" error share; and its caption stated the label-quality-ceiling claim
-that `docs/DO_NOT_ADD.md` forbids. It also rebuilt from `sonic/results/`, which is not staged here.
-
 The three panels are ONE Test A chip seen three ways, so the abstract is an argument rather than a
 pipeline:
 

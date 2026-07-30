@@ -1,7 +1,7 @@
 """
 Stage 3 — STANDARD class-balanced minority oversampler (defensibility arm; Kang 2020,
-arXiv:1910.09217). Clone of stage3_sampler.py (A0) with ONLY the sampler weights swapped: A0's
-bespoke `hardness^0.5 x pooled-richness^1.0` TSV -> a citable frequency-only inverse-tile-frequency
+arXiv:1910.09217). It replaces the retired bespoke `hardness^0.5 x pooled-richness^1.0`
+sampler with a citable frequency-only inverse-tile-frequency
 TSV ($SAMPLER_TSV, tagged per split), calibrated so Settlement stays flat (~1.27x, the binary-search
 target); the realised semi-natural uplift on the f1 split is ~2.84x. Neither figure may be quoted in
 the manuscript — see notes/NARRATIVE_LITERATURE_FINAL.md. Everything else (loss, init, optimiser, epochs, num_samples) is IDENTICAL

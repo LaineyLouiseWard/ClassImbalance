@@ -2,17 +2,17 @@
 """
 Boundary-tolerance (trimap) IoU recovery + error-vs-distance-to-boundary.
 
-The label-ceiling KEYSTONE on single-label data. Two non-circular analyses, both using the
+Two non-circular analyses of how error concentrates near class boundaries, both using the
 seed-ensemble argmax prediction and GROUND-TRUTH boundaries only (no repeated labels needed):
 
   A1  Trimap IoU recovery.  Re-score per-class IoU while EXCLUDING a band of width N px around
-      GT class boundaries (keep = dist_to_boundary > N). If IoU jumps as the boundary shell is
-      removed, the residual error is a boundary/label-ambiguity phenomenon, not an interior
-      (capacity) failure. Standard trimap / boundary-band diagnostic (Kohli et al. 2009, origin;
+      GT class boundaries (keep = dist_to_boundary > N). If IoU jumps as the boundary band is
+      removed, error is concentrated near boundaries for that class rather than in field
+      interiors. Standard trimap / boundary-band diagnostic (Kohli et al. 2009, origin;
       Csurka et al. 2013, the IoU-in-band variant), read in the complementary exclude-the-band direction.
 
   A2  Error rate vs distance-to-boundary.  The prediction-error mirror of the existing
-      uncertainty-vs-distance curve (figure_label_ceiling N4). A spike at distance 0 decaying to a
+      uncertainty-vs-distance curve. A spike at distance 0 decaying to a
       near-zero interior FLOOR is direct evidence the error is a boundary phenomenon; a non-zero
       far-from-boundary floor (esp. for Settlement) would instead flag an interior/capacity problem
       and FALSIFY the label-ambiguity reading for that class.
@@ -25,7 +25,7 @@ Usage:
     PYTHONPATH=. python scripts/analysis/boundary_trimap_iou.py \
         --softmax-root <per-seed softmax dump root> --mask-dir data/biodiversity_split/val/masks \
         --cell stage1_baseline --cell stage3_clsbal --seeds 42 43 44 45 46 47 48 49 50 51 \
-        --out-dir analysis/label_ceiling
+        --out-dir analysis/boundary_error
 """
 from __future__ import annotations
 
@@ -320,7 +320,7 @@ def run_cell(softmax_root, mask_dir, cell, seeds, out_dir):
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / f"boundary_trimap_{cell}.json").write_text(json.dumps(out, indent=2))
 
-    # --- console keystone summary ---
+    # --- console summary ---
     base = ens_curve[0]            # N=-1, no exclusion
     print(f"\n[{cell}]  trimap IoU recovery (ensemble argmax, {len(seeds)} seeds, {n_scored} tiles; "
           f"{len(img_ids) - n_scored} boundary-free tiles excluded)")
@@ -387,7 +387,7 @@ def main():
                          "from it.")
     ap.add_argument("--cell", action="append", dest="cells", default=None)
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 52)))
-    ap.add_argument("--out-dir", default="analysis/label_ceiling")
+    ap.add_argument("--out-dir", default="analysis/boundary_error")
     args = ap.parse_args()
     cells = args.cells or ["stage1_baseline", "stage3_clsbal"]
     results = {}

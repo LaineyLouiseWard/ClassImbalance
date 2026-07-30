@@ -10,9 +10,9 @@ measured on real softmax dumps over 69 overlapping pairs: 2.20% of shared foregr
 class depending on which tile they were predicted from, and that instability is 29x higher within
 0.5 m of a label boundary (15.21%) than in field interiors (0.52%).
 
-That matters because the paper's claim is that residual error concentrates at label boundaries
-because the labels are ambiguous there. A model is near its decision threshold at a boundary and
-confident in a field interior, so ANY input perturbation flips predictions at boundaries and
+That matters because a per-tile normalisation difference is itself a rival explanation for why
+prediction change concentrates near boundaries. A model is near its decision threshold at a boundary
+and confident in a field interior, so ANY input perturbation flips predictions at boundaries and
 nowhere else -- producing the same signature from an entirely different cause. Removing the
 per-tile variation removes that rival explanation. See docs/CORRECTIONS_PAPER_PT2.md.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Seed-ensemble disagreement -> label/boundary ambiguity (the label-ceiling analysis).
+Seed-ensemble disagreement as a proxy for label/boundary ambiguity.
 
 Implements docs/DISAGREEMENT_ANALYSIS_METHOD_2026-06-22.md. For a deep ensemble of N
 same-architecture seeds, per validation pixel and over the per-seed softmax p^(i)_c:
@@ -18,8 +18,7 @@ Two non-circular stratifiers (both use GROUND TRUTH only, never predictions):
 
 Reports foreground classes (1..5) only in class summaries, matching the rest of the paper.
 
-This module does the COMPUTATION and writes per-pixel aggregates + a summary JSON. Figure
-rendering lives in figure_label_ceiling.py so the numbers are reusable headless.
+This module does the COMPUTATION and writes per-pixel aggregates + a summary JSON, so the numbers are reusable headless.
 
 Usage (defaults match the on-disk layout):
     PYTHONPATH=. python scripts/analysis/seed_disagreement.py \
@@ -27,7 +26,7 @@ Usage (defaults match the on-disk layout):
         --mask-dir data/biodiversity_split/val/masks \
         --cell stage3_clsbal --cell stage1_baseline \
         --seeds 42 43 44 45 46 47 48 49 50 51 \
-        --out-dir analysis/label_ceiling
+        --out-dir analysis/boundary_error
 """
 from __future__ import annotations
 
@@ -107,7 +106,7 @@ def boundary_distance(mask: np.ndarray, tile_id: str | None = None) -> np.ndarra
     `sampling=(gsd_y, gsd_x)`. The two upland sites have ~0.64 x 0.51 m pixels, so an isotropic
     transform scaled by a single 0.5 m makes a nominal 8 m band up to 10.3 m wide there -- and those
     191 tiles are the whole of the generalisation test set. A wider band captures more boundary error,
-    which flatters the label-ceiling claim, so this must be correct BEFORE Test B is scored.
+    which would overstate the boundary concentration, so this must be correct BEFORE Test B is scored.
     Omitting tile_id falls back to 0.5 m isotropic and is only valid for the inland site.
     """
     m = mask
@@ -393,7 +392,7 @@ def main():
                     default=None, help="repeatable; default: stage3_clsbal + stage1_baseline")
     ap.add_argument("--seeds", nargs="+", type=int,
                     default=list(range(42, 52)))
-    ap.add_argument("--out-dir", default="analysis/label_ceiling")
+    ap.add_argument("--out-dir", default="analysis/boundary_error")
     ap.add_argument("--save-map-tiles", nargs="*", default=None,
                     help="img_ids to dump full entropy/MI maps for (for N5/N6). "
                          "Default: auto-pick rare-class tiles.")

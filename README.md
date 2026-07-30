@@ -1,7 +1,9 @@
 # Characterising Thematic Error in an Operational Rural Land-Cover Map
 
 Code accompanying the manuscript *Characterising Thematic Error in an Operational Rural Land-Cover Map*
-(in preparation for the journal *Remote Sensing*, special issue on Data Curation for AI).
+(submitted to the journal *Remote Sensing*, special issue on Data Curation for AI).
+
+![Graphical abstract: nearly half of the map's thematic error is confusion between grassland and semi-natural grassland, and it occurs within fields rather than at class boundaries.](assets/graphical_abstract.png)
 
 This is a case study of one operational product: a five-class land-cover map of rural Irish farmland from
 half-metre Pléiades imagery, produced by an industry partner from a single manual annotation pass that
@@ -17,8 +19,8 @@ with each other (2.1× the share their area alone would give), and it falls with
 their shared edge: under 1% of grassland lies within eight metres of any semi-natural grassland, and about
 half of the pair's error sits in connected patches larger than a hectare, while the map otherwise follows
 the usual boundary pattern (a pixel within one metre of a class boundary is misclassified about 3.7× as
-often as one further away). Because the error that carries the volume is not concentrated at boundaries,
-re-tracing the outlines already drawn cannot reach it. Whether the cause is model failure, parcel-level
+often as one further away). Because the dominant error is not concentrated at boundaries,
+boundary re-annotation cannot reach it. Whether the cause is model failure, parcel-level
 label error, or absorption of the minority class into the majority is left open.
 
 Built with PyTorch 2.9, PyTorch Lightning 2.3, and Rasterio 1.4 on Python 3.11; the environment is pinned in
@@ -70,6 +72,16 @@ python scripts/figures/build_all_figures.py
 evaluation), the stage→config map, and the `--from` resume points. The A1–A6 robustness analyses live in
 `scripts/analysis/`; the figure map is in [docs/FIGURES.md](docs/FIGURES.md).
 
+## Project structure
+
+- `geoseg/` — model, datasets, taxonomy, and losses
+- `config/biodiversity/` — training configs for the four factorial cells
+- `train/`, `evaluation/` — training loop and metric computation
+- `scripts/` — data preparation, analysis, and figure generation
+- `analysis/`, `artifacts/` — committed per-seed metrics and every derived number the paper quotes
+- `docs/` — the figure map and a dated audit trail of the methodology
+- `RUNBOOK.sh` / `RUNBOOK.md` — the end-to-end reproduction pipeline and its walkthrough
+
 ## Data availability
 
 The Biodiversity dataset is proprietary and not publicly available; it was acquired under licence from ODOS
@@ -80,7 +92,7 @@ access should place files as follows:
 | Asset | Location |
 |-------|----------|
 | Biodiversity imagery & masks | `data/biodiversity_raw/` |
-| Biodiversity train/val/test split | `data/biodiversity_split/` |
+| Biodiversity spatially-blocked split | `data/split_f1/` |
 | OpenEarthMap raw tiles | `data/openearthmap_raw/` |
 | OEM relabelled (6-class) | `data/openearthmap_relabelled/` |
 | OEM filtered subset | `data/openearthmap_filtered/` |

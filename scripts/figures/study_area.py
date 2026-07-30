@@ -247,8 +247,11 @@ def footprints_row(ax, sites, use_tex):
         # inland: off a coverage hole. ireland1: its centroid sits low in an L-shaped footprint,
         # so a centred two-line count hangs off the bottom edge; it lifts clear of it.
         dy_lab = {"biodiversity_": -1.5, "ireland1_": -0.10}.get(prefix, 0.0)
+        # small horizontal nudge (~3 px at 200 dpi) so the two-line SW counts clear the outline:
+        # 127 chips a touch right, 64 chips a touch left.
+        dx_lab = {"ireland2_": 0.048, "ireland1_": -0.048}.get(prefix, 0.0)
         lab_col = "#12314D" if (prefix == "biodiversity_" and assign) else "white"
-        ax.text(cc.x + x, cc.y + dy_lab, f"{s['count']:,}\nchips", ha="center", va="center",
+        ax.text(cc.x + x + dx_lab, cc.y + dy_lab, f"{s['count']:,}\nchips", ha="center", va="center",
                 fontsize=13, color=lab_col, fontweight="bold", linespacing=0.95, zorder=6,
                 path_effects=[pe.withStroke(linewidth=2.2, foreground="white")]
                 if (prefix == "biodiversity_" and assign) else None)

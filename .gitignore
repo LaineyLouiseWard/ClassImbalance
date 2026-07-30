@@ -62,14 +62,15 @@ __pycache__/
 *.egg-info/
 
 # --------------------
-# Private working notes — never published
+# Private working notes / local maintainer files — never published
 # --------------------
 notes/
+CLAUDE.md
+TODO_IFTIME.md
 
 # --------------------
-# Manuscript — gitignored during submission. After publication, delete the
-# `manuscript/` line to publish it, but keep manuscript/Definitions/ ignored
-# (MDPI-copyrighted class files).
+# Manuscript drafts — gitignored (working sources + MDPI-copyrighted class
+# files). The paper is distributed through the journal, not this repo.
 # --------------------
 manuscript/
 manuscript_v2/
@@ -108,7 +109,7 @@ config/biodiversity/_archive/
 /analysis/*
 !/analysis/confusion/
 !/analysis/interior/
-!/analysis/label_ceiling/
+!/analysis/boundary_error/
 !/analysis/metrics/
 !/analysis/pair_geometry/
 !/analysis/pairdist/

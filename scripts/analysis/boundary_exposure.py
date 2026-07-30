@@ -15,7 +15,7 @@ Baseline per-class IoU is supplied by --baseline-iou. It is NOT defaulted: this 
 analysis/eval_219/per_class_iou.json unconditionally until 2026-07-26, which is the withdrawn
 leaking campaign's output.
 
-Output: analysis/label_ceiling/boundary_exposure.json (+ printed summary).
+Output: analysis/boundary_error/boundary_exposure.json (+ printed summary).
 Run: PYTHONPATH=. python scripts/analysis/boundary_exposure.py --baseline-iou <current.json>
 """
 from __future__ import annotations
@@ -114,7 +114,7 @@ def main() -> None:
         "R2_iou_vs_exposure": round(r2, 3),
         "ols_slope": round(float(slope), 3),
     }
-    (root / "analysis/label_ceiling/boundary_exposure.json").write_text(json.dumps(out, indent=2))
+    (root / "analysis/boundary_error/boundary_exposure.json").write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
 
 

@@ -16,7 +16,7 @@ tiles that contain BOTH classes, i.e. within the scenes where the confusion actu
 is the figure cited in the paper; the "all_tiles" d (every tile containing each class) is kept for
 reference.
 
-Output: analysis/label_ceiling/spectral_separability.json (+ printed summary).
+Output: analysis/boundary_error/spectral_separability.json (+ printed summary).
 Run: PYTHONPATH=. python scripts/analysis/spectral_separability.py
 """
 from __future__ import annotations
@@ -121,7 +121,7 @@ def main() -> None:
         "co_occurring": scope(co_sN, co_gN, co_sW, co_gW),
         "all_tiles": scope(all_sN, all_gN, all_sW, all_gW),
     }
-    (root / "analysis/label_ceiling/spectral_separability.json").write_text(json.dumps(out, indent=2))
+    (root / "analysis/boundary_error/spectral_separability.json").write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
 
 

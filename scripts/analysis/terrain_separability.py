@@ -21,7 +21,7 @@ Two views, mirroring the spatial-autocorrelation caveat (Meyer 2019, Mannel 2011
 DEM: data/dem/Copernicus_DSM_COG_10_*.tif (4 one-degree GLO-30 cells covering the SW-Ireland tiles).
 Ireland-only: the 173 Irish validation tiles (data/split_$SPLIT_TAG/val/{images,masks}).
 
-Output: analysis/label_ceiling/terrain_separability.json (+ printed summary).
+Output: analysis/boundary_error/terrain_separability.json (+ printed summary).
 Run: PYTHONPATH=. python scripts/analysis/terrain_separability.py
 """
 from __future__ import annotations
@@ -162,7 +162,7 @@ def main() -> None:
             "semi_mean_deg": round(float(sS.mean()), 2), "grass_mean_deg": round(float(gS.mean()), 2),
         },
     }
-    p = root / "analysis/label_ceiling/terrain_separability.json"
+    p = root / "analysis/boundary_error/terrain_separability.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
